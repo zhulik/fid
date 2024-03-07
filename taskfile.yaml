@@ -48,9 +48,8 @@ tasks:
 
   down:
     cmds:
-      # TODO: only stop and delete fid containers
-      - docker stop $(docker ps -qa)
-      - docker rm $(docker ps -qa)
+      - docker stop $(docker ps -qa -f "label=wtf.zhulik.fid.component")
+      - docker rm $(docker ps -qa -f "label=wtf.zhulik.fid.component")
 
   start:
     deps:

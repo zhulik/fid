@@ -1,4 +1,4 @@
-package iter
+package utils
 
 func MapErr[F any, T any](xs []F, fun func(F) (T, error)) ([]T, error) {
 	result := make([]T, len(xs))

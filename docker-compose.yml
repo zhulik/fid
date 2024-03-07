@@ -1,17 +1,23 @@
 services:
   nats:
     image: nats:latest
+    labels:
+      wtf.zhulik.fid.component: nats
+
     ports:
       - "4222:4222"
-      - "8222:8222"
     volumes:
       - /tmp/nats/:/data
     command: [ "-js" ]
+
     networks:
       - nats
 
   start:
     image: ghcr.io/zhulik/fid
+    labels:
+      wtf.zhulik.fid.component: start
+
     command:
       - start
     environment:

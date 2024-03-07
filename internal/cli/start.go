@@ -23,7 +23,7 @@ var startCMD = &cli.Command{
 		&cli.StringFlag{
 			Name:    "fidfile",
 			Aliases: []string{"f"},
-			Value:   "Fidfile.yaml",
+			Value:   core.FilenameFidfile,
 			Usage:   "Load Fidfile.yaml from `FILE`",
 			Sources: cli.EnvVars("FIDFILE"),
 		},

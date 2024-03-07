@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zhulik/fid/pkg/json"
+	"github.com/zhulik/fid/pkg/utils"
 )
 
 type ContextKey int
@@ -35,6 +36,7 @@ var (
 
 	ErrUnexpectedStatus    = errors.New("unexpected status code")
 	ErrCannotParseDeadline = errors.New("cannot parse deadline")
+	ErrHandlerPaniched     = errors.New("handler panicked")
 )
 
 type Error struct {
@@ -106,7 +108,10 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 
 	ctx = context.WithValue(ctx, RequestID, requestID)
 
-	result, err := handler(ctx, event)
+	result, err := utils.Try(func() ([]byte, error) {
+		return handler(ctx, event)
+	})
+
 	if err != nil {
 		respReq, reqErr = errorRequest(err, requestID)
 	} else {
