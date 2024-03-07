@@ -18,12 +18,7 @@ var scalerCMD = &cli.Command{
 	Aliases:  []string{"sc"},
 	Usage:    "Run scaler.",
 	Category: "Function",
-	Flags: []cli.Flag{
-		natsURLFlag,
-		functionNameFlag,
-		serverPortFlag,
-		logLevelFlag,
-	},
+	Flags:    append(append(flagsServer, flagFunctionName), flagsBackend...),
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		registerConfig(cmd)

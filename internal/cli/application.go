@@ -19,7 +19,7 @@ var cmd = &cli.Command{
 func Run() {
 	cmd.Commands = []*cli.Command{
 		gatewayCMD,
-		infoserverCMD,
+		infoServerCMD,
 		runtimeapiCMD,
 		scalerCMD,
 		healthcheckCMD,

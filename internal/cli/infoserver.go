@@ -13,16 +13,12 @@ import (
 	"github.com/zhulik/fid/internal/infoserver"
 )
 
-var infoserverCMD = &cli.Command{
+var infoServerCMD = &cli.Command{
 	Name:     core.ComponentNameInfoServer,
 	Aliases:  []string{"is"},
 	Usage:    "Run info server.",
 	Category: "Service",
-	Flags: []cli.Flag{
-		natsURLFlag,
-		serverPortFlag,
-		logLevelFlag,
-	},
+	Flags:    append(flagsServer, flagsBackend...),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		registerConfig(cmd)
 

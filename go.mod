@@ -3,7 +3,6 @@ module github.com/zhulik/fid
 go 1.24.0
 
 require (
-	github.com/caarlos0/env/v11 v11.3.1
 	github.com/docker/docker v27.5.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/gin-gonic/gin v1.10.0

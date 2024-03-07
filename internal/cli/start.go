@@ -18,8 +18,8 @@ var startCMD = &cli.Command{
 	Usage:    "Start FID.",
 	Category: "User",
 	Flags: []cli.Flag{
-		natsURLFlag,
-		logLevelFlag,
+		flagNatsURL,
+		flagLogLevel,
 		&cli.StringFlag{
 			Name:    "fidfile",
 			Aliases: []string{"f"},
