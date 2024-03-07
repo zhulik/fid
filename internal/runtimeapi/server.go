@@ -164,16 +164,14 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 func (s *Server) ErrorHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
-	subject := s.pubSuber.ErrorSubjectName(function, requestID)
+	subject := s.pubSuber.ErrorSubjectName(s.functionInstance, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
-		"function":  function,
 		"requestID": requestID,
 		"subject":   subject,
 	})
 
-	logger.Debug("Sending error response...")
+	logger.Info("Sending error response...")
 
 	response, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -183,15 +181,8 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: s.pubSuber.ErrorSubjectName(function, requestID),
+		Subject: subject,
 		Data:    response,
-	}
-
-	err = s.functionInstance.executed(c.Request.Context())
-	if err != nil {
-		c.Error(err)
-
-		return
 	}
 
 	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
