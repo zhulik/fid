@@ -2,7 +2,8 @@ services:
   proxy:
     image: fid-proxy
     build:
-      context: ./proxy
+      dockerfile: Dockerfile.proxy
+
     
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -15,13 +16,13 @@ services:
     ports:
       - 80:8080
 
-  function_1:
+  function:
     image: function
     build:
-      context: ./function
+      dockerfile: Dockerfile.function
 
     environment:
-      - WS_URI=ws://proxy:8081/function_1
+      - WS_URI=ws://proxy:8081/function
 
     deploy:
       labels:

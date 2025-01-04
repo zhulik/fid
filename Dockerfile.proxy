@@ -12,13 +12,13 @@ RUN go mod download
 COPY . .
 
 # Build the Go application for a statically linked, optimized (stripped) binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o function
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 cd cmd/proxy && go build -ldflags="-w -s"
 
 # Stage 2: Create a minimal final image
 FROM scratch
 
 # Copy the built binary from the builder stage
-COPY --from=builder /app/function /function
+COPY --from=builder /app/cmd/proxy/proxy /proxy
 
 # Command to run the binary
-ENTRYPOINT ["/function"]
+ENTRYPOINT ["/proxy"]
