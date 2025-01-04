@@ -1,0 +1,24 @@
+# Stage 1: Build the Go application
+FROM golang:1.23 AS builder
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy go.mod and go.sum and download dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the rest of the application source code
+COPY . .
+
+# Build the Go application for a statically linked, optimized (stripped) binary
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o function
+
+# Stage 2: Create a minimal final image
+FROM scratch
+
+# Copy the built binary from the builder stage
+COPY --from=builder /app/function /function
+
+# Command to run the binary
+ENTRYPOINT ["/function"]

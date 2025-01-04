@@ -1,0 +1,31 @@
+services:
+  proxy:
+    image: fid-proxy
+    build:
+      context: ./proxy
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "proxy"
+      replicas: 1
+
+    ports:
+      - 80:8080
+
+  function_1:
+    image: function
+    build:
+      context: ./function
+
+    environment:
+      - WS_URI=ws://proxy:8081/function_1
+
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "function"
+        wtf.zhulik.fid.scale.min: 3
+        wtf.zhulik.fid.scale.max: 10
+      replicas: 1
