@@ -9,7 +9,7 @@ import (
 
 func Register(injector *do.Injector) {
 	do.Provide(injector, func(injector *do.Injector) (*Server, error) {
-		server := NewServer(8080)
+		server := NewServer(injector)
 
 		go func() {
 			err := server.Run()

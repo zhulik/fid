@@ -7,5 +7,7 @@ import (
 func New() *do.Injector {
 	injector := do.New()
 
+	// TODO: inject config
+
 	return injector
 }

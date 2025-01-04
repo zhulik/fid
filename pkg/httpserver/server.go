@@ -4,26 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/samber/do"
 	"net/http"
 
 	"github.com/zhulik/fid/pkg/log"
 )
 
 type Server struct {
-	server http.Server
+	injector *do.Injector
+	server   http.Server
 }
 
 // NewServer creates a new Server instance
-func NewServer(port int) *Server {
+func NewServer(injector *do.Injector) *Server {
 	mux := http.NewServeMux()
 
 	s := &Server{
+		injector: injector,
 		server: http.Server{
-			Addr:    fmt.Sprintf("0.0.0.0:%d", port),
+			Addr:    fmt.Sprintf("0.0.0.0:8080"), // TODO: read port from config
 			Handler: mux,
 		}}
 
-	mux.HandleFunc("/hello", s.HelloHandler)
+	mux.HandleFunc("/hello", LoggingMiddleware(s.HelloHandler))
 
 	return s
 }
