@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/samber/do"
+	"github.com/zhulik/fid/pkg/di"
+	"github.com/zhulik/fid/pkg/httpserver"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,8 +24,16 @@ func wait(shutdown func()) {
 func main() {
 	log.Info("Starting...")
 
+	injector := di.New()
+
+	httpserver.Register(injector)
+
+	do.MustInvoke[*httpserver.Server](injector) // Start the service
+
 	log.Info("Running...")
 	wait(func() {
+		log.Info("Cleaning up...")
+		injector.Shutdown()
 		log.Info("Exit.")
 	})
 }
