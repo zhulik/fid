@@ -10,7 +10,9 @@ import (
 	"github.com/zhulik/fid/pkg/log"
 )
 
-var logger = log.Logger.WithField("component", "httpserver.Server")
+var (
+	logger = log.Logger.WithField("component", "httpserver.Server")
+)
 
 type Server struct {
 	injector *do.Injector
@@ -30,11 +32,11 @@ func NewServer(injector *do.Injector) *Server {
 			Handler: mux,
 		}}
 
-	mux.HandleFunc("/hello", LoggingMiddleware(RecoverMiddleware(s.HelloHandler)))
-	mux.HandleFunc("/pulse", LoggingMiddleware(RecoverMiddleware(s.PulseHandler)))
-	mux.HandleFunc("/panic", LoggingMiddleware(RecoverMiddleware(s.PanicHandler)))
+	mux.HandleFunc("/hello", Middlewares(s.HelloHandler))
+	mux.HandleFunc("/pulse", Middlewares(s.PulseHandler))
+	mux.HandleFunc("/panic", Middlewares(s.PanicHandler))
 
-	mux.HandleFunc("/", LoggingMiddleware(RecoverMiddleware(s.NotFoundHandler)))
+	mux.HandleFunc("/", Middlewares(s.NotFoundHandler))
 
 	return s
 }
