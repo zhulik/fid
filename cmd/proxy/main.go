@@ -1,27 +1,17 @@
 package main
 
 import (
+	"errors"
 	"github.com/samber/do"
 	"github.com/zhulik/fid/pkg/di"
 	"github.com/zhulik/fid/pkg/httpserver"
-	"os"
-	"os/signal"
+	"net/http"
 	"syscall"
 
 	"github.com/zhulik/fid/pkg/log"
 )
 
 var logger = log.Logger.WithField("component", "main")
-
-func wait(shutdown func()) {
-	defer shutdown()
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-sigs
-
-	logger.Info("Received signal: ", sig)
-	logger.Info("Shutting down...")
-}
 
 func main() {
 	logger.Info("Starting...")
@@ -30,12 +20,20 @@ func main() {
 
 	httpserver.Register(injector)
 
-	do.MustInvoke[*httpserver.Server](injector) // Start the service
+	go func() {
+		server := do.MustInvoke[*httpserver.Server](injector) // Start the service
+		err := server.Run()
+
+		if errors.Is(err, http.ErrServerClosed) {
+			return
+		}
+
+		panic(err)
+	}()
 
 	logger.Info("Running...")
-	wait(func() {
-		logger.Info("Cleaning up...")
-		injector.Shutdown()
-		logger.Info("Exit.")
-	})
+	err := injector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
+	if err != nil {
+		panic(err)
+	}
 }

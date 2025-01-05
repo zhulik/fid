@@ -11,14 +11,20 @@ RUN go mod download
 # Copy the rest of the application source code
 COPY . .
 
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+
 # Build the Go application for a statically linked, optimized (stripped) binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 cd cmd/function && go build -ldflags="-w -s"
+RUN  cd cmd/function && go build -ldflags="-w -s"
 
 # Stage 2: Create a minimal final image
 FROM scratch
 
+WORKDIR /app
+
 # Copy the built binary from the builder stage
-COPY --from=builder /app/cmd/function/function /function
+COPY --from=builder /app/cmd/function/function /app/function
 
 # Command to run the binary
-ENTRYPOINT ["/function"]
+CMD ["/app/function"]

@@ -11,14 +11,20 @@ RUN go mod download
 # Copy the rest of the application source code
 COPY . .
 
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+
 # Build the Go application for a statically linked, optimized (stripped) binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 cd cmd/proxy && go build -ldflags="-w -s"
+RUN  cd cmd/proxy && go build -ldflags="-w -s"
 
 # Stage 2: Create a minimal final image
 FROM scratch
 
+WORKDIR /app
+
 # Copy the built binary from the builder stage
-COPY --from=builder /app/cmd/proxy/proxy /proxy
+COPY --from=builder /app/cmd/proxy/proxy /app/proxy
 
 # Command to run the binary
-ENTRYPOINT ["/proxy"]
+CMD ["/app/proxy"]
