@@ -42,8 +42,6 @@ func NewServer(injector *do.Injector) *Server {
 }
 
 func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	err := json.NewEncoder(w).Encode("test")
 
 	if err != nil {
@@ -52,8 +50,6 @@ func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
 	errs := s.injector.HealthCheck()
 
 	for _, err := range errs {
@@ -70,7 +66,6 @@ func (s *Server) PanicHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotFound)
 	err := json.NewEncoder(w).Encode(ErrorBody{
 		Error: "Not found",

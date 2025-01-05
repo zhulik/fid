@@ -9,7 +9,7 @@ import (
 )
 
 var Middlewares = func(next http.HandlerFunc) http.HandlerFunc {
-	return LoggingMiddleware(RecoverMiddleware(next))
+	return LoggingMiddleware(RecoverMiddleware(JSONMiddleware(next)))
 }
 
 type ResponseWriterWrapper struct {
@@ -20,6 +20,14 @@ type ResponseWriterWrapper struct {
 func (rw *ResponseWriterWrapper) WriteHeader(code int) {
 	rw.StatusCode = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+// JSONMiddleware sets Content-Type header to "application/json"
+func JSONMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		next(w, r)
+	}
 }
 
 // LoggingMiddleware logs each request's URI and method
