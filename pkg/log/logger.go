@@ -4,16 +4,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var logger = logrus.New()
+var Logger = logrus.New()
 
-func Info(args ...interface{}) {
-	logger.Info(args...)
-}
-
-func Infof(format string, args ...interface{}) {
-	logger.Infof(format, args...)
-}
-
-func Error(args ...interface{}) {
-	logger.Error(args...)
+func init() {
+	//Logger.SetReportCaller(true)
 }

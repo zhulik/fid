@@ -11,18 +11,20 @@ import (
 	"github.com/zhulik/fid/pkg/log"
 )
 
+var logger = log.Logger.WithField("component", "main")
+
 func wait(shutdown func()) {
 	defer shutdown()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
 
-	log.Info("Received signal: ", sig)
-	log.Info("Shutting down...")
+	logger.Info("Received signal: ", sig)
+	logger.Info("Shutting down...")
 }
 
 func main() {
-	log.Info("Starting...")
+	logger.Info("Starting...")
 
 	injector := di.New()
 
@@ -30,10 +32,10 @@ func main() {
 
 	do.MustInvoke[*httpserver.Server](injector) // Start the service
 
-	log.Info("Running...")
+	logger.Info("Running...")
 	wait(func() {
-		log.Info("Cleaning up...")
+		logger.Info("Cleaning up...")
 		injector.Shutdown()
-		log.Info("Exit.")
+		logger.Info("Exit.")
 	})
 }

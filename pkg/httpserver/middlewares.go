@@ -1,9 +1,10 @@
 package httpserver
 
 import (
-	"github.com/zhulik/fid/pkg/log"
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type ResponseWriterWrapper struct {
@@ -25,7 +26,12 @@ func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 
 		defer func() {
 			total := time.Now().Sub(start)
-			log.Infof("[%v] %s %s [%s]", wrappedWriter.StatusCode, r.Method, r.URL.Path, total)
+			logger.WithFields(logrus.Fields{
+				"method":   r.Method,
+				"path":     r.URL.Path,
+				"duration": total,
+				"status":   wrappedWriter.StatusCode,
+			}).Infof("%s %s", r.Method, r.URL.Path)
 		}()
 
 		next(wrappedWriter, r)

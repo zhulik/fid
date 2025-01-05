@@ -10,6 +10,8 @@ import (
 	"github.com/zhulik/fid/pkg/log"
 )
 
+var logger = log.Logger.WithField("component", "httpserver.Server")
+
 type Server struct {
 	injector *do.Injector
 	server   http.Server
@@ -41,19 +43,19 @@ func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HealthCheck() error {
-	log.Info("Server health check.")
+	logger.Info("Server health check.")
 	return nil
 }
 
 func (s *Server) Shutdown() error {
-	log.Info("Server shutting down...")
-	defer log.Info("Server shot down.")
+	logger.Info("Server shutting down...")
+	defer logger.Info("Server shot down.")
 
 	return s.server.Shutdown(context.Background())
 }
 
 // Run starts the HTTP server
 func (s *Server) Run() error {
-	log.Info("Starting server at: ", s.server.Addr)
+	logger.Info("Starting server at: ", s.server.Addr)
 	return s.server.ListenAndServe()
 }

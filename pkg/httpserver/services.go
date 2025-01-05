@@ -3,7 +3,6 @@ package httpserver
 import (
 	"errors"
 	"github.com/samber/do"
-	"github.com/zhulik/fid/pkg/log"
 	"net/http"
 )
 
@@ -18,7 +17,7 @@ func Register(injector *do.Injector) {
 				return
 			}
 
-			log.Error(err)
+			panic(err)
 		}()
 		return server, nil
 	})

@@ -8,21 +8,23 @@ import (
 	"github.com/zhulik/fid/pkg/log"
 )
 
+var logger = log.Logger.WithField("component", "main")
+
 func wait(shutdown func()) {
 	defer shutdown()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-sigs
 
-	log.Info("Received signal: ", sig)
-	log.Info("Shutting down...")
+	logger.Info("Received signal: ", sig)
+	logger.Info("Shutting down...")
 }
 
 func main() {
-	log.Info("Starting...")
+	logger.Info("Starting...")
 
-	log.Info("Running...")
+	logger.Info("Running...")
 	wait(func() {
-		log.Info("Exit.")
+		logger.Info("Exit.")
 	})
 }
