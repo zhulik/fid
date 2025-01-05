@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"github.com/samber/do"
+	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/di"
 	"github.com/zhulik/fid/pkg/httpserver"
 	"net/http"
@@ -20,20 +21,30 @@ func main() {
 
 	httpserver.Register(injector)
 
+	server := do.MustInvoke[*httpserver.Server](injector)
+
+	for service, err := range injector.HealthCheck() {
+		if err != nil {
+			logger.WithFields(logrus.Fields{
+				"component": service,
+			}).WithError(err).Fatal("Health check failed")
+		}
+	}
+
 	go func() {
-		server := do.MustInvoke[*httpserver.Server](injector) // Start the service
+		// Start the service
 		err := server.Run()
 
 		if errors.Is(err, http.ErrServerClosed) {
 			return
 		}
 
-		panic(err)
+		logger.WithError(err).Fatal("Failed to run server")
 	}()
 
 	logger.Info("Running...")
 	err := injector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	if err != nil {
-		panic(err)
+		logger.WithError(err).Fatal("Failed to shutdown")
 	}
 }

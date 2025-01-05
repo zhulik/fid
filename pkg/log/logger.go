@@ -5,7 +5,3 @@ import (
 )
 
 var Logger = logrus.New()
-
-func init() {
-	//Logger.SetReportCaller(true)
-}

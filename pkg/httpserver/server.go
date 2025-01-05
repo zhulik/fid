@@ -15,6 +15,8 @@ var logger = log.Logger.WithField("component", "httpserver.Server")
 type Server struct {
 	injector *do.Injector
 	server   http.Server
+
+	error error
 }
 
 // NewServer creates a new Server instance
@@ -37,6 +39,7 @@ func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
 	response := "test"
 	w.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(response)
+
 	if err != nil {
 		panic(err)
 	}
@@ -44,7 +47,7 @@ func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HealthCheck() error {
 	logger.Info("Server health check.")
-	return nil
+	return s.error
 }
 
 func (s *Server) Shutdown() error {
@@ -57,5 +60,7 @@ func (s *Server) Shutdown() error {
 // Run starts the HTTP server
 func (s *Server) Run() error {
 	logger.Info("Starting server at: ", s.server.Addr)
-	return s.server.ListenAndServe()
+
+	s.error = s.server.ListenAndServe()
+	return s.error
 }

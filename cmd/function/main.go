@@ -17,6 +17,6 @@ func main() {
 	logger.Info("Running...")
 	err := injector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	if err != nil {
-		panic(err)
+		logger.WithError(err).Fatal("Failed to shutdown")
 	}
 }
