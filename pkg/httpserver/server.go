@@ -7,6 +7,7 @@ import (
 	"github.com/zhulik/fid/pkg/core"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/zhulik/fid/pkg/log"
 )
 
@@ -26,7 +27,8 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
 
-	mux := http.NewServeMux()
+	router := mux.NewRouter()
+	router.Use(Middlewares)
 
 	backend, err := do.Invoke[core.Backend](injector)
 	if err != nil {
@@ -38,26 +40,22 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		backend:  backend,
 		server: http.Server{
 			Addr:    fmt.Sprintf("0.0.0.0:8080"), // TODO: read port from config
-			Handler: mux,
+			Handler: router,
 		},
 	}
 
-	mux.HandleFunc("/info", Middlewares(s.InfoHandler))
+	router.HandleFunc("/info", s.InfoHandler).Methods("GET")
 
-	mux.HandleFunc("/pulse", Middlewares(s.PulseHandler))
+	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET")
+	router.HandleFunc("/invoke/{functionName}", s.InvokeHandler).Methods("POST")
 
-	mux.HandleFunc("/", Middlewares(s.NotFoundHandler))
+	router.HandleFunc("/", s.NotFoundHandler)
 
 	return s, nil
 }
 
 func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
 
 	info, err := s.backend.Info(r.Context())
 	if err != nil {
@@ -73,11 +71,6 @@ func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
 	errs := s.injector.HealthCheck()
 
 	for _, err := range errs {
@@ -85,8 +78,14 @@ func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	}
+}
 
-	w.WriteHeader(http.StatusOK)
+func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	vars := mux.Vars(r)
+	name := vars["functionName"]
+	logger.Info("Invoking ", name, "...")
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {

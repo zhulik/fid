@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var Middlewares = func(next http.HandlerFunc) http.HandlerFunc {
+var Middlewares = func(next http.Handler) http.Handler {
 	return LoggingMiddleware(RecoverMiddleware(JSONMiddleware(next)))
 }
 
@@ -34,16 +34,16 @@ func WriteJSON(doc any, w http.ResponseWriter) error {
 }
 
 // JSONMiddleware sets Content-Type header to "application/json"
-func JSONMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func JSONMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		next(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // LoggingMiddleware logs each request's URI and method
-func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func LoggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		wrappedWriter := &ResponseWriterWrapper{ResponseWriter: w, StatusCode: http.StatusOK} // Default to 200
 
 		start := time.Now()
@@ -58,13 +58,13 @@ func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}).Infof("%s %s", r.Method, r.URL.Path)
 		}()
 
-		next(wrappedWriter, r)
-	}
+		next.ServeHTTP(wrappedWriter, r)
+	})
 }
 
 // RecoverMiddleware recovers from panics
-func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func RecoverMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
 				logger.Error("recovered from panic: ", err)
@@ -78,6 +78,6 @@ func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}()
 
-		next(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
