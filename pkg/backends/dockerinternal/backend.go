@@ -2,7 +2,6 @@ package dockerinternal
 
 import (
 	"context"
-	"errors"
 	"github.com/docker/docker/client"
 	"github.com/zhulik/fid/pkg/core"
 
@@ -11,8 +10,6 @@ import (
 
 var (
 	logger = log.Logger.WithField("component", "backends.dockerinternal.Backend")
-
-	ErrFunctionNotFound = errors.New("function not found")
 )
 
 type Backend struct {
@@ -42,7 +39,7 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 }
 
 func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
-	return nil, ErrFunctionNotFound
+	return nil, core.ErrFunctionNotFound
 }
 
 func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {

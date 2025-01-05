@@ -2,12 +2,15 @@ package httpserver
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/samber/do"
-	"github.com/zhulik/fid/pkg/core"
 	"net/http"
 
+	"github.com/samber/do"
+
 	"github.com/gorilla/mux"
+
+	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/log"
 )
 
@@ -44,10 +47,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		},
 	}
 
-	router.HandleFunc("/info", s.InfoHandler).Methods("GET")
-
-	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET")
-	router.HandleFunc("/invoke/{functionName}", s.InvokeHandler).Methods("POST")
+	router.HandleFunc("/info", s.InfoHandler).Methods("GET").Name("info")
+	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET").Name("pulse")
+	router.HandleFunc("/invoke/{functionName}", s.InvokeHandler).Methods("POST").Name("invoke")
 
 	router.HandleFunc("/", s.NotFoundHandler)
 
@@ -85,7 +87,24 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	name := vars["functionName"]
+	function, err := s.backend.Function(r.Context(), name)
+	if errors.Is(err, core.ErrFunctionNotFound) {
+		err := WriteJSON(ErrorBody{Error: "Not found"}, w)
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
 	logger.Info("Invoking ", name, "...")
+	response, err := function.Invoke(r.Context(), r.Body)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = w.Write(response)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {

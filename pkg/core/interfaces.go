@@ -1,6 +1,8 @@
 package core
 
 import (
+	"io"
+
 	"context"
 	"github.com/samber/do"
 )
@@ -18,5 +20,5 @@ type Backend interface {
 type Function interface {
 	Name() string
 
-	Invoke([]byte) ([]byte, error)
+	Invoke(ctx context.Context, r io.Reader) ([]byte, error)
 }
