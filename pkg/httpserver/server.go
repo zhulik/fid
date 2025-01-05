@@ -23,6 +23,9 @@ type Server struct {
 
 // NewServer creates a new Server instance
 func NewServer(injector *do.Injector) *Server {
+	logger.Info("Creating new server...")
+	defer logger.Info("Server created.")
+
 	mux := http.NewServeMux()
 
 	s := &Server{
