@@ -54,6 +54,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	info, err := s.backend.Info(r.Context())
 	if err != nil {
 		panic(err)
@@ -67,6 +72,11 @@ func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
 	errs := s.injector.HealthCheck()
 
