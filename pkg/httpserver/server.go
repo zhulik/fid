@@ -30,18 +30,18 @@ func NewServer(injector *do.Injector) *Server {
 			Handler: mux,
 		}}
 
-	mux.HandleFunc("/hello", LoggingMiddleware(s.HelloHandler))
+	mux.HandleFunc("/hello", LoggingMiddleware(RecoverMiddleware(s.HelloHandler)))
 
 	return s
 }
 
 func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
-	response := "test"
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(response)
+
+	err := json.NewEncoder(w).Encode("test")
 
 	if err != nil {
-		panic(err)
+		logger.WithError(err).Error("failed to encode response")
 	}
 }
 

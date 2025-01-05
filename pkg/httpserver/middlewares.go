@@ -37,3 +37,17 @@ func LoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		next(wrappedWriter, r)
 	}
 }
+
+// RecoverMiddleware recovers from panics
+func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("recovered from panic: ", err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}()
+
+		next(w, r)
+	}
+}
