@@ -52,6 +52,8 @@ func NewServer(injector *do.Injector) (*Server, error) {
 }
 
 func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	info, err := s.backend.Info(r.Context())
 	if err != nil {
 		panic(err)
@@ -64,6 +66,8 @@ func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	errs := s.injector.HealthCheck()
 
 	for _, err := range errs {
@@ -76,6 +80,8 @@ func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
 	w.WriteHeader(http.StatusNotFound)
 	err := WriteJSON(ErrorBody{
 		Error: "Not found",

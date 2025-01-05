@@ -12,6 +12,7 @@ import (
 	"github.com/samber/do"
 
 	"github.com/zhulik/fid/pkg/backends/dockerexternal"
+	"github.com/zhulik/fid/pkg/backends/dockerinternal"
 )
 
 var (
@@ -48,6 +49,6 @@ func Register(injector *do.Injector) {
 			return nil, err
 		}
 
-		return nil, ErrCannotDetectBackend // TODO: internal docker backend
+		return dockerinternal.New(cli), nil
 	})
 }
