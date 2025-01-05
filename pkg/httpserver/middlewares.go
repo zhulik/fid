@@ -22,6 +22,17 @@ func (rw *ResponseWriterWrapper) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+func WriteJSON(doc any, w http.ResponseWriter) error {
+	jsonErr, err := json.MarshalIndent(doc, "", " ")
+
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(jsonErr)
+	return err
+}
+
 // JSONMiddleware sets Content-Type header to "application/json"
 func JSONMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -58,11 +69,11 @@ func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			if err := recover(); err != nil {
 				logger.Error("recovered from panic: ", err)
 				w.WriteHeader(http.StatusInternalServerError)
-				err := json.NewEncoder(w).Encode(ErrorBody{
+				err := WriteJSON(ErrorBody{
 					Error: "Internal Server Error",
-				})
+				}, w)
 				if err != nil {
-					logger.WithError(err).Error("failed to encode response")
+					logger.WithError(err).Error("cannot write response")
 				}
 			}
 		}()

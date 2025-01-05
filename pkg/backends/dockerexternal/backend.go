@@ -28,16 +28,16 @@ func New(docker *client.Client) core.Backend {
 	}
 }
 
-func (b Backend) Info(ctx context.Context) (map[string]string, error) {
+func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	info, err := b.docker.Info(context.Background())
 
 	if err != nil {
 		return nil, err
 	}
 
-	return map[string]string{
-		"name": "Docker external backend",
-		"id":   info.ID,
+	return map[string]any{
+		"backend":      "Docker external backend",
+		"dockerEngine": info,
 	}, nil
 }
 

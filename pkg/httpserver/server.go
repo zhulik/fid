@@ -2,9 +2,9 @@ package httpserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/samber/do"
+	"github.com/zhulik/fid/pkg/core"
 	"net/http"
 
 	"github.com/zhulik/fid/pkg/log"
@@ -16,39 +16,50 @@ var (
 
 type Server struct {
 	injector *do.Injector
+	backend  core.Backend
 	server   http.Server
-
-	error error
+	error    error
 }
 
 // NewServer creates a new Server instance
-func NewServer(injector *do.Injector) *Server {
+func NewServer(injector *do.Injector) (*Server, error) {
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
 
 	mux := http.NewServeMux()
 
+	backend, err := do.Invoke[core.Backend](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
 		injector: injector,
+		backend:  backend,
 		server: http.Server{
 			Addr:    fmt.Sprintf("0.0.0.0:8080"), // TODO: read port from config
 			Handler: mux,
-		}}
+		},
+	}
 
-	mux.HandleFunc("/hello", Middlewares(s.HelloHandler))
+	mux.HandleFunc("/info", Middlewares(s.InfoHandler))
+
 	mux.HandleFunc("/pulse", Middlewares(s.PulseHandler))
-	mux.HandleFunc("/panic", Middlewares(s.PanicHandler))
 
 	mux.HandleFunc("/", Middlewares(s.NotFoundHandler))
 
-	return s
+	return s, nil
 }
 
-func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
-	err := json.NewEncoder(w).Encode("test")
-
+func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
+	info, err := s.backend.Info(r.Context())
 	if err != nil {
-		logger.WithError(err).Error("failed to encode response")
+		panic(err)
+	}
+
+	err = WriteJSON(info, w)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -64,17 +75,13 @@ func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Server) PanicHandler(w http.ResponseWriter, r *http.Request) {
-	panic("test panic")
-}
-
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	err := json.NewEncoder(w).Encode(ErrorBody{
+	err := WriteJSON(ErrorBody{
 		Error: "Not found",
-	})
+	}, w)
 	if err != nil {
-		logger.WithError(err).Error("failed to encode response")
+		panic(err)
 	}
 }
 

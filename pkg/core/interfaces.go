@@ -9,7 +9,7 @@ type Backend interface {
 	do.Healthcheckable
 	do.Shutdownable
 
-	Info(ctx context.Context) (map[string]string, error)
+	Info(ctx context.Context) (map[string]any, error)
 
 	Function(ctx context.Context, string string) (Function, error)
 	Functions(ctx context.Context) ([]Function, error)
