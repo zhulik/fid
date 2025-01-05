@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -45,6 +46,12 @@ func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			if err := recover(); err != nil {
 				logger.Error("recovered from panic: ", err)
 				w.WriteHeader(http.StatusInternalServerError)
+				err := json.NewEncoder(w).Encode(ErrorBody{
+					Error: "Internal Server Error",
+				})
+				if err != nil {
+					logger.WithError(err).Error("failed to encode response")
+				}
 			}
 		}()
 

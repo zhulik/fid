@@ -31,6 +31,10 @@ func NewServer(injector *do.Injector) *Server {
 		}}
 
 	mux.HandleFunc("/hello", LoggingMiddleware(RecoverMiddleware(s.HelloHandler)))
+	mux.HandleFunc("/pulse", LoggingMiddleware(RecoverMiddleware(s.PulseHandler)))
+	mux.HandleFunc("/panic", LoggingMiddleware(RecoverMiddleware(s.PanicHandler)))
+
+	mux.HandleFunc("/", LoggingMiddleware(RecoverMiddleware(s.NotFoundHandler)))
 
 	return s
 }
@@ -40,6 +44,35 @@ func (s *Server) HelloHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewEncoder(w).Encode("test")
 
+	if err != nil {
+		logger.WithError(err).Error("failed to encode response")
+	}
+}
+
+func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	errs := s.injector.HealthCheck()
+
+	for _, err := range errs {
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) PanicHandler(w http.ResponseWriter, r *http.Request) {
+	panic("test panic")
+}
+
+func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+	err := json.NewEncoder(w).Encode(ErrorBody{
+		Error: "Not found",
+	})
 	if err != nil {
 		logger.WithError(err).Error("failed to encode response")
 	}
