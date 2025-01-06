@@ -33,7 +33,7 @@ func Register(injector *do.Injector) {
 			if errdefs.IsNotFound(err) {
 				// We can connect to the Docker daemon, but current machine's hostname is not a container ID.
 				// Using external docker backend
-				return dockerexternal.New(cli), nil
+				return dockerexternal.New(cli, injector)
 			}
 
 			if client.IsErrConnectionFailed(err) {
@@ -44,6 +44,6 @@ func Register(injector *do.Injector) {
 			return nil, err
 		}
 
-		return dockerinternal.New(cli), nil
+		return dockerinternal.New(cli, injector)
 	})
 }

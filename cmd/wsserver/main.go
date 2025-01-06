@@ -10,16 +10,14 @@ import (
 	"github.com/zhulik/fid/pkg/backends"
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/di"
-	"github.com/zhulik/fid/pkg/log"
 	"github.com/zhulik/fid/pkg/wsserver"
 )
 
-var logger = log.Logger.WithField("component", "main")
-
 func main() {
-	logger.Info("Starting...")
-
 	injector := di.New()
+	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "main")
+
+	logger.Info("Starting...")
 
 	wsserver.Register(injector)
 	backends.Register(injector)

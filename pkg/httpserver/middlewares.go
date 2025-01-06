@@ -48,7 +48,7 @@ func WriteJSON(doc any, w http.ResponseWriter, status int) error {
 }
 
 // JSONMiddleware sets Content-Type header to "application/json".
-func JSONMiddleware(_ *logrus.Entry) mux.MiddlewareFunc {
+func JSONMiddleware(_ logrus.FieldLogger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -58,7 +58,7 @@ func JSONMiddleware(_ *logrus.Entry) mux.MiddlewareFunc {
 }
 
 // LoggingMiddleware logs each request's URI and method.
-func LoggingMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
+func LoggingMiddleware(logger logrus.FieldLogger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			wrappedWriter := &ResponseWriterWrapper{ResponseWriter: w, StatusCode: http.StatusOK} // Default to 200
@@ -81,7 +81,7 @@ func LoggingMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
 }
 
 // RecoverMiddleware recovers from panics.
-func RecoverMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
+func RecoverMiddleware(logger logrus.FieldLogger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {

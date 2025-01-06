@@ -3,18 +3,18 @@ package wsserver
 import (
 	"context"
 	"fmt"
+
 	"net/http"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
+
 	"github.com/samber/do"
+
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/httpserver"
-	"github.com/zhulik/fid/pkg/log"
-)
-
-var (
-	logger = log.Logger.WithField("component", "wsserver.Server")
 )
 
 type Server struct {
@@ -22,10 +22,19 @@ type Server struct {
 	backend  core.ContainerBackend
 	server   http.Server
 	error    error
+
+	logger logrus.FieldLogger
 }
 
 // NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
+	logger, err := do.Invoke[logrus.FieldLogger](injector)
+	if err != nil {
+		return nil, err
+	}
+
+	logger = logger.WithField("component", "wsserver.Server")
+
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
 
@@ -52,6 +61,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
 			Handler:           router,
 		},
+		logger: logger,
 	}
 
 	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
@@ -89,7 +99,7 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-	logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
+	s.logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
 	// Upgrade the HTTP connection to a WebSocket connection
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(_ *http.Request) bool { return true },
@@ -100,9 +110,9 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
+	s.logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
 
-	wsConn := NewWebsocketConnection(functionName, conn)
+	wsConn := NewWebsocketConnection(functionName, conn, s.logger)
 	// TODO: handle error?
 	go wsConn.Handle() //nolint:errcheck
 }
@@ -119,21 +129,21 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HealthCheck() error {
-	logger.Info("Server health check.")
+	s.logger.Info("Server health check.")
 
 	return s.error
 }
 
 func (s *Server) Shutdown() error {
-	logger.Info("Server shutting down...")
-	defer logger.Info("Server shot down.")
+	s.logger.Info("Server shutting down...")
+	defer s.logger.Info("Server shot down.")
 
 	return s.server.Shutdown(context.Background())
 }
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	logger.Info("Starting server at: ", s.server.Addr)
+	s.logger.Info("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
 

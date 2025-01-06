@@ -4,23 +4,32 @@ import (
 	"context"
 
 	"github.com/docker/docker/client"
+	"github.com/samber/do"
+	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/core"
-	"github.com/zhulik/fid/pkg/log"
 )
-
-var logger = log.Logger.WithField("component", "backends.dockerinternal.ContainerBackend")
 
 type Backend struct {
 	docker *client.Client
+
+	logger logrus.FieldLogger
 }
 
-func New(docker *client.Client) *Backend {
+func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
+	logger, err := do.Invoke[logrus.FieldLogger](injector)
+	if err != nil {
+		return nil, err
+	}
+
+	logger = logger.WithField("component", "backends.dockerinternal.Backend")
+
 	logger.Info("Creating new backend...")
 	defer logger.Info("ContainerBackend created.")
 
 	return &Backend{
 		docker: docker,
-	}
+		logger: logger,
+	}, nil
 }
 
 func (b Backend) Info(ctx context.Context) (map[string]any, error) {
@@ -44,7 +53,7 @@ func (b Backend) Functions(_ context.Context) ([]core.Function, error) {
 }
 
 func (b Backend) HealthCheck() error {
-	logger.Debug("ContainerBackend health check.")
+	b.logger.Debug("ContainerBackend health check.")
 
 	_, err := b.docker.Info(context.Background())
 
@@ -52,8 +61,8 @@ func (b Backend) HealthCheck() error {
 }
 
 func (b Backend) Shutdown() error {
-	logger.Info("ContainerBackend shutting down...")
-	defer logger.Info("ContainerBackend shot down.")
+	b.logger.Info("ContainerBackend shutting down...")
+	defer b.logger.Info("ContainerBackend shot down.")
 
 	return b.docker.Close()
 }

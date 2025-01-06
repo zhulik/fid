@@ -6,24 +6,32 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gorilla/mux"
 	"github.com/samber/do"
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/httpserver"
-	"github.com/zhulik/fid/pkg/log"
 )
-
-var logger = log.Logger.WithField("component", "proxyserver.Server")
 
 type Server struct {
 	injector *do.Injector
 	backend  core.ContainerBackend
 	server   http.Server
 	error    error
+
+	logger logrus.FieldLogger
 }
 
 // NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
+	logger, err := do.Invoke[logrus.FieldLogger](injector)
+	if err != nil {
+		return nil, err
+	}
+
+	logger = logger.WithField("component", "proxyserver.Server")
+
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
 
@@ -50,6 +58,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
 			Handler:           router,
 		},
+		logger: logger,
 	}
 
 	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
@@ -89,7 +98,7 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.Info("Invoking ", functionName, "...")
+	s.logger.Info("Invoking ", functionName, "...")
 
 	response, err := function.Invoke(r.Context(), r.Body)
 	if err != nil {
@@ -114,21 +123,21 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HealthCheck() error {
-	logger.Info("Server health check.")
+	s.logger.Info("Server health check.")
 
 	return s.error
 }
 
 func (s *Server) Shutdown() error {
-	logger.Info("Server shutting down...")
-	defer logger.Info("Server shot down.")
+	s.logger.Info("Server shutting down...")
+	defer s.logger.Info("Server shot down.")
 
 	return s.server.Shutdown(context.Background())
 }
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	logger.Info("Starting server at: ", s.server.Addr)
+	s.logger.Info("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
 

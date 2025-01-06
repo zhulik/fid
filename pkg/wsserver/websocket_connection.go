@@ -3,12 +3,9 @@ package wsserver
 import (
 	"time"
 
-	"github.com/gorilla/websocket"
-	"github.com/zhulik/fid/pkg/log"
-)
+	"github.com/sirupsen/logrus"
 
-var (
-	wsLogger = log.Logger.WithField("component", "wsserver.WebsocketConnection")
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -19,12 +16,15 @@ const (
 type WebSocketConnection struct {
 	conn *websocket.Conn
 	name string
+
+	logger logrus.FieldLogger
 }
 
-func NewWebsocketConnection(name string, conn *websocket.Conn) *WebSocketConnection {
+func NewWebsocketConnection(name string, conn *websocket.Conn, logger logrus.FieldLogger) *WebSocketConnection {
 	return &WebSocketConnection{
-		conn: conn,
-		name: name,
+		conn:   conn,
+		name:   name,
+		logger: logger.WithField("component", "websocket-connection"),
 	}
 }
 
@@ -45,8 +45,8 @@ func (w *WebSocketConnection) WriteRead(payload string) (string, error) {
 func (w *WebSocketConnection) Handle() error {
 	defer w.Close()
 
-	wsLogger.Info("Function '", w.name, "' handler is being handled...")
-	defer wsLogger.Info("Function '", w.name, "' handler is not being handled anymore.")
+	w.logger.Info("Function '", w.name, "' handler is being handled...")
+	defer w.logger.Info("Function '", w.name, "' handler is not being handled anymore.")
 
 	w.ping()
 
@@ -60,15 +60,15 @@ func (w *WebSocketConnection) Close() error {
 func (w *WebSocketConnection) ping() {
 	for {
 		time.Sleep(PingInterval)
-		wsLogger.Debug("Pinging function '", w.name, "'...")
+		w.logger.Debug("Pinging function '", w.name, "'...")
 
 		err := w.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(PingTimeout))
 		if err != nil {
 			// TODO: exit silently when already disconnected.
-			wsLogger.Debug("Function '", w.name, "' ping error, closing connection...")
+			w.logger.Debug("Function '", w.name, "' ping error, closing connection...")
 			w.Close()
 		}
 
-		wsLogger.Debug("Pong received from function '", w.name, "'...")
+		w.logger.Debug("Pong received from function '", w.name, "'...")
 	}
 }
