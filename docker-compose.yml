@@ -2,7 +2,9 @@ services:
   proxy:
     image: fid-proxy
     build:
-      dockerfile: Dockerfile.proxy
+      context: .
+      args:
+        COMPONENT: "proxy"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
@@ -15,7 +17,9 @@ services:
   wsserver:
     image: fid-wsserver
     build:
-      dockerfile: Dockerfile.wsserver
+      context: .
+      args:
+        COMPONENT: "wsserver"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
@@ -29,7 +33,10 @@ services:
   infoserver:
     image: fid-infoserver
     build:
-      dockerfile: Dockerfile.infoserver
+      context: .
+      args:
+        COMPONENT: "infoserver"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
@@ -43,7 +50,9 @@ services:
   function:
     image: function
     build:
-      dockerfile: Dockerfile.function
+      context: .
+      args:
+        COMPONENT: "function"
 
     environment:
       - WS_URI=ws://wsserver:8081/function
