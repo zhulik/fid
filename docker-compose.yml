@@ -1,4 +1,13 @@
 services:
+  nats-server:
+    image: nats:latest
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - /tmp/nats/:/data
+    command: [ "-js" ]
+
   proxy:
     image: fid-proxy
     build:
@@ -54,7 +63,7 @@ services:
         COMPONENT: "function"
 
     environment:
-      - WS_URI=ws://wsserver/function
+      - WS_URI=ws://wsserver/ws/function
 
     deploy:
       labels:
@@ -66,3 +75,7 @@ services:
     depends_on:
       - wsserver
       - proxy
+
+
+volumes:
+  nats_data:

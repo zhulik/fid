@@ -16,9 +16,14 @@ ENV GOARCH=amd64
 RUN go build -ldflags="-w -s" -o app
 
 
-FROM scratch
+FROM alpine
+
+RUN apk add --no-cache curl
+
 COPY --from=builder /app/app /
 
 ENV HTTP_PORT=80
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=2s CMD curl --fail http://127.0.0.1/pulse || exit 1
 
 CMD ["/app"]
