@@ -137,7 +137,12 @@ func (s *Server) Shutdown() error {
 	s.logger.Debug("Server shutting down...")
 	defer s.logger.Debug("Server shot down.")
 
-	return s.server.Shutdown(context.Background())
+	err := s.server.Shutdown(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to shut down the https server: %w", err)
+	}
+
+	return nil
 }
 
 // Run starts the HTTP server.

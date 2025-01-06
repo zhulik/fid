@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -30,7 +31,7 @@ func (rw *ResponseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return nil, nil, ErrNotImplementsHijacker
 	}
 
-	return hijacker.Hijack()
+	return hijacker.Hijack() //nolint:wrapcheck
 }
 
 func (rw *ResponseWriterWrapper) WriteHeader(code int) {
@@ -41,13 +42,17 @@ func (rw *ResponseWriterWrapper) WriteHeader(code int) {
 func WriteJSON(doc any, w http.ResponseWriter, status int) error {
 	jsonErr, err := json.MarshalIndent(doc, "", " ")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed marshal json: %w", err)
 	}
 
 	w.WriteHeader(status)
-	_, err = w.Write(jsonErr)
 
-	return err
+	_, err = w.Write(jsonErr)
+	if err != nil {
+		return fmt.Errorf("failed to write response: %w", err)
+	}
+
+	return nil
 }
 
 // JSONMiddleware sets Content-Type header to "application/json".

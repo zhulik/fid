@@ -12,9 +12,6 @@ linters:
     - godox # Does not make any sense
     - depguard # Too boring to configure and maintain
 
-    # TODO:
-    - wrapcheck
-
 linters-settings:
   varnamelen:
     ignore-decls:

@@ -57,12 +57,12 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 
 	natsClient, err := nats.Connect(config.NatsURL()) // TODO: from config
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to NATS client: %w", err)
 	}
 
 	jetStream, err := jetstream.New(natsClient)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to build JetStream client: %w", err)
 	}
 
 	publisher := &Publisher{
@@ -92,7 +92,7 @@ func (p Publisher) HealthCheck() error {
 		return fmt.Errorf("healthcheck failed: %w", err)
 	}
 
-	return err
+	return nil
 }
 
 func (p Publisher) Shutdown() error {
@@ -106,12 +106,15 @@ func (p Publisher) Shutdown() error {
 func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 	payload, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
 	_, err = p.jetStream.Publish(ctx, subject, payload)
+	if err != nil {
+		return fmt.Errorf("failed to publish: %w", err)
+	}
 
-	return err
+	return nil
 }
 
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
@@ -119,12 +122,12 @@ func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstre
 		_, err := p.jetStream.CreateStream(ctx, stream)
 		if err != nil {
 			if !errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
-				return err
+				return fmt.Errorf("failed to create stream: %w", err)
 			}
 		} else {
 			_, err = p.jetStream.UpdateStream(ctx, stream)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to update stream: %w", err)
 			}
 		}
 	}

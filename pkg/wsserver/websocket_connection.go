@@ -1,6 +1,7 @@
 package wsserver
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -30,12 +31,12 @@ func NewWebsocketConnection(name string, conn *websocket.Conn, logger logrus.Fie
 func (w *WebSocketConnection) WriteRead(payload string) (string, error) {
 	err := w.conn.WriteMessage(websocket.TextMessage, []byte(payload))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to write WS message: %w", err)
 	}
 
 	_, message, err := w.conn.ReadMessage()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read WS message: %w", err)
 	}
 
 	return string(message), nil
@@ -53,7 +54,12 @@ func (w *WebSocketConnection) Handle() error {
 }
 
 func (w *WebSocketConnection) Close() error {
-	return w.conn.Close()
+	err := w.conn.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close WS connection: %w", err)
+	}
+
+	return nil
 }
 
 func (w *WebSocketConnection) ping() {

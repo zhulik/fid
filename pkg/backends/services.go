@@ -3,6 +3,7 @@ package backends
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/docker/docker/client"
@@ -20,12 +21,12 @@ func Register(injector *do.Injector) {
 	do.Provide(injector, func(_ *do.Injector) (core.ContainerBackend, error) {
 		hostname, err := os.Hostname()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get hostname: %w", err)
 		}
 
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to build docker client: %w", err)
 		}
 
 		_, err = cli.ContainerInspect(context.Background(), hostname)
@@ -41,7 +42,7 @@ func Register(injector *do.Injector) {
 				return nil, ErrCannotDetectBackend
 			}
 
-			return nil, err
+			return nil, fmt.Errorf("failed inspect docker container: %w", err)
 		}
 
 		return dockerinternal.New(cli, injector)

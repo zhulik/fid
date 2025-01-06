@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/caarlos0/env/v11"
 	"github.com/samber/do"
 	"github.com/zhulik/fid/pkg/core"
@@ -12,7 +14,7 @@ func Register(injector *do.Injector) {
 		var cfg Config
 
 		if err := env.Parse(&cfg); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to parse config from ENV: %w", err)
 		}
 
 		return cfg, nil
