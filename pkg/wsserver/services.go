@@ -1,4 +1,4 @@
-package httpserver
+package wsserver
 
 import (
 	"github.com/samber/do"
