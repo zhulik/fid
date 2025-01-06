@@ -3,3 +3,5 @@
 .dockerignore
 Dockerfile
 docker-compose.yml
+
+bin/

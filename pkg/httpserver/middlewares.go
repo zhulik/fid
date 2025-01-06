@@ -3,13 +3,18 @@ package httpserver
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/gorilla/mux"
+	"errors"
 	"net"
 	"net/http"
 	"runtime/debug"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	ReadHeaderTimeout = 5 * time.Second
 )
 
 type ResponseWriterWrapper struct {
@@ -18,8 +23,11 @@ type ResponseWriterWrapper struct {
 }
 
 func (rw *ResponseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	// TODO: proper check
-	return rw.ResponseWriter.(http.Hijacker).Hijack()
+	hijacker, ok := rw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("responseWriter does not implement http.Hijacker")
+	}
+	return hijacker.Hijack()
 }
 
 func (rw *ResponseWriterWrapper) WriteHeader(code int) {
@@ -29,18 +37,18 @@ func (rw *ResponseWriterWrapper) WriteHeader(code int) {
 
 func WriteJSON(doc any, w http.ResponseWriter, status int) error {
 	jsonErr, err := json.MarshalIndent(doc, "", " ")
-
 	if err != nil {
 		return err
 	}
 
 	w.WriteHeader(status)
 	_, err = w.Write(jsonErr)
+
 	return err
 }
 
-// JSONMiddleware sets Content-Type header to "application/json"
-func JSONMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
+// JSONMiddleware sets Content-Type header to "application/json".
+func JSONMiddleware(_ *logrus.Entry) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -49,7 +57,7 @@ func JSONMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
 	}
 }
 
-// LoggingMiddleware logs each request's URI and method
+// LoggingMiddleware logs each request's URI and method.
 func LoggingMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +66,7 @@ func LoggingMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
 			start := time.Now()
 
 			defer func() {
-				total := time.Now().Sub(start)
+				total := time.Since(start)
 				logger.WithFields(logrus.Fields{
 					"method":   r.Method,
 					"path":     r.URL.Path,
@@ -72,7 +80,7 @@ func LoggingMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
 	}
 }
 
-// RecoverMiddleware recovers from panics
+// RecoverMiddleware recovers from panics.
 func RecoverMiddleware(logger *logrus.Entry) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

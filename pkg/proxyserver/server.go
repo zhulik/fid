@@ -4,19 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/zhulik/fid/pkg/httpserver"
 	"net/http"
 
-	"github.com/samber/do"
-
 	"github.com/gorilla/mux"
+	"github.com/samber/do"
 	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/pkg/httpserver"
 	"github.com/zhulik/fid/pkg/log"
 )
 
-var (
-	logger = log.Logger.WithField("component", "proxyserver.Server")
-)
+var logger = log.Logger.WithField("component", "proxyserver.Server")
 
 type Server struct {
 	injector *do.Injector
@@ -25,7 +22,7 @@ type Server struct {
 	error    error
 }
 
-// NewServer creates a new Server instance
+// NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
@@ -45,25 +42,26 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	s := &Server{
+	server := &Server{
 		injector: injector,
 		backend:  backend,
 		server: http.Server{
-			Addr:    fmt.Sprintf(fmt.Sprintf("0.0.0.0:%d", config.ProxyServerPort())),
-			Handler: router,
+			Addr:              fmt.Sprintf("0.0.0.0:%d", config.ProxyServerPort()),
+			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
+			Handler:           router,
 		},
 	}
 
-	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET").Name("pulse")
+	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
 
-	router.HandleFunc("/invoke/{functionName}", s.InvokeHandler).Methods("POST").Name("invoke")
+	router.HandleFunc("/invoke/{functionName}", server.InvokeHandler).Methods("POST").Name("invoke")
 
-	router.HandleFunc("/", s.NotFoundHandler)
+	router.HandleFunc("/", server.NotFoundHandler)
 
-	return s, nil
+	return server, nil
 }
 
-func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PulseHandler(_ http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	errs := s.injector.HealthCheck()
@@ -80,15 +78,19 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	functionName := vars["functionName"]
+
 	function, err := s.backend.Function(r.Context(), functionName)
 	if errors.Is(err, core.ErrFunctionNotFound) {
 		err := httpserver.WriteJSON(httpserver.ErrorBody{Error: "Not found"}, w, http.StatusNotFound)
 		if err != nil {
 			panic(err)
 		}
+
 		return
 	}
+
 	logger.Info("Invoking ", functionName, "...")
+
 	response, err := function.Invoke(r.Context(), r.Body)
 	if err != nil {
 		panic(err)
@@ -113,6 +115,7 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HealthCheck() error {
 	logger.Info("Server health check.")
+
 	return s.error
 }
 
@@ -123,10 +126,11 @@ func (s *Server) Shutdown() error {
 	return s.server.Shutdown(context.Background())
 }
 
-// Run starts the HTTP server
+// Run starts the HTTP server.
 func (s *Server) Run() error {
 	logger.Info("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
+
 	return s.error
 }

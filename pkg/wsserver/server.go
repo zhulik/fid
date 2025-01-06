@@ -3,24 +3,18 @@ package wsserver
 import (
 	"context"
 	"fmt"
-	"github.com/zhulik/fid/pkg/httpserver"
 	"net/http"
-
-	"github.com/samber/do"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
-
+	"github.com/samber/do"
 	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/pkg/httpserver"
 	"github.com/zhulik/fid/pkg/log"
 )
 
 var (
 	logger = log.Logger.WithField("component", "wsserver.Server")
-
-	upgrader = websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true },
-	}
 )
 
 type Server struct {
@@ -30,7 +24,7 @@ type Server struct {
 	error    error
 }
 
-// NewServer creates a new Server instance
+// NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
@@ -50,25 +44,26 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	s := &Server{
+	server := &Server{
 		injector: injector,
 		backend:  backend,
 		server: http.Server{
-			Addr:    fmt.Sprintf(fmt.Sprintf("0.0.0.0:%d", config.WSServerPort())),
-			Handler: router,
+			Addr:              fmt.Sprintf("0.0.0.0:%d", config.WSServerPort()),
+			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
+			Handler:           router,
 		},
 	}
 
-	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET").Name("pulse")
+	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
 	// TODO: authentication
-	router.HandleFunc("/ws/{functionName}", s.WebsocketHandler).Methods("GET").Name("ws")
+	router.HandleFunc("/ws/{functionName}", server.WebsocketHandler).Methods("GET").Name("ws")
 
-	router.HandleFunc("/", s.NotFoundHandler)
+	router.HandleFunc("/", server.NotFoundHandler)
 
-	return s, nil
+	return server, nil
 }
 
-func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PulseHandler(_ http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	errs := s.injector.HealthCheck()
@@ -85,8 +80,8 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	functionName := vars["functionName"]
-	//_, err := s.backend.Function(r.Context(), functionName)
-	//if errors.Is(err, core.ErrFunctionNotFound) {
+	// _, err := s.backend.Function(r.Context(), functionName)
+	// if errors.Is(err, core.ErrFunctionNotFound) {
 	//	err := WriteJSON(ErrorBody{Error: "Not found"}, w)
 	//	if err != nil {
 	//		panic(err)
@@ -96,6 +91,10 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
 	// Upgrade the HTTP connection to a WebSocket connection
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(_ *http.Request) bool { return true },
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		panic(err)
@@ -105,7 +104,7 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	wsConn := NewWebsocketConnection(functionName, conn)
 	// TODO: handle error?
-	go wsConn.Handle()
+	go wsConn.Handle() //nolint:errcheck
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +120,7 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HealthCheck() error {
 	logger.Info("Server health check.")
+
 	return s.error
 }
 
@@ -131,10 +131,11 @@ func (s *Server) Shutdown() error {
 	return s.server.Shutdown(context.Background())
 }
 
-// Run starts the HTTP server
+// Run starts the HTTP server.
 func (s *Server) Run() error {
 	logger.Info("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
+
 	return s.error
 }

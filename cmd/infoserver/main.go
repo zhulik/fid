@@ -2,15 +2,15 @@ package main
 
 import (
 	"errors"
+	"net/http"
+	"syscall"
+
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/backends"
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/di"
 	"github.com/zhulik/fid/pkg/infoserver"
-	"net/http"
-	"syscall"
-
 	"github.com/zhulik/fid/pkg/log"
 )
 
@@ -48,6 +48,7 @@ func main() {
 	}()
 
 	logger.Info("Running...")
+
 	err := injector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to shutdown")

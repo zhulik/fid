@@ -2,32 +2,29 @@ package dockerinternal
 
 import (
 	"context"
+
 	"github.com/docker/docker/client"
 	"github.com/zhulik/fid/pkg/core"
-
 	"github.com/zhulik/fid/pkg/log"
 )
 
-var (
-	logger = log.Logger.WithField("component", "backends.dockerinternal.ContainerBackend")
-)
+var logger = log.Logger.WithField("component", "backends.dockerinternal.ContainerBackend")
 
 type Backend struct {
 	docker *client.Client
 }
 
-func New(docker *client.Client) core.ContainerBackend {
+func New(docker *client.Client) *Backend {
 	logger.Info("Creating new backend...")
 	defer logger.Info("ContainerBackend created.")
 
-	return Backend{
+	return &Backend{
 		docker: docker,
 	}
 }
 
 func (b Backend) Info(ctx context.Context) (map[string]any, error) {
-	info, err := b.docker.Info(context.Background())
-
+	info, err := b.docker.Info(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -38,17 +35,19 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
+func (b Backend) Function(_ context.Context, _ string) (core.Function, error) { //nolint:ireturn
 	return nil, core.ErrFunctionNotFound
 }
 
-func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
+func (b Backend) Functions(_ context.Context) ([]core.Function, error) {
 	return []core.Function{}, nil
 }
 
 func (b Backend) HealthCheck() error {
 	logger.Debug("ContainerBackend health check.")
+
 	_, err := b.docker.Info(context.Background())
+
 	return err
 }
 

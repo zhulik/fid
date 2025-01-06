@@ -1,9 +1,9 @@
 package core
 
 import (
+	"context"
 	"io"
 
-	"context"
 	"github.com/samber/do"
 )
 
@@ -19,7 +19,7 @@ type ContainerBackend interface {
 
 	Info(ctx context.Context) (map[string]any, error)
 
-	Function(ctx context.Context, string string) (Function, error)
+	Function(ctx context.Context, name string) (Function, error)
 	Functions(ctx context.Context) ([]Function, error)
 }
 

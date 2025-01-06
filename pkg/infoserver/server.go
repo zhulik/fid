@@ -3,20 +3,16 @@ package infoserver
 import (
 	"context"
 	"fmt"
-	"github.com/zhulik/fid/pkg/httpserver"
 	"net/http"
 
-	"github.com/samber/do"
-
 	"github.com/gorilla/mux"
-
+	"github.com/samber/do"
 	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/pkg/httpserver"
 	"github.com/zhulik/fid/pkg/log"
 )
 
-var (
-	logger = log.Logger.WithField("component", "infoserver.Server")
-)
+var logger = log.Logger.WithField("component", "infoserver.Server")
 
 type Server struct {
 	injector *do.Injector
@@ -25,7 +21,7 @@ type Server struct {
 	error    error
 }
 
-// NewServer creates a new Server instance
+// NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
 	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
@@ -45,21 +41,22 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	s := &Server{
+	server := &Server{
 		injector: injector,
 		backend:  backend,
 		server: http.Server{
-			Addr:    fmt.Sprintf(fmt.Sprintf("0.0.0.0:%d", config.InfoServerPort())),
-			Handler: router,
+			Addr:              fmt.Sprintf("0.0.0.0:%d", config.InfoServerPort()),
+			Handler:           router,
+			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
 		},
 	}
 
-	router.HandleFunc("/info", s.InfoHandler).Methods("GET").Name("info")
-	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET").Name("pulse")
+	router.HandleFunc("/info", server.InfoHandler).Methods("GET").Name("info")
+	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
 
-	router.HandleFunc("/", s.NotFoundHandler)
+	router.HandleFunc("/", server.NotFoundHandler)
 
-	return s, nil
+	return server, nil
 }
 
 func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +73,7 @@ func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PulseHandler(_ http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	errs := s.injector.HealthCheck()
@@ -92,6 +89,7 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	w.WriteHeader(http.StatusNotFound)
+
 	err := httpserver.WriteJSON(httpserver.ErrorBody{
 		Error: "Not found",
 	}, w, http.StatusOK)
@@ -102,6 +100,7 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) HealthCheck() error {
 	logger.Info("Server health check.")
+
 	return s.error
 }
 
@@ -112,10 +111,11 @@ func (s *Server) Shutdown() error {
 	return s.server.Shutdown(context.Background())
 }
 
-// Run starts the HTTP server
+// Run starts the HTTP server.
 func (s *Server) Run() error {
 	logger.Info("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
+
 	return s.error
 }

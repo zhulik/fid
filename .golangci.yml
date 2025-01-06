@@ -1,0 +1,30 @@
+run:
+  modules-download-mode: readonly
+linters:
+  enable-all: true
+  disable:
+    # Deprecated
+    - exportloopref
+
+    - exhaustruct # Does not make any sense
+    - gofumpt # Requires 3rd party tool for formatting
+    - gci # Requires 3rd party tool for formatting
+    - godox # Does not make any sense
+    - nlreturn # Does not make any sense
+    - err113  # Does not make any sense
+    - tagliatelle # Does not make any sense
+    - depguard # Too boring to configure and maintain
+
+    # Disabled temporarily
+    - wsl
+    - wrapcheck
+    - gochecknoglobals
+
+linters-settings:
+  varnamelen:
+    ignore-decls:
+      - w http.ResponseWriter
+      - r *http.Request
+
+issues:
+  max-same-issues: 0
