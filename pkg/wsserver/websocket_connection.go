@@ -3,9 +3,8 @@ package wsserver
 import (
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 const (

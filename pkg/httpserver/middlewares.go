@@ -17,6 +17,8 @@ const (
 	ReadHeaderTimeout = 5 * time.Second
 )
 
+var ErrNotImplementsHijacker = errors.New("ResponseWriter does not implement http.Hijacker")
+
 type ResponseWriterWrapper struct {
 	http.ResponseWriter
 	StatusCode int
@@ -25,8 +27,9 @@ type ResponseWriterWrapper struct {
 func (rw *ResponseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hijacker, ok := rw.ResponseWriter.(http.Hijacker)
 	if !ok {
-		return nil, nil, errors.New("responseWriter does not implement http.Hijacker")
+		return nil, nil, ErrNotImplementsHijacker
 	}
+
 	return hijacker.Hijack()
 }
 
