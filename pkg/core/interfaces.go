@@ -7,6 +7,12 @@ import (
 	"github.com/samber/do"
 )
 
+type Config interface {
+	WSServerPort() int
+	ProxyServerPort() int
+	InfoServerPort() int
+}
+
 type ContainerBackend interface {
 	do.Healthcheckable
 	do.Shutdownable

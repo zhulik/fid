@@ -18,4 +18,7 @@ RUN go build -ldflags="-w -s" -o app
 
 FROM scratch
 COPY --from=builder /app/app /
+
+ENV HTTP_PORT=80
+
 CMD ["/app"]

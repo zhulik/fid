@@ -40,6 +40,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	router.Use(httpserver.RecoverMiddleware(logger))
 	router.Use(httpserver.LoggingMiddleware(logger))
 
+	config, err := do.Invoke[core.Config](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	backend, err := do.Invoke[core.ContainerBackend](injector)
 	if err != nil {
 		return nil, err
@@ -49,7 +54,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		injector: injector,
 		backend:  backend,
 		server: http.Server{
-			Addr:    fmt.Sprintf("0.0.0.0:8081"), // TODO: read port from config
+			Addr:    fmt.Sprintf(fmt.Sprintf("0.0.0.0:%d", config.WSServerPort())),
 			Handler: router,
 		},
 	}
