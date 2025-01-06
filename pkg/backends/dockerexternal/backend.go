@@ -23,7 +23,6 @@ func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
 
 	logger = logger.WithField("component", "backends.dockerexternal.Backend")
 
-	logger.Info("Creating new backend...")
 	defer logger.Info("ContainerBackend created.")
 
 	return &Backend{
@@ -62,8 +61,8 @@ func (b Backend) HealthCheck() error {
 }
 
 func (b Backend) Shutdown() error {
-	b.logger.Info("ContainerBackend shutting down...")
-	defer b.logger.Info("ContainerBackend shot down.")
+	b.logger.Debug("ContainerBackend shutting down...")
+	defer b.logger.Debug("ContainerBackend shot down.")
 
 	return b.docker.Close()
 }

@@ -30,7 +30,6 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	logger = logger.WithField("component", "infoserver.Server")
 
-	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
 
 	router := mux.NewRouter()
@@ -107,7 +106,7 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HealthCheck() error {
-	s.logger.Info("Server health check.")
+	s.logger.Debug("Server health check.")
 
 	return s.error
 }

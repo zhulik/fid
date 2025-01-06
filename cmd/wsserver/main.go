@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/samber/do"
@@ -29,8 +30,9 @@ func main() {
 	for service, err := range injector.HealthCheck() {
 		if err != nil {
 			logger.WithFields(logrus.Fields{
+				"error":     err,
 				"component": service,
-			}).WithError(err).Fatal("Health check failed")
+			}).Fatal("Application panicked:", string(debug.Stack()))
 		}
 	}
 

@@ -19,7 +19,8 @@ type Server struct {
 	server   http.Server
 	error    error
 
-	logger logrus.FieldLogger
+	publisher core.Publisher
+	logger    logrus.FieldLogger
 }
 
 // NewServer creates a new Server instance.
@@ -31,7 +32,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	logger = logger.WithField("component", "proxyserver.Server")
 
-	logger.Info("Creating new server...")
+	publisher, err := do.Invoke[core.Publisher](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	defer logger.Info("Server created.")
 
 	router := mux.NewRouter()
@@ -57,7 +62,8 @@ func NewServer(injector *do.Injector) (*Server, error) {
 			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
 			Handler:           router,
 		},
-		logger: logger,
+		logger:    logger,
+		publisher: publisher,
 	}
 
 	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
@@ -122,21 +128,21 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HealthCheck() error {
-	s.logger.Info("Server health check.")
+	s.logger.Debug("Server health check.")
 
 	return s.error
 }
 
 func (s *Server) Shutdown() error {
-	s.logger.Info("Server shutting down...")
-	defer s.logger.Info("Server shot down.")
+	s.logger.Debug("Server shutting down...")
+	defer s.logger.Debug("Server shot down.")
 
 	return s.server.Shutdown(context.Background())
 }
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	s.logger.Info("Starting server at: ", s.server.Addr)
+	s.logger.Debug("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
 

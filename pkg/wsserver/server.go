@@ -31,7 +31,6 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	logger = logger.WithField("component", "wsserver.Server")
 
-	logger.Info("Creating new server...")
 	defer logger.Info("Server created.")
 
 	router := mux.NewRouter()
@@ -125,14 +124,14 @@ func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) HealthCheck() error {
-	s.logger.Info("Server health check.")
+	s.logger.Debug("Server health check.")
 
 	return s.error
 }
 
 func (s *Server) Shutdown() error {
-	s.logger.Info("Server shutting down...")
-	defer s.logger.Info("Server shot down.")
+	s.logger.Debug("Server shutting down...")
+	defer s.logger.Debug("Server shot down.")
 
 	return s.server.Shutdown(context.Background())
 }

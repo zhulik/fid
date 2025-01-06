@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/samber/do"
@@ -11,6 +12,7 @@ import (
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/di"
 	"github.com/zhulik/fid/pkg/proxyserver"
+	"github.com/zhulik/fid/pkg/pubsub"
 )
 
 func main() {
@@ -21,6 +23,7 @@ func main() {
 
 	proxyserver.Register(injector)
 	backends.Register(injector)
+	pubsub.Register(injector)
 
 	do.MustInvoke[core.ContainerBackend](injector)
 
@@ -29,8 +32,9 @@ func main() {
 	for service, err := range injector.HealthCheck() {
 		if err != nil {
 			logger.WithFields(logrus.Fields{
+				"error":     err,
 				"component": service,
-			}).WithError(err).Fatal("Health check failed")
+			}).Fatal("Application panicked:", string(debug.Stack()))
 		}
 	}
 
