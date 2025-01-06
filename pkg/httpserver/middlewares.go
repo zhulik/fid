@@ -1,8 +1,11 @@
 package httpserver
 
 import (
+	"bufio"
 	"encoding/json"
+	"net"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,6 +18,11 @@ var Middlewares = func(next http.Handler) http.Handler {
 type ResponseWriterWrapper struct {
 	http.ResponseWriter
 	StatusCode int
+}
+
+func (rw *ResponseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	// TODO: proper check
+	return rw.ResponseWriter.(http.Hijacker).Hijack()
 }
 
 func (rw *ResponseWriterWrapper) WriteHeader(code int) {
@@ -67,7 +75,10 @@ func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Error("recovered from panic: ", err)
+				logger.WithFields(logrus.Fields{
+					"error": err,
+				}).Error("Application panicked:", string(debug.Stack()))
+
 				w.WriteHeader(http.StatusInternalServerError)
 				err := WriteJSON(ErrorBody{
 					Error: "Internal Server Error",
