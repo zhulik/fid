@@ -36,7 +36,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	defer logger.Info("Server created.")
 
 	router := mux.NewRouter()
-	router.Use(Middlewares)
+	router.Use(JSONMiddleware)
+	router.Use(RecoverMiddleware)
+	router.Use(LoggingMiddleware)
 
 	backend, err := do.Invoke[core.Backend](injector)
 	if err != nil {
@@ -130,22 +132,18 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-	logger.Info("Function '", functionName, "' handler connected, upgrading to websocket connection...")
+	logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		panic(err)
 	}
 
-	logger.Info("Function '", functionName, "' handler successfully upgraded to websocket connection")
+	logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
 
 	wsConn := NewWebsocketConnection(functionName, conn)
-	go func() {
-		err := wsConn.Handle()
-		if err != nil {
-			panic(err)
-		}
-	}()
+	// TODO: handle error?
+	go wsConn.Handle()
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {

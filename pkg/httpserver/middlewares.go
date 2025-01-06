@@ -11,10 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var Middlewares = func(next http.Handler) http.Handler {
-	return LoggingMiddleware(RecoverMiddleware(JSONMiddleware(next)))
-}
-
 type ResponseWriterWrapper struct {
 	http.ResponseWriter
 	StatusCode int

@@ -47,7 +47,7 @@ func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
 }
 
 func (b Backend) HealthCheck() error {
-	logger.Info("Backend health check.")
+	logger.Debug("Backend health check.")
 	_, err := b.docker.Info(context.Background())
 	return err
 }
