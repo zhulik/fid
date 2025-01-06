@@ -3,18 +3,42 @@ services:
     image: fid-proxy
     build:
       dockerfile: Dockerfile.proxy
-
-    
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
     deploy:
       labels:
         wtf.zhulik.fid.component: "proxy"
       replicas: 1
-
     ports:
       - 80:8080
+
+  wsserver:
+    image: fid-wsserver
+    build:
+      dockerfile: Dockerfile.wsserver
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "wsserver"
+      replicas: 1
+
+    ports:
+      - 81:8081
+
+  infoserver:
+    image: fid-infoserver
+    build:
+      dockerfile: Dockerfile.infoserver
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "infoserver"
+      replicas: 1
+
+    ports:
+      - 82:8082
 
   function:
     image: function
@@ -22,7 +46,7 @@ services:
       dockerfile: Dockerfile.function
 
     environment:
-      - WS_URI=ws://proxy:8081/function
+      - WS_URI=ws://wsserver:8081/function
 
     deploy:
       labels:
@@ -30,3 +54,7 @@ services:
         wtf.zhulik.fid.scale.min: 3
         wtf.zhulik.fid.scale.max: 10
       replicas: 1
+
+    depends_on:
+      - wsserver
+      - proxy

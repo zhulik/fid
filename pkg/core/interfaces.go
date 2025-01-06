@@ -7,7 +7,7 @@ import (
 	"github.com/samber/do"
 )
 
-type Backend interface {
+type ContainerBackend interface {
 	do.Healthcheckable
 	do.Shutdownable
 
@@ -21,4 +21,20 @@ type Function interface {
 	Name() string
 
 	Invoke(ctx context.Context, r io.Reader) ([]byte, error)
+}
+
+type Publisher interface {
+	do.Healthcheckable
+	do.Shutdownable
+
+	Publish(ctx context.Context, subject string, msg any) error
+}
+
+type Subscriber interface {
+	do.Healthcheckable
+	do.Shutdownable
+
+	// Returning an error from the receiver means unsubscribing.
+	// Returned errors except for ErrUnsubscribe are logged.
+	Subscribe(ctx context.Context, subject string, receiver func([]byte) error) error
 }

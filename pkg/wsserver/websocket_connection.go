@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	wsLogger = log.Logger.WithField("component", "proxyserver.WebsocketConnection")
+	wsLogger = log.Logger.WithField("component", "wsserver.WebsocketConnection")
 
 	PingInterval = time.Second * 10
 )

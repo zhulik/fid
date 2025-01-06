@@ -1,4 +1,4 @@
-package proxyserver
+package infoserver
 
 import (
 	"github.com/samber/do"

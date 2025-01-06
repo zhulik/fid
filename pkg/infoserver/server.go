@@ -1,31 +1,26 @@
-package proxyserver
+package infoserver
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/zhulik/fid/pkg/httpserver"
 	"net/http"
 
 	"github.com/samber/do"
 
 	"github.com/gorilla/mux"
-	"github.com/gorilla/websocket"
 
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/log"
 )
 
 var (
-	logger = log.Logger.WithField("component", "proxyserver.Server")
+	logger = log.Logger.WithField("component", "infoserver.Server")
 )
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
 
 type Server struct {
 	injector *do.Injector
-	backend  core.Backend
+	backend  core.ContainerBackend
 	server   http.Server
 	error    error
 }
@@ -36,11 +31,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	defer logger.Info("Server created.")
 
 	router := mux.NewRouter()
-	router.Use(JSONMiddleware)
-	router.Use(RecoverMiddleware)
-	router.Use(LoggingMiddleware)
+	router.Use(httpserver.JSONMiddleware(logger))
+	router.Use(httpserver.RecoverMiddleware(logger))
+	router.Use(httpserver.LoggingMiddleware(logger))
 
-	backend, err := do.Invoke[core.Backend](injector)
+	backend, err := do.Invoke[core.ContainerBackend](injector)
 	if err != nil {
 		return nil, err
 	}
@@ -49,18 +44,13 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		injector: injector,
 		backend:  backend,
 		server: http.Server{
-			Addr:    fmt.Sprintf("0.0.0.0:8080"), // TODO: read port from config
+			Addr:    fmt.Sprintf("0.0.0.0:8082"), // TODO: read port from config
 			Handler: router,
 		},
 	}
 
 	router.HandleFunc("/info", s.InfoHandler).Methods("GET").Name("info")
 	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET").Name("pulse")
-
-	router.HandleFunc("/invoke/{functionName}", s.InvokeHandler).Methods("POST").Name("invoke")
-
-	// TODO: authentication
-	router.HandleFunc("/ws/{functionName}", s.WebsocketHandler).Methods("GET").Name("ws")
 
 	router.HandleFunc("/", s.NotFoundHandler)
 
@@ -75,7 +65,7 @@ func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	err = WriteJSON(info, w)
+	err = httpserver.WriteJSON(info, w, http.StatusOK)
 	if err != nil {
 		panic(err)
 	}
@@ -93,66 +83,13 @@ func (s *Server) PulseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	vars := mux.Vars(r)
-	functionName := vars["functionName"]
-	function, err := s.backend.Function(r.Context(), functionName)
-	if errors.Is(err, core.ErrFunctionNotFound) {
-		err := WriteJSON(ErrorBody{Error: "Not found"}, w)
-		if err != nil {
-			panic(err)
-		}
-		return
-	}
-	logger.Info("Invoking ", functionName, "...")
-	response, err := function.Invoke(r.Context(), r.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = w.Write(response)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	vars := mux.Vars(r)
-	functionName := vars["functionName"]
-	//_, err := s.backend.Function(r.Context(), functionName)
-	//if errors.Is(err, core.ErrFunctionNotFound) {
-	//	err := WriteJSON(ErrorBody{Error: "Not found"}, w)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	return
-	//}
-
-	logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
-	// Upgrade the HTTP connection to a WebSocket connection
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		panic(err)
-	}
-
-	logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
-
-	wsConn := NewWebsocketConnection(functionName, conn)
-	// TODO: handle error?
-	go wsConn.Handle()
-}
-
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	w.WriteHeader(http.StatusNotFound)
-	err := WriteJSON(ErrorBody{
+	err := httpserver.WriteJSON(httpserver.ErrorBody{
 		Error: "Not found",
-	}, w)
+	}, w, http.StatusOK)
 	if err != nil {
 		panic(err)
 	}

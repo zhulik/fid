@@ -6,4 +6,5 @@ import (
 
 var (
 	ErrFunctionNotFound = errors.New("function not found")
+	ErrUnsubscribe      = errors.New("unsubscribe")
 )

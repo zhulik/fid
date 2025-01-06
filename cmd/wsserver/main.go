@@ -24,7 +24,7 @@ func main() {
 	wsserver.Register(injector)
 	backends.Register(injector)
 
-	do.MustInvoke[core.Backend](injector)
+	do.MustInvoke[core.ContainerBackend](injector)
 
 	server := do.MustInvoke[*wsserver.Server](injector)
 

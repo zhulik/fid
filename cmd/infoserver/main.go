@@ -7,7 +7,7 @@ import (
 	"github.com/zhulik/fid/pkg/backends"
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/di"
-	"github.com/zhulik/fid/pkg/proxyserver"
+	"github.com/zhulik/fid/pkg/infoserver"
 	"net/http"
 	"syscall"
 
@@ -21,12 +21,12 @@ func main() {
 
 	injector := di.New()
 
-	proxyserver.Register(injector)
+	infoserver.Register(injector)
 	backends.Register(injector)
 
 	do.MustInvoke[core.ContainerBackend](injector)
 
-	server := do.MustInvoke[*proxyserver.Server](injector)
+	server := do.MustInvoke[*infoserver.Server](injector)
 
 	for service, err := range injector.HealthCheck() {
 		if err != nil {

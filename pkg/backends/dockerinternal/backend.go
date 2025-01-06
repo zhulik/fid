@@ -9,16 +9,16 @@ import (
 )
 
 var (
-	logger = log.Logger.WithField("component", "backends.dockerinternal.Backend")
+	logger = log.Logger.WithField("component", "backends.dockerinternal.ContainerBackend")
 )
 
 type Backend struct {
 	docker *client.Client
 }
 
-func New(docker *client.Client) core.Backend {
+func New(docker *client.Client) core.ContainerBackend {
 	logger.Info("Creating new backend...")
-	defer logger.Info("Backend created.")
+	defer logger.Info("ContainerBackend created.")
 
 	return Backend{
 		docker: docker,
@@ -47,14 +47,14 @@ func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
 }
 
 func (b Backend) HealthCheck() error {
-	logger.Debug("Backend health check.")
+	logger.Debug("ContainerBackend health check.")
 	_, err := b.docker.Info(context.Background())
 	return err
 }
 
 func (b Backend) Shutdown() error {
-	logger.Info("Backend shutting down...")
-	defer logger.Info("Backend shot down.")
+	logger.Info("ContainerBackend shutting down...")
+	defer logger.Info("ContainerBackend shot down.")
 
 	return b.docker.Close()
 }

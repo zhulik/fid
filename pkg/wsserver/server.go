@@ -25,7 +25,7 @@ var (
 
 type Server struct {
 	injector *do.Injector
-	backend  core.Backend
+	backend  core.ContainerBackend
 	server   http.Server
 	error    error
 }
@@ -40,7 +40,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	router.Use(httpserver.RecoverMiddleware(logger))
 	router.Use(httpserver.LoggingMiddleware(logger))
 
-	backend, err := do.Invoke[core.Backend](injector)
+	backend, err := do.Invoke[core.ContainerBackend](injector)
 	if err != nil {
 		return nil, err
 	}
