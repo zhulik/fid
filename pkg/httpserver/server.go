@@ -9,6 +9,7 @@ import (
 	"github.com/samber/do"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/log"
@@ -17,6 +18,10 @@ import (
 var (
 	logger = log.Logger.WithField("component", "httpserver.Server")
 )
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 type Server struct {
 	injector *do.Injector
@@ -49,7 +54,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	router.HandleFunc("/info", s.InfoHandler).Methods("GET").Name("info")
 	router.HandleFunc("/pulse", s.PulseHandler).Methods("GET").Name("pulse")
+
 	router.HandleFunc("/invoke/{functionName}", s.InvokeHandler).Methods("POST").Name("invoke")
+
+	// TODO: authentication
+	router.HandleFunc("/ws/{functionName}", s.WebsocketHandler).Methods("GET").Name("ws")
 
 	router.HandleFunc("/", s.NotFoundHandler)
 
@@ -86,8 +95,8 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	vars := mux.Vars(r)
-	name := vars["functionName"]
-	function, err := s.backend.Function(r.Context(), name)
+	functionName := vars["functionName"]
+	function, err := s.backend.Function(r.Context(), functionName)
 	if errors.Is(err, core.ErrFunctionNotFound) {
 		err := WriteJSON(ErrorBody{Error: "Not found"}, w)
 		if err != nil {
@@ -95,7 +104,7 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	logger.Info("Invoking ", name, "...")
+	logger.Info("Invoking ", functionName, "...")
 	response, err := function.Invoke(r.Context(), r.Body)
 	if err != nil {
 		panic(err)
@@ -105,6 +114,38 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	vars := mux.Vars(r)
+	functionName := vars["functionName"]
+	//_, err := s.backend.Function(r.Context(), functionName)
+	//if errors.Is(err, core.ErrFunctionNotFound) {
+	//	err := WriteJSON(ErrorBody{Error: "Not found"}, w)
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//	return
+	//}
+
+	logger.Info("Function '", functionName, "' handler connected, upgrading to websocket connection...")
+	// Upgrade the HTTP connection to a WebSocket connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Info("Function '", functionName, "' handler successfully upgraded to websocket connection")
+
+	wsConn := NewWebsocketConnection(functionName, conn)
+	go func() {
+		err := wsConn.Handle()
+		if err != nil {
+			panic(err)
+		}
+	}()
 }
 
 func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
