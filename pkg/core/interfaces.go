@@ -11,6 +11,7 @@ type Config interface {
 	WSServerPort() int
 	ProxyServerPort() int
 	InfoServerPort() int
+	NatsURL() string
 }
 
 type ContainerBackend interface {

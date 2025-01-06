@@ -14,6 +14,8 @@ services:
       context: .
       args:
         COMPONENT: "proxy"
+    environment:
+      - NATS_URL=nats://nats:4222
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
@@ -29,6 +31,9 @@ services:
       context: .
       args:
         COMPONENT: "wsserver"
+
+    environment:
+      - NATS_URL=nats://nats:4222
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:

@@ -41,6 +41,11 @@ type Publisher struct {
 }
 
 func NewPublisher(injector *do.Injector) (*Publisher, error) {
+	config, err := do.Invoke[core.Config](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	logger, err := do.Invoke[logrus.FieldLogger](injector)
 	if err != nil {
 		return nil, err
@@ -50,7 +55,7 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 
 	defer logrus.Info("Nats publisher created.")
 
-	natsClient, err := nats.Connect(nats.DefaultURL) // TODO: from config
+	natsClient, err := nats.Connect(config.NatsURL()) // TODO: from config
 	if err != nil {
 		return nil, err
 	}
