@@ -11,10 +11,10 @@ import (
 )
 
 type Server struct {
-	injector *do.Injector
-	server   http.Server
-	router   *gin.Engine
-	logger   logrus.FieldLogger
+	server http.Server
+
+	Router *gin.Engine
+	Logger logrus.FieldLogger
 
 	error error
 }
@@ -32,28 +32,27 @@ func NewServer(injector *do.Injector, name string, port int) (*Server, error) {
 	router := NewRouter(injector, logger)
 
 	server := &Server{
-		injector: injector,
 		server: http.Server{
 			Addr:              fmt.Sprintf("0.0.0.0:%d", port),
 			ReadHeaderTimeout: ReadHeaderTimeout,
 			Handler:           router,
 		},
-		logger: logger,
-		router: router,
+		Logger: logger,
+		Router: router,
 	}
 
 	return server, nil
 }
 
 func (s *Server) HealthCheck() error {
-	s.logger.Debug("Server health check.")
+	s.Logger.Debug("Server health check.")
 
 	return s.error
 }
 
 func (s *Server) Shutdown() error {
-	s.logger.Debug("Server shutting down...")
-	defer s.logger.Debug("Server shot down.")
+	s.Logger.Debug("Server shutting down...")
+	defer s.Logger.Debug("Server shot down.")
 
 	err := s.server.Shutdown(context.Background())
 	if err != nil {
@@ -65,18 +64,9 @@ func (s *Server) Shutdown() error {
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	s.logger.Debug("Starting server at: ", s.server.Addr)
+	s.Logger.Debug("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
 
 	return s.error
-}
-
-// Logger returns the logger.
-func (s *Server) Logger() logrus.FieldLogger { //nolint:ireturn
-	return s.logger
-}
-
-func (s *Server) Router() *gin.Engine {
-	return s.router
 }

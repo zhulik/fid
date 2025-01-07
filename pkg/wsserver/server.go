@@ -29,10 +29,6 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	logger := server.Logger()
-
-	defer logger.Info("Server created.")
-
 	backend, err := do.Invoke[core.ContainerBackend](injector)
 	if err != nil {
 		return nil, err
@@ -44,7 +40,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	// TODO: authentication
-	srv.Router().GET("/ws/:functionName", srv.WebsocketHandler)
+	srv.Router.GET("/ws/:functionName", srv.WebsocketHandler)
 
 	return srv, nil
 }
@@ -60,7 +56,7 @@ func (s *Server) WebsocketHandler(c *gin.Context) {
 	//	return
 	//}
 
-	s.Logger().Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
+	s.Logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
 	// Upgrade the HTTP connection to a WebSocket connection
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(_ *http.Request) bool { return true },
@@ -71,9 +67,9 @@ func (s *Server) WebsocketHandler(c *gin.Context) {
 		c.Error(err)
 	}
 
-	s.Logger().Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
+	s.Logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
 
-	wsConn := NewWebsocketConnection(functionName, conn, s.Logger())
+	wsConn := NewWebsocketConnection(functionName, conn, s.Logger)
 	// TODO: handle error?
 	go wsConn.Handle() //nolint:errcheck
 }

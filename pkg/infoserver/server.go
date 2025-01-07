@@ -23,14 +23,10 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	server, err := httpserver.NewServer(injector, "infoserver.Server", config.WSServerPort())
+	server, err := httpserver.NewServer(injector, "infoserver.Server", config.InfoServerPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
-
-	logger := server.Logger()
-
-	defer logger.Info("Server created.")
 
 	backend, err := do.Invoke[core.ContainerBackend](injector)
 	if err != nil {
@@ -42,7 +38,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		backend: backend,
 	}
 
-	server.Router().GET("/info", srv.InfoHandler)
+	srv.Router.GET("/info", srv.InfoHandler)
 
 	return srv, nil
 }

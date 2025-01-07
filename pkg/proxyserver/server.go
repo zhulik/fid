@@ -30,21 +30,17 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	logger := server.Logger()
-
 	publisher, err := do.Invoke[core.Publisher](injector)
 	if err != nil {
 		return nil, err
 	}
-
-	defer logger.Info("Server created.")
 
 	srv := &Server{
 		Server:    server,
 		publisher: publisher,
 	}
 
-	server.Router().POST("/invoke/:functionName", srv.InvokeHandler)
+	srv.Router.POST("/invoke/:functionName", srv.InvokeHandler)
 
 	return srv, nil
 }
@@ -53,7 +49,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 	functionName := c.Param("functionName")
 	invocationUUID := uuid.New()
 
-	s.Logger().WithFields(logrus.Fields{
+	s.Logger.WithFields(logrus.Fields{
 		"requestUUID":  invocationUUID,
 		"functionName": functionName,
 	}).Info("Invoking...")
