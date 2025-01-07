@@ -39,11 +39,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := gin.New()
-
-	router.Use(httpserver.JSONRecovery())
-	router.Use(httpserver.LoggingMiddleware(logger))
-	router.Use(httpserver.JSONErrorHandler())
+	router := httpserver.NewRouter(logger)
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
