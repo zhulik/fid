@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/core"
@@ -39,10 +39,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := mux.NewRouter()
-	// router.Use(httpserver.JSONMiddleware(logger))
-	// router.Use(httpserver.RecoverMiddleware(logger))
-	// router.Use(httpserver.LoggingMiddleware(logger))
+	router := gin.New()
+
+	router.Use(httpserver.JSONRecovery())
+	router.Use(httpserver.LoggingMiddleware(logger))
+	router.Use(httpserver.JSONErrorHandler())
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
@@ -60,33 +61,24 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		publisher: publisher,
 	}
 
-	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
-
-	router.HandleFunc("/invoke/{functionName}", server.InvokeHandler).Methods("POST").Name("invoke")
-
-	router.HandleFunc("/", server.NotFoundHandler)
+	router.GET("/pulse", server.PulseHandler)
+	router.POST("/invoke/:functionName", server.InvokeHandler)
 
 	return server, nil
 }
 
-func (s *Server) PulseHandler(_ http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
+func (s *Server) PulseHandler(c *gin.Context) {
 	errs := s.injector.HealthCheck()
 
 	for _, err := range errs {
 		if err != nil {
-			panic(err)
+			c.Error(err)
 		}
 	}
 }
 
-func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	vars := mux.Vars(r)
-	functionName := vars["functionName"]
-
+func (s *Server) InvokeHandler(c *gin.Context) {
+	functionName := c.Param("functionName")
 	invocationUUID := uuid.New()
 
 	s.logger.WithFields(logrus.Fields{
@@ -94,33 +86,22 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 		"functionName": functionName,
 	}).Info("Invoking...")
 
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		panic(err)
+		c.Error(err)
 	}
 
 	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, invocationUUID)
 
-	response, err := s.publisher.PublishWaitReply(r.Context(), subject, body)
+	response, err := s.publisher.PublishWaitReply(c, subject, body)
 	if err != nil {
-		panic(err)
+		c.Error(err)
 	}
 
 	// TODO: develop protocol.
-	_, err = w.Write(response)
+	_, err = c.Writer.Write(response)
 	if err != nil {
-		panic(err)
-	}
-}
-
-func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	err := httpserver.WriteJSON(httpserver.ErrorBody{
-		Error: "Not found",
-	}, w, http.StatusNotFound)
-	if err != nil {
-		panic(err)
+		c.Error(err)
 	}
 }
 
