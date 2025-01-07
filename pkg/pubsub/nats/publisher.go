@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do"
@@ -53,9 +54,9 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 
 	logger = logger.WithField("component", "pubsub.nats.Publisher")
 
-	defer logrus.Info("Nats publisher created.")
+	defer logger.Info("Nats publisher created.")
 
-	natsClient, err := nats.Connect(config.NatsURL()) // TODO: from config
+	natsClient, err := nats.Connect(config.NatsURL())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS client: %w", err)
 	}
@@ -130,11 +131,13 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 
 	_, err = p.jetStream.PublishMsg(ctx, msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to publish: %w", err)
+		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
+	consumerName := uuid.New().String()
+
 	cons, err := p.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
-		Name:          msg.Reply,
+		Name:          consumerName,
 		FilterSubject: msg.Reply,
 	})
 	if err != nil {
@@ -142,8 +145,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	}
 
 	defer func() {
-		err := p.jetStream.DeleteConsumer(ctx, InvocationStreamName, msg.Reply)
-		if err != nil {
+		if err := p.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
 			p.logger.WithError(err).Error("failed to delete consumer")
 		}
 	}()
@@ -170,17 +172,24 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
 	for _, stream := range streams {
+		logger := p.logger.WithField("streamName", stream.Name)
 		_, err := p.jetStream.CreateStream(ctx, stream)
+
 		if err != nil {
-			if !errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
-				return fmt.Errorf("failed to create stream: %w", err)
+			if errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
+				_, err = p.jetStream.UpdateStream(ctx, stream)
+				if err != nil {
+					return fmt.Errorf("failed to update stream: %w", err)
+				}
+				logger.Info("Stream updated")
+
+				return nil
 			}
-		} else {
-			_, err = p.jetStream.UpdateStream(ctx, stream)
-			if err != nil {
-				return fmt.Errorf("failed to update stream: %w", err)
-			}
+
+			return fmt.Errorf("failed to create stream: %w", err)
 		}
+
+		logger.Info("Stream created")
 	}
 
 	return nil

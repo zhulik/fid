@@ -8,7 +8,6 @@ import (
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/pkg/backends"
 	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/di"
 	"github.com/zhulik/fid/pkg/proxyserver"
@@ -22,10 +21,9 @@ func main() {
 	logger.Info("Starting...")
 
 	proxyserver.Register(injector)
-	backends.Register(injector)
 	pubsub.Register(injector)
 
-	do.MustInvoke[core.ContainerBackend](injector)
+	do.MustInvoke[core.Publisher](injector)
 
 	server := do.MustInvoke[*proxyserver.Server](injector)
 

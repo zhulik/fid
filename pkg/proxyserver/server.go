@@ -2,10 +2,11 @@ package proxyserver
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -15,7 +16,6 @@ import (
 
 type Server struct {
 	injector *do.Injector
-	backend  core.ContainerBackend
 	server   http.Server
 	error    error
 
@@ -49,14 +49,8 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	backend, err := do.Invoke[core.ContainerBackend](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	server := &Server{
 		injector: injector,
-		backend:  backend,
 		server: http.Server{
 			Addr:              fmt.Sprintf("0.0.0.0:%d", config.ProxyServerPort()),
 			ReadHeaderTimeout: httpserver.ReadHeaderTimeout,
@@ -93,23 +87,26 @@ func (s *Server) InvokeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	functionName := vars["functionName"]
 
-	function, err := s.backend.Function(r.Context(), functionName)
-	if errors.Is(err, core.ErrFunctionNotFound) {
-		err := httpserver.WriteJSON(httpserver.ErrorBody{Error: "Not found"}, w, http.StatusNotFound)
-		if err != nil {
-			panic(err)
-		}
+	invocationUUID := uuid.New()
 
-		return
-	}
+	s.logger.WithFields(logrus.Fields{
+		"requestUUID":  invocationUUID,
+		"functionName": functionName,
+	}).Info("Invoking...")
 
-	s.logger.Info("Invoking ", functionName, "...")
-
-	response, err := function.Invoke(r.Context(), r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		panic(err)
 	}
 
+	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, invocationUUID)
+
+	response, err := s.publisher.PublishWaitReply(r.Context(), subject, body)
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: develop protocol.
 	_, err = w.Write(response)
 	if err != nil {
 		panic(err)
