@@ -8,19 +8,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/pkg/core"
+	core2 "github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
 
 type Server struct {
 	*httpserver.Server
 
-	publisher core.Publisher
+	publisher core2.Publisher
 }
 
 // NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
-	config, err := do.Invoke[core.Config](injector)
+	config, err := do.Invoke[core2.Config](injector)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	publisher, err := do.Invoke[core.Publisher](injector)
+	publisher, err := do.Invoke[core2.Publisher](injector)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		c.Error(err)
 	}
 
-	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, invocationUUID)
+	subject := fmt.Sprintf("%s.%s", core2.InvokeSubjectBase, invocationUUID)
 
 	response, err := s.publisher.PublishWaitReply(c, subject, body)
 	if err != nil {

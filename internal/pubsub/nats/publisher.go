@@ -12,7 +12,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/internal/core"
 )
 
 const (

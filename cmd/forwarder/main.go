@@ -7,8 +7,8 @@ import (
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/pkg/di"
-	"github.com/zhulik/fid/pkg/forwarder"
+	"github.com/zhulik/fid/internal/di"
+	"github.com/zhulik/fid/internal/forwarder"
 )
 
 func main() {

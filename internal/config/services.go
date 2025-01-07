@@ -5,7 +5,7 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/samber/do"
-	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/internal/core"
 )
 
 func Register(injector *do.Injector) {

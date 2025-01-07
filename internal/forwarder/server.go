@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/samber/do"
-	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
 

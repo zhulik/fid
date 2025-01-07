@@ -29,7 +29,21 @@ func NewServer(injector *do.Injector, name string, port int) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := NewRouter(injector, logger)
+	router := gin.New()
+
+	router.Use(JSONRecovery())
+	router.Use(LoggingMiddleware(logger))
+	router.Use(JSONErrorHandler())
+
+	router.GET("/health", func(c *gin.Context) {
+		errs := injector.HealthCheck()
+
+		for _, err := range errs {
+			if err != nil {
+				c.Error(err)
+			}
+		}
+	})
 
 	server := &Server{
 		server: http.Server{

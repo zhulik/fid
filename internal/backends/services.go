@@ -9,9 +9,9 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/errdefs"
 	"github.com/samber/do"
-	"github.com/zhulik/fid/pkg/backends/dockerexternal"
-	"github.com/zhulik/fid/pkg/backends/dockerinternal"
-	"github.com/zhulik/fid/pkg/core"
+	"github.com/zhulik/fid/internal/backends/dockerexternal"
+	"github.com/zhulik/fid/internal/backends/dockerinternal"
+	"github.com/zhulik/fid/internal/core"
 )
 
 var ErrCannotDetectBackend = errors.New("cannot detect backend")
