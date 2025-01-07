@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -33,10 +33,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := mux.NewRouter()
-	// router.Use(httpserver.JSONMiddleware(logger))
-	// router.Use(httpserver.RecoverMiddleware(logger))
-	// router.Use(httpserver.LoggingMiddleware(logger))
+	router := gin.New()
+
+	router.Use(httpserver.JSONRecovery())
+	router.Use(httpserver.LoggingMiddleware(logger))
+	router.Use(httpserver.JSONErrorHandler())
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
@@ -59,32 +60,25 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		logger: logger,
 	}
 
-	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
+	router.GET("/pulse", server.PulseHandler)
 	// TODO: authentication
-	router.HandleFunc("/ws/{functionName}", server.WebsocketHandler).Methods("GET").Name("ws")
-
-	router.HandleFunc("/", server.NotFoundHandler)
+	router.GET("/ws/:functionName", server.WebsocketHandler)
 
 	return server, nil
 }
 
-func (s *Server) PulseHandler(_ http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
+func (s *Server) PulseHandler(c *gin.Context) {
 	errs := s.injector.HealthCheck()
 
 	for _, err := range errs {
 		if err != nil {
-			panic(err)
+			c.Error(err)
 		}
 	}
 }
 
-func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	vars := mux.Vars(r)
-	functionName := vars["functionName"]
+func (s *Server) WebsocketHandler(c *gin.Context) {
+	functionName := c.Param("functionName")
 	// _, err := s.backend.Function(r.Context(), functionName)
 	// if errors.Is(err, core.ErrFunctionNotFound) {
 	//	err := WriteJSON(ErrorBody{Error: "Not found"}, w)
@@ -100,9 +94,9 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 		CheckOrigin: func(_ *http.Request) bool { return true },
 	}
 
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		panic(err)
+		c.Error(err)
 	}
 
 	s.logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
@@ -110,17 +104,6 @@ func (s *Server) WebsocketHandler(w http.ResponseWriter, r *http.Request) {
 	wsConn := NewWebsocketConnection(functionName, conn, s.logger)
 	// TODO: handle error?
 	go wsConn.Handle() //nolint:errcheck
-}
-
-func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	err := httpserver.WriteJSON(httpserver.ErrorBody{
-		Error: "Not found",
-	}, w, http.StatusNotFound)
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (s *Server) HealthCheck() error {
