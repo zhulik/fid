@@ -7,6 +7,8 @@ import (
 )
 
 func Register(injector *do.Injector) {
+	do.Provide(injector, nats.NewClient)
+
 	do.Provide(injector, func(injector *do.Injector) (core.Publisher, error) {
 		return nats.NewPublisher(injector)
 	})

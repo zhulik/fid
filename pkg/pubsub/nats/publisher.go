@@ -35,18 +35,12 @@ var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 }
 
 type Publisher struct {
-	nats      *nats.Conn
-	jetStream jetstream.JetStream
+	nats *Client
 
 	logger logrus.FieldLogger
 }
 
 func NewPublisher(injector *do.Injector) (*Publisher, error) {
-	config, err := do.Invoke[core.Config](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	logger, err := do.Invoke[logrus.FieldLogger](injector)
 	if err != nil {
 		return nil, err
@@ -54,22 +48,16 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 
 	logger = logger.WithField("component", "pubsub.nats.Publisher")
 
-	defer logger.Info("Nats publisher created.")
+	defer logger.Info("nats publisher created.")
 
-	natsClient, err := nats.Connect(config.NatsURL())
+	natsClient, err := do.Invoke[*Client](injector)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to NATS client: %w", err)
-	}
-
-	jetStream, err := jetstream.New(natsClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build JetStream client: %w", err)
+		return nil, err
 	}
 
 	publisher := &Publisher{
-		nats:      natsClient,
-		jetStream: jetStream,
-		logger:    logger,
+		nats:   natsClient,
+		logger: logger,
 	}
 
 	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig)
@@ -83,12 +71,7 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 func (p Publisher) HealthCheck() error {
 	p.logger.Debug("Publisher health check...")
 
-	_, err := p.nats.GetClientID()
-	if err != nil {
-		return fmt.Errorf("healthcheck failed: %w", err)
-	}
-
-	_, err = p.jetStream.AccountInfo(context.Background())
+	err := p.nats.HealthCheck()
 	if err != nil {
 		return fmt.Errorf("healthcheck failed: %w", err)
 	}
@@ -97,10 +80,6 @@ func (p Publisher) HealthCheck() error {
 }
 
 func (p Publisher) Shutdown() error {
-	p.logger.Debug("Shitting down nats publisher...")
-	p.jetStream.CleanupPublisher()
-	p.nats.Close()
-
 	return nil
 }
 
@@ -110,7 +89,7 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 		return fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	_, err = p.jetStream.Publish(ctx, subject, payload)
+	_, err = p.nats.jetStream.Publish(ctx, subject, payload)
 	if err != nil {
 		return fmt.Errorf("failed to publish: %w", err)
 	}
@@ -129,14 +108,14 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	msg.Data = data
 	msg.Reply = subject + ".reply"
 
-	_, err = p.jetStream.PublishMsg(ctx, msg)
+	_, err = p.nats.jetStream.PublishMsg(ctx, msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
 	consumerName := uuid.New().String()
 
-	cons, err := p.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
+	cons, err := p.nats.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		FilterSubject: msg.Reply,
 	})
@@ -145,7 +124,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	}
 
 	defer func() {
-		if err := p.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
+		if err := p.nats.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
 			p.logger.WithError(err).Error("failed to delete consumer")
 		}
 	}()
@@ -174,10 +153,10 @@ func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstre
 	for _, stream := range streams {
 		logger := p.logger.WithField("streamName", stream.Name)
 
-		_, err := p.jetStream.CreateStream(ctx, stream)
+		_, err := p.nats.jetStream.CreateStream(ctx, stream)
 		if err != nil {
 			if errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
-				_, err = p.jetStream.UpdateStream(ctx, stream)
+				_, err = p.nats.jetStream.UpdateStream(ctx, stream)
 				if err != nil {
 					return fmt.Errorf("failed to update stream: %w", err)
 				}

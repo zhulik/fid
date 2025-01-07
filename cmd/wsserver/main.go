@@ -7,7 +7,6 @@ import (
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/pkg/core"
 	"github.com/zhulik/fid/pkg/di"
 	"github.com/zhulik/fid/pkg/wsserver"
 )
