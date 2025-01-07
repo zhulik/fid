@@ -3,6 +3,5 @@ package core
 type SubjectName = string
 
 const (
-	Invoke SubjectName = "invoke"
-	Result SubjectName = "result"
+	InvokeSubjectBase SubjectName = "fid.invoke"
 )

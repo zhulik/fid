@@ -24,7 +24,7 @@ const (
 
 var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Name:      InvocationStreamName,
-	Subjects:  []string{core.Invoke, core.Result},
+	Subjects:  []string{core.InvokeSubjectBase, core.InvokeSubjectBase + ".*"},
 	Storage:   jetstream.FileStorage,
 	Retention: jetstream.LimitsPolicy,
 	MaxAge:    maxAge,
@@ -115,6 +115,57 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 	}
 
 	return nil
+}
+
+// PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
+func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any) ([]byte, error) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal message: %w", err)
+	}
+
+	msg := nats.NewMsg(subject)
+	msg.Data = data
+	msg.Reply = subject + ".reply"
+
+	_, err = p.jetStream.PublishMsg(ctx, msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to publish: %w", err)
+	}
+
+	cons, err := p.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
+		Name:          msg.Reply,
+		FilterSubject: msg.Reply,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create consumer: %w", err)
+	}
+
+	defer func() {
+		err := p.jetStream.DeleteConsumer(ctx, InvocationStreamName, msg.Reply)
+		if err != nil {
+			p.logger.WithError(err).Error("failed to delete consumer")
+		}
+	}()
+
+	var result []byte
+
+	var sub jetstream.ConsumeContext
+
+	// TODO: timeout
+	sub, err = cons.Consume(func(msg jetstream.Msg) {
+		result = msg.Data()
+
+		sub.Stop()
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to consume: %w", err)
+	}
+	defer sub.Stop()
+
+	<-sub.Closed()
+
+	return result, nil
 }
 
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
