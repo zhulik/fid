@@ -7,10 +7,10 @@ require (
 	github.com/docker/docker v27.4.1+incompatible
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
 	github.com/nats-io/nats.go v1.38.0
 	github.com/samber/do v1.6.0
+	github.com/samber/lo v1.47.0
 	github.com/sirupsen/logrus v1.9.3
 )
 

@@ -48,8 +48,6 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 
 	logger = logger.WithField("component", "pubsub.nats.Publisher")
 
-	defer logger.Info("nats publisher created.")
-
 	natsClient, err := do.Invoke[*Client](injector)
 	if err != nil {
 		return nil, err

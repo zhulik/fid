@@ -43,6 +43,8 @@ type Subscriber interface {
 	do.Healthcheckable
 	do.Shutdownable
 
-	// Returned from receiver errors are only logger.
-	Subscribe(ctx context.Context, subject string, receiver func(payload []byte, unsubscribe func()) error) error
+	// If errors is returned from the handler, the message will be nacked.
+	Subscribe(
+		ctx context.Context, consumerName, subject string, handler func(payload []byte, unsubscribe func()) error,
+	) error
 }
