@@ -19,7 +19,7 @@ func JSONRecovery() gin.HandlerFunc {
 		defer func() {
 			// TODO: log errors
 			if err := recover(); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
+				c.IndentedJSON(http.StatusInternalServerError, gin.H{
 					"error": "Internal server error",
 				})
 				c.Abort()
@@ -35,7 +35,7 @@ func JSONErrorHandler() gin.HandlerFunc {
 
 		if len(c.Errors) > 0 {
 			// TODO: log errors
-			c.JSON(http.StatusInternalServerError, gin.H{
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{
 				"error": "Internal server error",
 			})
 		}

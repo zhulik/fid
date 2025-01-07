@@ -49,5 +49,5 @@ func (s *Server) InfoHandler(c *gin.Context) {
 		c.Error(err)
 	}
 
-	c.JSON(http.StatusOK, info)
+	c.IndentedJSON(http.StatusOK, info)
 }
