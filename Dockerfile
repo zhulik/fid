@@ -23,6 +23,7 @@ RUN apk add --no-cache curl
 COPY --from=builder /app/app /
 
 ENV HTTP_PORT=80
+ENV GIN_MODE=release
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=2s CMD curl --fail http://127.0.0.1/pulse || exit 1
 

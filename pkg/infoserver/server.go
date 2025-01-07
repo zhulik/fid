@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/core"
@@ -32,10 +32,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := mux.NewRouter()
-	router.Use(httpserver.JSONMiddleware(logger))
-	router.Use(httpserver.RecoverMiddleware(logger))
+	router := gin.New()
+
+	router.Use(httpserver.JSONRecovery())
 	router.Use(httpserver.LoggingMiddleware(logger))
+	router.Use(httpserver.JSONErrorHandler())
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
@@ -58,50 +59,28 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		logger: logger,
 	}
 
-	router.HandleFunc("/info", server.InfoHandler).Methods("GET").Name("info")
-	router.HandleFunc("/pulse", server.PulseHandler).Methods("GET").Name("pulse")
-
-	router.HandleFunc("/", server.NotFoundHandler)
+	router.GET("/info", server.InfoHandler)
+	router.GET("/pulse", server.PulseHandler)
 
 	return server, nil
 }
 
-func (s *Server) InfoHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	info, err := s.backend.Info(r.Context())
+func (s *Server) InfoHandler(c *gin.Context) {
+	info, err := s.backend.Info(c)
 	if err != nil {
-		panic(err)
+		c.Error(err)
 	}
 
-	err = httpserver.WriteJSON(info, w, http.StatusOK)
-	if err != nil {
-		panic(err)
-	}
+	c.JSON(http.StatusOK, info)
 }
 
-func (s *Server) PulseHandler(_ http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
+func (s *Server) PulseHandler(c *gin.Context) {
 	errs := s.injector.HealthCheck()
 
 	for _, err := range errs {
 		if err != nil {
-			panic(err)
+			c.Error(err)
 		}
-	}
-}
-
-func (s *Server) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
-	w.WriteHeader(http.StatusNotFound)
-
-	err := httpserver.WriteJSON(httpserver.ErrorBody{
-		Error: "Not found",
-	}, w, http.StatusOK)
-	if err != nil {
-		panic(err)
 	}
 }
 

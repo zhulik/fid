@@ -17,6 +17,11 @@ linters-settings:
     ignore-decls:
       - w http.ResponseWriter
       - r *http.Request
+      - c *gin.Context
+
+  errcheck:
+    exclude-functions:
+      - (*github.com/gin-gonic/gin.Context).Error
 
 issues:
   max-same-issues: 0

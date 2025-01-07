@@ -40,9 +40,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	defer logger.Info("Server created.")
 
 	router := mux.NewRouter()
-	router.Use(httpserver.JSONMiddleware(logger))
-	router.Use(httpserver.RecoverMiddleware(logger))
-	router.Use(httpserver.LoggingMiddleware(logger))
+	// router.Use(httpserver.JSONMiddleware(logger))
+	// router.Use(httpserver.RecoverMiddleware(logger))
+	// router.Use(httpserver.LoggingMiddleware(logger))
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {

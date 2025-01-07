@@ -1,16 +1,12 @@
 package httpserver
 
 import (
-	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"runtime/debug"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,25 +14,32 @@ const (
 	ReadHeaderTimeout = 5 * time.Second
 )
 
-var ErrNotImplementsHijacker = errors.New("ResponseWriter does not implement http.Hijacker")
-
-type ResponseWriterWrapper struct {
-	http.ResponseWriter
-	StatusCode int
-}
-
-func (rw *ResponseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	hijacker, ok := rw.ResponseWriter.(http.Hijacker)
-	if !ok {
-		return nil, nil, ErrNotImplementsHijacker
+func JSONRecovery() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			// TODO: log errors
+			if err := recover(); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "Internal server error",
+				})
+				c.Abort()
+			}
+		}()
+		c.Next()
 	}
-
-	return hijacker.Hijack() //nolint:wrapcheck
 }
 
-func (rw *ResponseWriterWrapper) WriteHeader(code int) {
-	rw.StatusCode = code
-	rw.ResponseWriter.WriteHeader(code)
+func JSONErrorHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		if len(c.Errors) > 0 {
+			// TODO: log errors
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Internal server error",
+			})
+		}
+	}
 }
 
 func WriteJSON(doc any, w http.ResponseWriter, status int) error {
@@ -55,59 +58,21 @@ func WriteJSON(doc any, w http.ResponseWriter, status int) error {
 	return nil
 }
 
-// JSONMiddleware sets Content-Type header to "application/json".
-func JSONMiddleware(_ logrus.FieldLogger) mux.MiddlewareFunc {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
 // LoggingMiddleware logs each request's URI and method.
-func LoggingMiddleware(logger logrus.FieldLogger) mux.MiddlewareFunc {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			wrappedWriter := &ResponseWriterWrapper{ResponseWriter: w, StatusCode: http.StatusOK} // Default to 200
+func LoggingMiddleware(logger logrus.FieldLogger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
 
-			start := time.Now()
+		defer func() {
+			total := time.Since(start)
+			logger.WithFields(logrus.Fields{
+				"method":   c.Request.Method,
+				"path":     c.Request.URL.Path,
+				"duration": total,
+				"status":   c.Writer.Status(),
+			}).Infof("%s %s", c.Request.Method, c.Request.URL.Path)
+		}()
 
-			defer func() {
-				total := time.Since(start)
-				logger.WithFields(logrus.Fields{
-					"method":   r.Method,
-					"path":     r.URL.Path,
-					"duration": total,
-					"status":   wrappedWriter.StatusCode,
-				}).Infof("%s %s", r.Method, r.URL.Path)
-			}()
-
-			next.ServeHTTP(wrappedWriter, r)
-		})
-	}
-}
-
-// RecoverMiddleware recovers from panics.
-func RecoverMiddleware(logger logrus.FieldLogger) mux.MiddlewareFunc {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				if err := recover(); err != nil {
-					logger.WithFields(logrus.Fields{
-						"error": err,
-					}).Error("Application panicked:", string(debug.Stack()))
-
-					err := WriteJSON(ErrorBody{
-						Error: "Internal Server Error",
-					}, w, http.StatusInternalServerError)
-					if err != nil {
-						logger.WithError(err).Error("cannot write response")
-					}
-				}
-			}()
-
-			next.ServeHTTP(w, r)
-		})
+		c.Next()
 	}
 }
