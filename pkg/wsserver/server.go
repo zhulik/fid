@@ -33,7 +33,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := httpserver.NewRouter(logger)
+	router := httpserver.NewRouter(injector, logger)
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
@@ -56,21 +56,10 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		logger: logger,
 	}
 
-	router.GET("/pulse", server.PulseHandler)
 	// TODO: authentication
 	router.GET("/ws/:functionName", server.WebsocketHandler)
 
 	return server, nil
-}
-
-func (s *Server) PulseHandler(c *gin.Context) {
-	errs := s.injector.HealthCheck()
-
-	for _, err := range errs {
-		if err != nil {
-			c.Error(err)
-		}
-	}
 }
 
 func (s *Server) WebsocketHandler(c *gin.Context) {

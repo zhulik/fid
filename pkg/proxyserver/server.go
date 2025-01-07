@@ -39,7 +39,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	defer logger.Info("Server created.")
 
-	router := httpserver.NewRouter(logger)
+	router := httpserver.NewRouter(injector, logger)
 
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
@@ -57,20 +57,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		publisher: publisher,
 	}
 
-	router.GET("/pulse", server.PulseHandler)
 	router.POST("/invoke/:functionName", server.InvokeHandler)
 
 	return server, nil
-}
-
-func (s *Server) PulseHandler(c *gin.Context) {
-	errs := s.injector.HealthCheck()
-
-	for _, err := range errs {
-		if err != nil {
-			c.Error(err)
-		}
-	}
 }
 
 func (s *Server) InvokeHandler(c *gin.Context) {
