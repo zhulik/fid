@@ -8,7 +8,7 @@ import (
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/di"
-	"github.com/zhulik/fid/pkg/wsserver"
+	"github.com/zhulik/fid/pkg/forwarder"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 
 	logger.Info("Starting...")
 
-	server := do.MustInvoke[*wsserver.Server](injector)
+	server := do.MustInvoke[*forwarder.Server](injector)
 
 	go func() {
 		err := server.Run()

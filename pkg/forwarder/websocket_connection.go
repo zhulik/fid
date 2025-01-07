@@ -1,4 +1,4 @@
-package wsserver
+package forwarder
 
 import (
 	"fmt"

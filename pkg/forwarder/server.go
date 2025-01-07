@@ -1,4 +1,4 @@
-package wsserver
+package forwarder
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	server, err := httpserver.NewServer(injector, "wsserver.Server", config.WSServerPort())
+	server, err := httpserver.NewServer(injector, "forwarder.Server", config.WSServerPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/pkg/di"
-	"github.com/zhulik/fid/pkg/proxyserver"
+	"github.com/zhulik/fid/pkg/gateway"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 
 	logger.Info("Starting...")
 
-	server := do.MustInvoke[*proxyserver.Server](injector)
+	server := do.MustInvoke[*gateway.Server](injector)
 
 	go func() {
 		err := server.Run()

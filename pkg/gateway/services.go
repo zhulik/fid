@@ -1,4 +1,4 @@
-package wsserver
+package gateway
 
 import (
 	"github.com/samber/do"

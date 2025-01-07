@@ -1,4 +1,4 @@
-package proxyserver
+package forwarder
 
 import (
 	"github.com/samber/do"
