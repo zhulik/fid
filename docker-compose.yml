@@ -8,29 +8,29 @@ services:
       - /tmp/nats/:/data
     command: [ "-js" ]
 
-  proxy:
-    image: fid-proxy
+  gateway:
+    image: fid/gateway
     build:
       context: .
       args:
-        COMPONENT: "proxy"
+        COMPONENT: "gateway"
     environment:
       - NATS_URL=nats://nats:4222
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       labels:
-        wtf.zhulik.fid.component: "proxy"
+        wtf.zhulik.fid.component: "gateway"
       replicas: 1
     ports:
       - 80:80
 
-  wsserver:
-    image: fid-wsserver
+  forwarder:
+    image: fid/forwarder
     build:
       context: .
       args:
-        COMPONENT: "wsserver"
+        COMPONENT: "forwarder"
 
     environment:
       - NATS_URL=nats://nats:4222
@@ -38,14 +38,14 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       labels:
-        wtf.zhulik.fid.component: "wsserver"
+        wtf.zhulik.fid.component: "forwarder"
       replicas: 1
 
     ports:
       - 81:80
 
   infoserver:
-    image: fid-infoserver
+    image: fid/infoserver
     build:
       context: .
       args:
@@ -61,14 +61,14 @@ services:
       - 82:80
 
   function:
-    image: function
+    image: fid/demo-function
     build:
       context: .
       args:
         COMPONENT: "function"
 
     environment:
-      - WS_URI=ws://wsserver/ws/function
+      - WS_URI=ws://forwarder/ws/function
 
     deploy:
       labels:
@@ -78,9 +78,7 @@ services:
       replicas: 1
 
     depends_on:
-      - wsserver
-      - proxy
-
+      - forwarder
 
 volumes:
   nats_data:
