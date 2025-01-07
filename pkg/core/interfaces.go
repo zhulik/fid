@@ -12,6 +12,7 @@ type Config interface {
 	ProxyServerPort() int
 	InfoServerPort() int
 	NatsURL() string
+	LogLevel() string
 }
 
 type ContainerBackend interface {

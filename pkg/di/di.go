@@ -9,8 +9,8 @@ import (
 func New() *do.Injector {
 	injector := do.New()
 
-	log.Register(injector)
 	config.Register(injector)
+	log.Register(injector)
 
 	// TODO: inject config
 

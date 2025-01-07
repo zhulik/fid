@@ -1,6 +1,8 @@
 package config
 
-import "github.com/nats-io/nats.go"
+import (
+	"github.com/nats-io/nats.go"
+)
 
 const (
 	DefaultHTTPPort = 8080
@@ -11,6 +13,7 @@ type Config struct {
 	WSPort   int    `env:"WS_PORT"   envDefault:"8081"`
 	InfoPort int    `env:"INFO_PORT" envDefault:"8082"`
 	NATSURL  string `env:"NATS_URL"`
+	Loglevel string `env:"LOG_LEVEL" envDefault:"info"`
 }
 
 func (c Config) NatsURL() string {
@@ -43,4 +46,8 @@ func (c Config) InfoServerPort() int {
 	}
 
 	return c.InfoPort
+}
+
+func (c Config) LogLevel() string {
+	return c.Loglevel
 }

@@ -173,14 +173,15 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
 	for _, stream := range streams {
 		logger := p.logger.WithField("streamName", stream.Name)
-		_, err := p.jetStream.CreateStream(ctx, stream)
 
+		_, err := p.jetStream.CreateStream(ctx, stream)
 		if err != nil {
 			if errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
 				_, err = p.jetStream.UpdateStream(ctx, stream)
 				if err != nil {
 					return fmt.Errorf("failed to update stream: %w", err)
 				}
+
 				logger.Info("Stream updated")
 
 				return nil
