@@ -14,7 +14,8 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	backend core.ContainerBackend
+	backend    core.ContainerBackend
+	subscriber core.Subscriber
 }
 
 // NewServer creates a new Server instance.
@@ -34,9 +35,15 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
+	subscriber, err := do.Invoke[core.Subscriber](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	srv := &Server{
-		Server:  server,
-		backend: backend,
+		Server:     server,
+		backend:    backend,
+		subscriber: subscriber,
 	}
 
 	// TODO: authentication

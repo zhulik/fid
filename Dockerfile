@@ -7,6 +7,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY pkg/ ./pkg
+COPY internal/ ./internal
 COPY cmd/$COMPONENT .
 
 ENV CGO_ENABLED=0
