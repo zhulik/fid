@@ -1,13 +1,13 @@
 package httpserver
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"github.com/zhulik/fid/pkg/json"
 )
 
 const (

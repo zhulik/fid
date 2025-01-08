@@ -2,7 +2,6 @@ package nats
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/pkg/json"
 )
 
 const (
