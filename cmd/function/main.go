@@ -1,43 +1,19 @@
 package main
 
 import (
+	"context"
 	"log"
-	"os"
 
-	"github.com/gorilla/websocket"
+	"github.com/zhulik/fid/pkg/sdk"
 )
 
-func handler(input []byte) ([]byte, error) { //nolint:unparam
+func handler(_ context.Context, input []byte) ([]byte, error) { //nolint:unparam
 	log.Printf("Handling %s:", string(input))
 
 	return []byte("test"), nil
 }
 
 func main() {
-	// Connect to the WebSocket server
-	serverURL := os.Getenv("WS_URI")
 
-	conn, _, err := websocket.DefaultDialer.Dial(serverURL, nil)
-	if err != nil {
-		log.Fatal("Failed to connect to WebSocket server:", err)
-	}
-
-	defer conn.Close()
-
-	for {
-		_, msg, err := conn.ReadMessage()
-		if err != nil {
-			panic(err)
-		}
-
-		result, err := handler(msg)
-		if err != nil {
-			panic(err)
-		}
-
-		err = conn.WriteMessage(websocket.TextMessage, result)
-		if err != nil {
-			panic(err)
-		}
-	}
+	sdk.Serve(handler)
 }

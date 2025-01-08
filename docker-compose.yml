@@ -23,7 +23,7 @@ services:
         wtf.zhulik.fid.component: "gateway"
       replicas: 1
     ports:
-      - 80:80
+      - "8080:80"
 
   forwarder:
     image: fid/forwarder
@@ -42,7 +42,7 @@ services:
       replicas: 1
 
     ports:
-      - 81:80
+      - "8081:80"
 
   infoserver:
     image: fid/infoserver
@@ -58,7 +58,7 @@ services:
       replicas: 1
 
     ports:
-      - 82:80
+      - "8082:80"
 
   function:
     image: fid/demo-function
