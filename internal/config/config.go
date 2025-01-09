@@ -24,7 +24,7 @@ func (c Config) NatsURL() string {
 	return c.NATSURL
 }
 
-func (c Config) ProxyServerPort() int {
+func (c Config) GatewayPort() int {
 	if c.HTTPPort != 0 {
 		return c.HTTPPort
 	}
@@ -32,7 +32,7 @@ func (c Config) ProxyServerPort() int {
 	return DefaultHTTPPort
 }
 
-func (c Config) WSServerPort() int {
+func (c Config) ForwarderPort() int {
 	if c.HTTPPort != 0 {
 		return c.HTTPPort
 	}

@@ -25,7 +25,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	server, err := httpserver.NewServer(injector, "forwarder.Server", config.WSServerPort())
+	server, err := httpserver.NewServer(injector, "forwarder.Server", config.GatewayPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}

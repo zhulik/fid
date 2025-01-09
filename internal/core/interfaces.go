@@ -8,8 +8,8 @@ import (
 )
 
 type Config interface {
-	WSServerPort() int
-	ProxyServerPort() int
+	ForwarderPort() int
+	GatewayPort() int
 	InfoServerPort() int
 	NatsURL() string
 	LogLevel() string
