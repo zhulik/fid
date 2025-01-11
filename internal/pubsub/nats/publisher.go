@@ -113,6 +113,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 
 	consumerName := uuid.New().String()
 
+	// TODO: no need to create and delete consumer for each request.
 	cons, err := p.nats.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		FilterSubject: msg.Reply,
