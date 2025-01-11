@@ -121,7 +121,10 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	defer func() {
+	defer func() { //nolint:contextcheck
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
 		if err := p.nats.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
 			p.logger.WithError(err).Error("failed to delete consumer")
 		}
@@ -142,9 +145,14 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	}
 	defer sub.Stop()
 
-	<-sub.Closed()
-
-	return result, nil
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("failed to consume, client has probably disconnected: %w", ctx.Err())
+		case <-sub.Closed():
+			return result, nil
+		}
+	}
 }
 
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {

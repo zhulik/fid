@@ -46,6 +46,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 }
 
 func (s *Server) InvokeHandler(c *gin.Context) {
+	ctx := c.Request.Context()
 	functionName := c.Param("functionName")
 	invocationUUID := uuid.New()
 
@@ -57,18 +58,24 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Error(err)
+
+		return
 	}
 
 	subject := fmt.Sprintf("%s.%s", core2.InvokeSubjectBase, invocationUUID)
 
-	response, err := s.publisher.PublishWaitReply(c, subject, body)
+	response, err := s.publisher.PublishWaitReply(ctx, subject, body)
 	if err != nil {
 		c.Error(err)
+
+		return
 	}
 
 	// TODO: develop protocol.
 	_, err = c.Writer.Write(response)
 	if err != nil {
 		c.Error(err)
+
+		return
 	}
 }
