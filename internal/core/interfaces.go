@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"io"
 	"time"
 
 	"github.com/samber/do"
@@ -29,7 +28,8 @@ type ContainerBackend interface {
 type Function interface {
 	Name() string
 
-	Invoke(ctx context.Context, r io.Reader) ([]byte, error)
+	Timeout() time.Duration
+	ScalingConfig() ScalingConfig
 }
 
 type Publisher interface {

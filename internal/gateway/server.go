@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,6 +18,7 @@ import (
 type Server struct {
 	*httpserver.Server
 
+	backend   core.ContainerBackend
 	publisher core.Publisher
 }
 
@@ -38,9 +39,15 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
+	backend, err := do.Invoke[core.ContainerBackend](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	srv := &Server{
 		Server:    server,
 		publisher: publisher,
+		backend:   backend,
 	}
 
 	srv.Router.POST("/invoke/:functionName", srv.InvokeHandler)
@@ -52,6 +59,20 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	functionName := c.Param("functionName")
+
+	function, err := s.backend.Function(ctx, functionName)
+	if err != nil {
+		if errors.Is(err, core.ErrFunctionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
+
+			return
+		}
+
+		c.Error(err)
+
+		return
+	}
+
 	invocationUUID := uuid.New()
 
 	s.Logger.WithFields(logrus.Fields{
@@ -68,8 +89,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 
 	subject := fmt.Sprintf("%s.%s.%s", core.InvokeSubjectBase, functionName, invocationUUID)
 
-	// TODO: use function's timeout from it's config.
-	response, err := s.publisher.PublishWaitReply(ctx, subject, body, 30*time.Second) //nolint:mnd
+	response, err := s.publisher.PublishWaitReply(ctx, subject, body, function.Timeout())
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			s.Logger.Info("client disconnected while waiting for reply")
