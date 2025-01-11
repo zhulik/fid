@@ -108,7 +108,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 		return nil, fmt.Errorf("failed to create consumer for subject=%s: %w", replySubject, err)
 	}
 
-	p.logger.Debugf("NATS Consumer for subject=%s created", replySubject)
+	p.logger.WithField("subject", replySubject).Debug("NATS Consumer created")
 
 	defer func() { //nolint:contextcheck
 		ctx, cancel := context.WithCancel(context.Background())
@@ -118,7 +118,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 			p.logger.WithError(err).Errorf("Failed to delete consumer subject=%s", replySubject)
 		}
 
-		p.logger.Debugf("NATS Consumer for subject=%s deleted", replySubject)
+		p.logger.WithField("subject", replySubject).Debug("NATS Consumer for deleted")
 	}()
 
 	done, errChan := awaitReply(cons, replyTimeout)
@@ -137,7 +137,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.Debugf("Message to subject=%s sent, awaiting reply", subject)
+	p.logger.WithField("subject", subject).Debugf("Message sent, awaiting reply")
 
 	select {
 	case <-ctx.Done():
