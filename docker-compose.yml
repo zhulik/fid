@@ -75,6 +75,7 @@ services:
         wtf.zhulik.fid.component: "function"
         wtf.zhulik.fid.scale.min: 3
         wtf.zhulik.fid.scale.max: 10
+        wtf.zhulik.fid.timeout: 10
       replicas: 1
 
     depends_on:

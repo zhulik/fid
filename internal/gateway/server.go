@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -67,7 +68,8 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 
 	subject := fmt.Sprintf("%s.%s.%s", core.InvokeSubjectBase, functionName, invocationUUID)
 
-	response, err := s.publisher.PublishWaitReply(ctx, subject, body)
+	// TODO: use function's timeout from it's config.
+	response, err := s.publisher.PublishWaitReply(ctx, subject, body, 30*time.Second) //nolint:mnd
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			s.Logger.Info("client disconnected while waiting for reply")

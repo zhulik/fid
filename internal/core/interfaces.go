@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"io"
+	"time"
 
 	"github.com/samber/do"
 )
@@ -36,7 +37,7 @@ type Publisher interface {
 	do.Shutdownable
 
 	Publish(ctx context.Context, subject string, msg any) error
-	PublishWaitReply(ctx context.Context, subject string, payload any) ([]byte, error)
+	PublishWaitReply(ctx context.Context, subject string, payload any, replyTimeout time.Duration) ([]byte, error)
 }
 
 type Subscriber interface {
