@@ -1,13 +1,11 @@
 package httpserver
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/pkg/json"
 )
 
 const (
@@ -29,33 +27,20 @@ func JSONRecovery() gin.HandlerFunc {
 	}
 }
 
-func JSONErrorHandler() gin.HandlerFunc {
+func JSONErrorHandler(logger logrus.FieldLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 
 		if len(c.Errors) > 0 {
-			// TODO: log errors
+			for _, err := range c.Errors {
+				logger.WithError(err.Err).Errorf("Error during handling %s: %s", c.Request.URL.Path, err)
+			}
+
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{
 				"error": "Internal server error",
 			})
 		}
 	}
-}
-
-func WriteJSON(doc any, w http.ResponseWriter, status int) error {
-	jsonErr, err := json.MarshalIndent(doc, "", " ")
-	if err != nil {
-		return fmt.Errorf("failed marshal json: %w", err)
-	}
-
-	w.WriteHeader(status)
-
-	_, err = w.Write(jsonErr)
-	if err != nil {
-		return fmt.Errorf("failed to write response: %w", err)
-	}
-
-	return nil
 }
 
 // LoggingMiddleware logs each request's URI and method.

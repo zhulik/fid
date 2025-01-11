@@ -33,7 +33,7 @@ func NewServer(injector *do.Injector, name string, port int) (*Server, error) {
 
 	router.Use(JSONRecovery())
 	router.Use(LoggingMiddleware(logger))
-	router.Use(JSONErrorHandler())
+	router.Use(JSONErrorHandler(logger))
 
 	router.GET("/health", func(c *gin.Context) {
 		errs := injector.HealthCheck()
