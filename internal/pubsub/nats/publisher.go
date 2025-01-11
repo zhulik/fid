@@ -161,6 +161,11 @@ func awaitReply(cons jetstream.Consumer, timeout time.Duration) (chan []byte, ch
 			return
 		}
 		done <- reply.Data()
+
+		err = reply.Ack()
+		if err != nil {
+			errChan <- fmt.Errorf("failed to ack reply: %w", err)
+		}
 	}()
 
 	return done, errChan
