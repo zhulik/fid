@@ -43,7 +43,5 @@ func New() *do.Injector {
 	pubsub.Register(injector)
 	infoserver.Register(injector)
 
-	// TODO: inject config
-
 	return injector
 }

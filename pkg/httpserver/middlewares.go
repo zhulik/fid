@@ -15,7 +15,6 @@ const (
 func JSONRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
-			// TODO: log errors
 			if err := recover(); err != nil {
 				c.IndentedJSON(http.StatusInternalServerError, gin.H{
 					"error": "Internal server error",
