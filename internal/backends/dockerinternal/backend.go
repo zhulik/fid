@@ -7,7 +7,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	core2 "github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/core"
 )
 
 type Backend struct {
@@ -44,12 +44,12 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(_ context.Context, _ string) (core2.Function, error) { //nolint:ireturn
-	return nil, core2.ErrFunctionNotFound
+func (b Backend) Function(_ context.Context, _ string) (core.Function, error) { //nolint:ireturn
+	return nil, core.ErrFunctionNotFound
 }
 
-func (b Backend) Functions(_ context.Context) ([]core2.Function, error) {
-	return []core2.Function{}, nil
+func (b Backend) Functions(_ context.Context) ([]core.Function, error) {
+	return []core.Function{}, nil
 }
 
 func (b Backend) HealthCheck() error {
