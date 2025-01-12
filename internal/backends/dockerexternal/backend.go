@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -26,6 +28,8 @@ func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
 
 	defer logger.Info("ContainerBackend created.")
 
+	// TODO: validate function configs
+
 	return &Backend{
 		docker: docker,
 
@@ -45,8 +49,23 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(_ context.Context, _ string) (core.Function, error) { //nolint:ireturn
-	return nil, core.ErrFunctionNotFound
+func (b Backend) Function(ctx context.Context, name string) (core.Function, error) { //nolint:ireturn
+	fnFilters := filters.NewArgs()
+	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionComponentLabelValue))
+	fnFilters.Add("name", name)
+
+	containers, err := b.docker.ContainerList(ctx, container.ListOptions{
+		Filters: fnFilters,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	if len(containers) == 0 {
+		return nil, core.ErrFunctionNotFound
+	}
+
+	return NewFunction(containers[0])
 }
 
 func (b Backend) Functions(_ context.Context) ([]core.Function, error) {

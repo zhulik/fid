@@ -21,7 +21,6 @@ services:
     deploy:
       labels:
         wtf.zhulik.fid.component: "gateway"
-      replicas: 1
     ports:
       - "8080:80"
 
@@ -39,7 +38,6 @@ services:
     deploy:
       labels:
         wtf.zhulik.fid.component: "forwarder"
-      replicas: 1
 
     ports:
       - "8081:80"
@@ -55,7 +53,6 @@ services:
     deploy:
       labels:
         wtf.zhulik.fid.component: "infoserver"
-      replicas: 1
 
     ports:
       - "8082:80"
@@ -76,10 +73,29 @@ services:
         wtf.zhulik.fid.scale.min: 3
         wtf.zhulik.fid.scale.max: 10
         wtf.zhulik.fid.timeout: 10
-      replicas: 1
 
     depends_on:
       - forwarder
+
+
+  not_a_function:
+    image: nginx:latest
+
+    environment:
+      - SOME_VAR=1
+
+    labels:
+      wtf.zhulik.fid.component: "function"
+      wtf.zhulik.fid.scale.min: 3
+      wtf.zhulik.fid.scale.max: 10
+      wtf.zhulik.fid.timeout: 10
+
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "function"
+        wtf.zhulik.fid.scale.min: 3
+        wtf.zhulik.fid.scale.max: 10
+        wtf.zhulik.fid.timeout: 10
 
 volumes:
   nats_data:

@@ -1,6 +1,6 @@
 package core
 
 type ScalingConfig struct {
-	Min int
-	Max int
+	Min int64
+	Max int64
 }
