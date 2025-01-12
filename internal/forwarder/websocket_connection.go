@@ -22,9 +22,12 @@ type WebSocketConnection struct {
 
 func NewWebsocketConnection(name string, conn *websocket.Conn, logger logrus.FieldLogger) *WebSocketConnection {
 	return &WebSocketConnection{
-		conn:   conn,
-		name:   name,
-		logger: logger.WithField("component", "websocket-connection"),
+		conn: conn,
+		name: name,
+		logger: logger.WithFields(logrus.Fields{
+			"function":  name,
+			"component": "websocket-connection",
+		}),
 	}
 }
 
@@ -45,8 +48,8 @@ func (w *WebSocketConnection) WriteRead(payload string) (string, error) {
 func (w *WebSocketConnection) Handle() error {
 	defer w.Close()
 
-	w.logger.Info("Function '", w.name, "' handler is being handled...")
-	defer w.logger.Info("Function '", w.name, "' handler is not being handled anymore.")
+	w.logger.Info("Function handler is being handled...")
+	defer w.logger.Info("Function handler is not being handled anymore.")
 
 	w.ping()
 
@@ -65,15 +68,15 @@ func (w *WebSocketConnection) Close() error {
 func (w *WebSocketConnection) ping() {
 	for {
 		time.Sleep(PingInterval)
-		w.logger.Debug("Pinging function '", w.name, "'...")
+		w.logger.Debug("Pinging function ...")
 
 		err := w.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(PingTimeout))
 		if err != nil {
 			// TODO: exit silently when already disconnected.
-			w.logger.Debug("Function '", w.name, "' ping error, closing connection...")
+			w.logger.Debug("Function ping error, closing connection...")
 			w.Close()
 		}
 
-		w.logger.Debug("Pong received from function '", w.name, "'...")
+		w.logger.Debug("Pong received from function.")
 	}
 }

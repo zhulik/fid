@@ -1,6 +1,7 @@
 package forwarder
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -54,16 +55,19 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 func (s *Server) WebsocketHandler(c *gin.Context) {
 	functionName := c.Param("functionName")
-	// _, err := s.backend.Function(r.Context(), functionName)
-	// if errors.Is(err, core.ErrFunctionNotFound) {
-	//	err := WriteJSON(ErrorBody{Error: "Not found"}, w)
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//	return
-	//}
 
-	s.Logger.Debug("Function '", functionName, "' handler connected, upgrading to websocket connection...")
+	_, err := s.backend.Function(c.Request.Context(), functionName)
+	if err != nil {
+		if errors.Is(err, core.ErrFunctionNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
+
+			return
+		}
+
+		c.Error(err)
+	}
+
+	s.Logger.WithField("function", functionName).Debug("Function connected, upgrading to websocket connection...")
 	// Upgrade the HTTP connection to a WebSocket connection
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(_ *http.Request) bool { return true },
@@ -74,7 +78,7 @@ func (s *Server) WebsocketHandler(c *gin.Context) {
 		c.Error(err)
 	}
 
-	s.Logger.Debug("Function '", functionName, "' handler successfully upgraded to websocket connection")
+	s.Logger.WithField("function", functionName).Debug("Function successfully upgraded to websocket connection")
 
 	wsConn := NewWebsocketConnection(functionName, conn, s.Logger)
 	// TODO: handle error?
