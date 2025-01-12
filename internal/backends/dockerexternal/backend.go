@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/pkg/iter"
 )
 
 type Backend struct {
@@ -30,11 +32,18 @@ func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
 
 	// TODO: validate function configs
 
-	return &Backend{
+	backend := Backend{
 		docker: docker,
 
 		logger: logger,
-	}, nil
+	}
+
+	_, err = backend.Functions(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch functions: %w", err)
+	}
+
+	return &backend, nil
 }
 
 func (b Backend) Info(ctx context.Context) (map[string]any, error) {
@@ -50,13 +59,13 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 }
 
 func (b Backend) Function(ctx context.Context, name string) (core.Function, error) { //nolint:ireturn
+	b.logger.WithField("function", name).Debug("Fetching function info")
+
 	fnFilters := filters.NewArgs()
 	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionComponentLabelValue))
 	fnFilters.Add("name", name)
 
-	containers, err := b.docker.ContainerList(ctx, container.ListOptions{
-		Filters: fnFilters,
-	})
+	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
@@ -65,11 +74,44 @@ func (b Backend) Function(ctx context.Context, name string) (core.Function, erro
 		return nil, core.ErrFunctionNotFound
 	}
 
-	return NewFunction(containers[0])
+	inspect, err := b.docker.ContainerInspect(ctx, containers[0].ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect container: %w", err)
+	}
+
+	function, err := NewFunction(inspect)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create function from container: %w", err)
+	}
+
+	return function, nil
 }
 
-func (b Backend) Functions(_ context.Context) ([]core.Function, error) {
-	return []core.Function{}, nil
+func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
+	b.logger.Debug("Fetching function list")
+
+	fnFilters := filters.NewArgs()
+	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionComponentLabelValue))
+
+	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	// TODO: map in parallel
+	functions, err := iter.MapErr(containers, func(t types.Container) (core.Function, error) {
+		inspect, err := b.docker.ContainerInspect(ctx, t.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect container: %w", err)
+		}
+
+		return NewFunction(inspect)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to map containers to functions: %w", err)
+	}
+
+	return functions, nil
 }
 
 func (b Backend) HealthCheck() error {

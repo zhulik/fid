@@ -3,6 +3,7 @@ package dockerexternal
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -10,14 +11,19 @@ import (
 )
 
 type Function struct {
-	container types.Container
+	container types.ContainerJSON
 
 	timeout       time.Duration
 	scalingConfig core.ScalingConfig
+	env           map[string]string
 }
 
-func NewFunction(container types.Container) (*Function, error) {
-	timeoutStr := container.Labels[core.LabelNameTimeout]
+func (f Function) Env() map[string]string {
+	return f.env
+}
+
+func NewFunction(container types.ContainerJSON) (*Function, error) {
+	timeoutStr := container.Config.Labels[core.LabelNameTimeout]
 	timeout := core.DefaultTimeout
 
 	if timeoutStr != "" {
@@ -31,7 +37,7 @@ func NewFunction(container types.Container) (*Function, error) {
 
 	var err error
 
-	minScaleStr := container.Labels[core.LabelNameMinScale]
+	minScaleStr := container.Config.Labels[core.LabelNameMinScale]
 	minScale := int64(core.DefaultMinScale)
 
 	if minScaleStr == "" {
@@ -41,7 +47,7 @@ func NewFunction(container types.Container) (*Function, error) {
 		}
 	}
 
-	maxScaleStr := container.Labels[core.LabelNameMaxScale]
+	maxScaleStr := container.Config.Labels[core.LabelNameMaxScale]
 	maxScale := int64(core.DefaultMaxScale)
 
 	if maxScaleStr != "" {
@@ -58,11 +64,24 @@ func NewFunction(container types.Container) (*Function, error) {
 			Min: minScale,
 			Max: maxScale,
 		},
+		env: parseEnv(container.Config.Env),
 	}, nil
 }
 
+func parseEnv(env []string) map[string]string {
+	envMap := make(map[string]string)
+
+	for _, str := range env {
+		parts := strings.SplitN(str, "=", 2) //nolint:mnd
+
+		envMap[parts[0]] = parts[1]
+	}
+
+	return envMap
+}
+
 func (f Function) Name() string {
-	return f.container.Names[0]
+	return f.container.Name
 }
 
 func (f Function) Timeout() time.Duration {

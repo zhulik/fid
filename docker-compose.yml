@@ -83,6 +83,7 @@ services:
 
     environment:
       - SOME_VAR=1
+      - SOME_OTHER_VAR="=1"
 
     labels:
       wtf.zhulik.fid.component: "function"

@@ -30,6 +30,8 @@ type Function interface {
 
 	Timeout() time.Duration
 	ScalingConfig() ScalingConfig
+
+	Env() map[string]string
 }
 
 type Publisher interface {
