@@ -31,6 +31,9 @@ services:
       args:
         COMPONENT: "forwarder"
 
+    depends_on:
+      - nats
+
     environment:
       - NATS_URL=nats://nats:4222
     volumes:
@@ -66,6 +69,12 @@ services:
 
     environment:
       - WS_URI=ws://forwarder/ws/function
+
+    labels:
+      wtf.zhulik.fid.component: "function"
+      wtf.zhulik.fid.scale.min: 3
+      wtf.zhulik.fid.scale.max: 10
+      wtf.zhulik.fid.timeout: 10
 
     deploy:
       labels:
