@@ -5,13 +5,13 @@ import (
 )
 
 const (
-	DefaultHTTPPort = 8080
+	DefaultHTTPPort = 8180
 )
 
 type Config struct {
 	HTTPPort int    `env:"HTTP_PORT"`
-	WSPort   int    `env:"WS_PORT"   envDefault:"8081"`
-	InfoPort int    `env:"INFO_PORT" envDefault:"8082"`
+	WSPort   int    `env:"WS_PORT"   envDefault:"8181"`
+	InfoPort int    `env:"INFO_PORT" envDefault:"8182"`
 	NATSURL  string `env:"NATS_URL"`
 	Loglevel string `env:"LOG_LEVEL" envDefault:"info"`
 }

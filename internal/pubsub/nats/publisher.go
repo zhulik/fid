@@ -27,7 +27,7 @@ var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Name:      InvocationStreamName,
 	Subjects:  []string{core.InvokeSubjectBase, core.InvokeSubjectBase + ".*"},
 	Storage:   jetstream.FileStorage,
-	Retention: jetstream.LimitsPolicy,
+	Retention: jetstream.WorkQueuePolicy,
 	MaxAge:    maxAge,
 	MaxMsgs:   maxMsgs,
 	MaxBytes:  maxBytes,
@@ -96,6 +96,7 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 }
 
 // PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
+// If payload is []byte, publishes as is, otherwise marshals to JSON.
 func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any, header map[string][]string, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
 	consumerName := uuid.New().String()
 	replySubject := subject + ".reply"
@@ -115,7 +116,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 		defer cancel()
 
 		if err := p.nats.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
-			p.logger.WithError(err).Errorf("Failed to delete consumer subject=%s", replySubject)
+			p.logger.WithError(err).Errorf("Failed to delete consumer stream=%s consumer=%s", InvocationStreamName, consumerName)
 		}
 
 		p.logger.WithField("subject", replySubject).Debug("NATS Consumer for deleted")
@@ -123,9 +124,15 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 
 	done, errChan := awaitReply(cons, replyTimeout)
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+	var data []byte
+
+	var ok bool
+
+	if data, ok = payload.([]byte); !ok {
+		data, err = json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal payload: %w", err)
+		}
 	}
 
 	msg := nats.NewMsg(subject)
