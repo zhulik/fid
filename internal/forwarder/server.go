@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"github.com/samber/do"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
@@ -41,20 +40,38 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
+	server.Router.Use(JWTMiddleware())
+
 	srv := &Server{
 		Server:     server,
 		backend:    backend,
 		subscriber: subscriber,
 	}
 
-	// TODO: authentication
-	srv.Router.GET("/ws/:functionName", srv.WebsocketHandler)
+	// Mimicking the AWS Lambda runtime API for custom runtimes
+	srv.Router.GET("/2018-06-01/runtime/invocation/next", srv.NextHandler)
+	// TODO:
+	// srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/response", srv.ResponseHandler)
+	// srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/error", srv.ErrorHandler)
+	// srv.Router.POST("/2018-06-01/runtime/init/error", srv.InitErrorHandler)
 
 	return srv, nil
 }
 
-func (s *Server) WebsocketHandler(c *gin.Context) {
-	functionName := c.Param("functionName")
+func (s *Server) NextHandler(c *gin.Context) {
+	functionNameAny, ok := c.Get("functionName")
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "function name not found in the context"})
+
+		return
+	}
+
+	functionName, ok := functionNameAny.(string)
+	if !ok || functionName == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "function name not found in the context"})
+
+		return
+	}
 
 	_, err := s.backend.Function(c.Request.Context(), functionName)
 	if err != nil {
@@ -65,22 +82,10 @@ func (s *Server) WebsocketHandler(c *gin.Context) {
 		}
 
 		c.Error(err)
+
+		return
 	}
 
-	s.Logger.WithField("function", functionName).Debug("Function connected, upgrading to websocket connection...")
-	// Upgrade the HTTP connection to a WebSocket connection
-	upgrader := websocket.Upgrader{
-		CheckOrigin: func(_ *http.Request) bool { return true },
-	}
-
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		c.Error(err)
-	}
-
-	s.Logger.WithField("function", functionName).Debug("Function successfully upgraded to websocket connection")
-
-	wsConn := NewWebsocketConnection(functionName, conn, s.Logger)
-	// TODO: handle error?
-	go wsConn.Handle() //nolint:errcheck
+	s.Logger.WithField("function", functionName).Debug("Function connected.")
+	// TODO: subscribe to subject, forward received messages to the function.
 }

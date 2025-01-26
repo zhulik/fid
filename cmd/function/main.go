@@ -63,5 +63,7 @@ func handler(ctx context.Context, input []byte) ([]byte, error) {
 }
 
 func main() {
-	sdk.Serve(handler)
+	if err := sdk.Serve(handler); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

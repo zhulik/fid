@@ -18,6 +18,7 @@ linters-settings:
       - w http.ResponseWriter
       - r *http.Request
       - c *gin.Context
+      - ok bool
 
   errcheck:
     exclude-functions:

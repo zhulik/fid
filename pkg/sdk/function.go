@@ -1,15 +1,39 @@
 package sdk
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
+)
 
-	"github.com/gorilla/websocket"
+type ContextKey int
+
+const (
+	RequestID ContextKey = iota
+	// ...
+)
+
+const (
+	ResponseTimeout = 5 * time.Second
+)
+
+var (
+	// TODO: extract constants.
+	apiURL  = os.Getenv("AWS_LAMBDA_RUNTIME_API")                                 //nolint:gochecknoglobals
+	nextURL = fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/next", apiURL) //nolint:gochecknoglobals
+
+	// TODO: use jwt instead.
+	functionName = os.Getenv("FID_FUNCTION_NAME") //nolint:gochecknoglobals
+
+	ErrUnexpectedStatus    = errors.New("unexpected status code")
+	ErrCannotParseDeadline = errors.New("cannot parse deadline")
 )
 
 type Handler func(ctx context.Context, req []byte) ([]byte, error)
@@ -30,38 +54,125 @@ func port() int {
 	return port
 }
 
-func Serve(handler Handler) {
-	// Connect to the WebSocket server
-	serverURL := os.Getenv("WS_URI")
+func Serve(handler Handler) error {
+	go server(handler)
 
-	conn, response, err := websocket.DefaultDialer.Dial(serverURL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, nextURL, nil)
 	if err != nil {
-		log.Fatal("Failed to connect to WebSocket server:", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	defer response.Body.Close()
-	defer conn.Close()
-
-	go func() {
-		server(handler)
-	}()
+	req.Header.Set(http.CanonicalHeaderKey("function-name"), functionName)
 
 	for {
-		_, msg, err := conn.ReadMessage()
+		err := fetchEventAndHandle(req, handler)
 		if err != nil {
-			panic(err)
-		}
-
-		result, err := handler(context.TODO(), msg)
-		if err != nil {
-			panic(err)
-		}
-
-		err = conn.WriteMessage(websocket.TextMessage, result)
-		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+}
+
+func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
+	// TODO: recover from panic in the handler
+	resp, err := fetchNextEvent(nextReq)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	deadline, err := parseDeadline(resp)
+	if err != nil {
+		return err
+	}
+
+	event, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read message: %w", err)
+	}
+
+	var respReq *http.Request
+
+	var reqErr error
+
+	requestID := resp.Header.Get("Lambda-Runtime-Aws-Request-Id")
+
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
+
+	ctx = context.WithValue(ctx, RequestID, requestID)
+
+	result, err := handler(ctx, event)
+	if err != nil {
+		// TODO: properly serialize error
+		respReq, reqErr = http.NewRequest(
+			http.MethodPost,
+			fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/%s/error", apiURL, requestID),
+			bytes.NewReader(result),
+		)
+	} else {
+		respReq, reqErr = http.NewRequest(
+			http.MethodPost,
+			fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/%s/response", apiURL, requestID),
+			bytes.NewReader(result),
+		)
+	}
+
+	if reqErr != nil {
+		return fmt.Errorf("failed to create response request: %w", err)
+	}
+
+	err = postResponse(respReq)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fetchNextEvent(nextReq *http.Request) (*http.Response, error) {
+	resp, err := http.DefaultClient.Do(nextReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get next event: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %d, failed to read body", ErrUnexpectedStatus, resp.StatusCode)
+		}
+		return nil, fmt.Errorf("%w: %d, body=%s", ErrUnexpectedStatus, resp.StatusCode, body)
+	}
+
+	return resp, nil
+}
+
+func postResponse(respReq *http.Request) error {
+	respCtx, cancel := context.WithTimeout(context.Background(), ResponseTimeout)
+	defer cancel()
+
+	respReq = respReq.WithContext(respCtx)
+
+	resp, err := http.DefaultClient.Do(respReq)
+	if err != nil {
+		return fmt.Errorf("failed to send response: %w", err)
+	}
+
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func parseDeadline(resp *http.Response) (time.Time, error) {
+	deadlineStr := resp.Header.Get("Lambda-Runtime-Deadline-Ms")
+	deadline, ok := strconv.ParseInt(deadlineStr, 10, 64)
+
+	if ok != nil {
+		return time.Time{}, fmt.Errorf("%w: failed to parse deadline '%s'", ErrCannotParseDeadline, deadlineStr)
+	}
+
+	return time.UnixMilli(deadline), nil
 }
 
 func server(handler Handler) {

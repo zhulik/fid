@@ -78,7 +78,7 @@ func (s *Server) Shutdown() error {
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	s.Logger.Debug("Starting server at: ", s.server.Addr)
+	s.Logger.Info("Starting server at: ", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
 
