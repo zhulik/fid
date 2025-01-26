@@ -94,8 +94,8 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
 	response, err := s.publisher.PublishWaitReply(ctx, subject, body, nats.Header{
-		"RequestID": {invocationUUID},
-		"Deadline":  {strconv.FormatInt(deadline, 10)},
+		"Lambda-Runtime-Aws-Request-Id": {invocationUUID},
+		"Lambda-Runtime-Deadline-Ms":    {strconv.FormatInt(deadline, 10)},
 	}, function.Timeout())
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
