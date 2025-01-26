@@ -142,6 +142,7 @@ func fetchNextEvent(nextReq *http.Request) (*http.Response, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%w: %d, failed to read body", ErrUnexpectedStatus, resp.StatusCode)
 		}
+
 		return nil, fmt.Errorf("%w: %d, body=%s", ErrUnexpectedStatus, resp.StatusCode, body)
 	}
 
@@ -169,7 +170,7 @@ func parseDeadline(resp *http.Response) (time.Time, error) {
 	deadline, ok := strconv.ParseInt(deadlineStr, 10, 64)
 
 	if ok != nil {
-		return time.Time{}, fmt.Errorf("%w: failed to parse deadline '%s'", ErrCannotParseDeadline, deadlineStr)
+		return time.Time{}, fmt.Errorf("%w: '%s'", ErrCannotParseDeadline, deadlineStr)
 	}
 
 	return time.UnixMilli(deadline), nil
