@@ -6,9 +6,21 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do"
-	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
+	"github.com/zhulik/fid/internal/core"
 )
+
+type msgWrapper struct {
+	msg jetstream.Msg
+}
+
+func (m msgWrapper) Headers() map[string][]string {
+	return m.msg.Headers()
+}
+
+func (m msgWrapper) Data() []byte {
+	return m.msg.Data()
+}
 
 type Subscriber struct {
 	nats *Client
@@ -52,47 +64,20 @@ func (s Subscriber) Shutdown() error {
 	return nil
 }
 
-func (s Subscriber) Subscribe(
-	ctx context.Context, consumerName, subject string, handler func(payload []byte, unsubscribe func()) error,
-) error {
-	cons, err := s.nats.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
+func (s Subscriber) Fetch(ctx context.Context, consumerName, subject string) (core.Message, error) { //nolint:ireturn
+	cons, err := s.nats.jetStream.CreateOrUpdateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		FilterSubject: subject,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create consumer: %w", err)
+		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	defer func() {
-		if err := s.nats.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
-			s.logger.WithError(err).Error("failed to delete consumer")
-		}
-	}()
-
-	var sub jetstream.ConsumeContext
-
-	// TODO: timeout
-	sub, err = cons.Consume(func(msg jetstream.Msg) {
-		result := msg.Data()
-
-		err := handler(result, sub.Stop)
-		// TODO: if handler panics, it should be recovered and the message should be nacked.
-		if err != nil {
-			// TODO: handler error somehow
-			lo.Must0(msg.Nak())
-
-			return
-		}
-
-		// TODO: handler error somehow
-		lo.Must0(msg.Ack())
-	})
+	// TODO: respect ctx cancellation
+	msg, err := cons.Next()
 	if err != nil {
-		return fmt.Errorf("failed to consume: %w", err)
+		return nil, fmt.Errorf("failed to fetch message: %w", err)
 	}
-	defer sub.Stop()
 
-	<-sub.Closed()
-
-	return nil
+	return msgWrapper{msg}, nil
 }

@@ -86,6 +86,30 @@ func (s *Server) NextHandler(c *gin.Context) {
 		return
 	}
 
-	s.Logger.WithField("function", functionName).Debug("Function connected.")
-	// TODO: subscribe to subject, forward received messages to the function.
+	logger := s.Logger.WithField("function", functionName)
+
+	logger.Debug("Function connected, waiting for events...")
+
+	msg, err := s.subscriber.Fetch(c.Request.Context(), functionName,
+		fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName))
+	if err != nil {
+		c.Error(err)
+
+		return
+	}
+
+	logger.Infof("Event received: %s", msg.Headers()["Lambda-Runtime-Aws-Request-Id"][0])
+
+	for key, values := range msg.Headers() {
+		for _, value := range values {
+			c.Writer.Header().Add(key, value)
+		}
+	}
+
+	_, err = c.Writer.Write(msg.Data())
+	if err != nil {
+		c.Error(err)
+
+		return
+	}
 }

@@ -47,8 +47,10 @@ type Subscriber interface {
 	do.Healthcheckable
 	do.Shutdownable
 
-	// If errors is returned from the handler, the message will be nacked.
-	Subscribe(
-		ctx context.Context, consumerName, subject string, handler func(payload []byte, unsubscribe func()) error,
-	) error
+	Fetch(ctx context.Context, consumerName, subject string) (Message, error)
+}
+
+type Message interface {
+	Data() []byte
+	Headers() map[string][]string
 }
