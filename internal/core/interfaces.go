@@ -39,7 +39,8 @@ type Publisher interface {
 	do.Shutdownable
 
 	Publish(ctx context.Context, subject string, msg any) error
-	PublishWaitReply(ctx context.Context, subject string, payload any, replyTimeout time.Duration) ([]byte, error)
+	PublishWaitReply(ctx context.Context, subject string, payload any,
+		header map[string][]string, replyTimeout time.Duration) ([]byte, error)
 }
 
 type Subscriber interface {

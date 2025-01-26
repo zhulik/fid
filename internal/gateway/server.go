@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -73,10 +76,10 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	invocationUUID := uuid.New()
+	invocationUUID := uuid.NewString()
 
 	s.Logger.WithFields(logrus.Fields{
-		"requestUUID":  invocationUUID,
+		"requestID":    invocationUUID,
 		"functionName": functionName,
 	}).Info("Invoking...")
 
@@ -87,9 +90,13 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	subject := fmt.Sprintf("%s.%s.%s", core.InvokeSubjectBase, functionName, invocationUUID)
+	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
+	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
-	response, err := s.publisher.PublishWaitReply(ctx, subject, body, function.Timeout())
+	response, err := s.publisher.PublishWaitReply(ctx, subject, body, nats.Header{
+		"RequestID": {invocationUUID},
+		"Deadline":  {strconv.FormatInt(deadline, 10)},
+	}, function.Timeout())
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			s.Logger.Info("client disconnected while waiting for reply")

@@ -25,7 +25,7 @@ const (
 
 var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Name:      InvocationStreamName,
-	Subjects:  []string{core.InvokeSubjectBase, core.InvokeSubjectBase + ".*", core.InvokeSubjectBase + ".*.*"},
+	Subjects:  []string{core.InvokeSubjectBase, core.InvokeSubjectBase + ".*"},
 	Storage:   jetstream.FileStorage,
 	Retention: jetstream.LimitsPolicy,
 	MaxAge:    maxAge,
@@ -96,7 +96,7 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 }
 
 // PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
-func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
+func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any, header map[string][]string, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
 	consumerName := uuid.New().String()
 	replySubject := subject + ".reply"
 
@@ -131,6 +131,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	msg := nats.NewMsg(subject)
 	msg.Data = data
 	msg.Reply = replySubject
+	msg.Header = header
 
 	_, err = p.nats.jetStream.PublishMsg(ctx, msg)
 	if err != nil {
