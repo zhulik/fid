@@ -35,7 +35,8 @@ var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 type Publisher struct {
 	nats *Client
 
-	logger logrus.FieldLogger
+	logger     logrus.FieldLogger
+	subscriber core.Subscriber
 }
 
 func NewPublisher(injector *do.Injector) (*Publisher, error) {
@@ -51,9 +52,15 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 		return nil, err
 	}
 
+	subscriber, err := do.Invoke[core.Subscriber](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	publisher := &Publisher{
-		nats:   natsClient,
-		logger: logger,
+		nats:       natsClient,
+		logger:     logger,
+		subscriber: subscriber,
 	}
 
 	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig)
@@ -96,39 +103,18 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 // PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
 func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any, header map[string][]string, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
-	consumerName := uuid.New().String()
 	replySubject := subject + ".reply"
 
-	cons, err := p.nats.jetStream.CreateConsumer(ctx, core.InvocationStreamName, jetstream.ConsumerConfig{
-		Name:          consumerName,
-		FilterSubject: replySubject,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create consumer for subject=%s: %w", replySubject, err)
-	}
+	replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
+	defer cancel()
 
-	p.logger.WithField("subject", replySubject).Debug("NATS Consumer created")
+	// TODO: use lo.Async
+	done, errChan := p.awaitReply(replyCtx, replySubject)
 
-	defer func() {
-		logger := p.logger.WithFields(logrus.Fields{
-			"stream":   core.InvocationStreamName,
-			"consumer": consumerName,
-			"subject":  subject,
-		})
-		if err := p.nats.jetStream.DeleteConsumer(ctx, core.InvocationStreamName, consumerName); err != nil {
-			logger.WithError(err).Error("Failed to delete consumer")
-		}
+	data, ok := payload.([]byte)
+	if !ok {
+		var err error
 
-		logger.Debug("NATS Consumer deleted")
-	}()
-
-	done, errChan := awaitReply(cons, replyTimeout)
-
-	var data []byte
-
-	var ok bool
-
-	if data, ok = payload.([]byte); !ok {
 		data, err = json.Marshal(payload)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal payload: %w", err)
@@ -140,7 +126,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	msg.Reply = replySubject
 	msg.Header = header
 
-	_, err = p.nats.jetStream.PublishMsg(ctx, msg)
+	_, err := p.nats.jetStream.PublishMsg(ctx, msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
@@ -157,12 +143,14 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	}
 }
 
-func awaitReply(cons jetstream.Consumer, timeout time.Duration) (chan []byte, chan error) {
+func (p Publisher) awaitReply(ctx context.Context, subject string) (chan []byte, chan error) {
+	consumerName := uuid.New().String()
+
 	done := make(chan []byte)
 	errChan := make(chan error)
 
 	go func() {
-		reply, err := cons.Next(jetstream.FetchMaxWait(timeout))
+		reply, err := p.subscriber.Next(ctx, core.InvocationStreamName, consumerName, subject)
 		if err != nil {
 			errChan <- fmt.Errorf("failed to consume reply: %w", err)
 

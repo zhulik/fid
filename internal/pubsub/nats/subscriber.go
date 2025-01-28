@@ -38,7 +38,7 @@ func NewSubscriber(injector *do.Injector) (*Subscriber, error) {
 }
 
 func (s Subscriber) HealthCheck() error {
-	s.logger.Debug("Publisher health check...")
+	s.logger.Debug("Subscriber health check...")
 
 	err := s.nats.HealthCheck()
 	if err != nil {
@@ -52,9 +52,8 @@ func (s Subscriber) Shutdown() error {
 	return nil
 }
 
-func (s Subscriber) Next(ctx context.Context, //nolint:ireturn
-	streamName, consumerName, subject string,
-) (core.Message, error) {
+// Next returns the next message from the stream, **does not respect ctx cancellation yet**
+func (s Subscriber) Next(ctx context.Context, streamName, consumerName, subject string) (core.Message, error) { //nolint:ireturn,lll
 	cons, err := s.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		FilterSubject: subject,
@@ -63,13 +62,19 @@ func (s Subscriber) Next(ctx context.Context, //nolint:ireturn
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	defer func() {
-		logger := s.logger.WithFields(logrus.Fields{
-			"stream":   streamName,
-			"consumer": consumerName,
-			"subject":  subject,
-		})
-		if err := s.nats.jetStream.DeleteConsumer(ctx, streamName, consumerName); err != nil {
+	logger := s.logger.WithFields(logrus.Fields{
+		"stream":   streamName,
+		"consumer": consumerName,
+		"subject":  subject,
+	})
+
+	logger.Debug("NATS Consumer created")
+
+	defer func() { //nolint:contextcheck
+		delCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		if err := s.nats.jetStream.DeleteConsumer(delCtx, streamName, consumerName); err != nil {
 			logger.WithError(err).Error("Failed to delete consumer")
 		}
 
