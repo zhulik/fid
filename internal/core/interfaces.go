@@ -7,6 +7,11 @@ import (
 	"github.com/samber/do"
 )
 
+type ServiceDependency interface {
+	do.Healthcheckable
+	do.Shutdownable
+}
+
 type Config interface {
 	ForwarderPort() int
 	GatewayPort() int
@@ -16,8 +21,7 @@ type Config interface {
 }
 
 type ContainerBackend interface {
-	do.Healthcheckable
-	do.Shutdownable
+	ServiceDependency
 
 	Info(ctx context.Context) (map[string]any, error)
 
@@ -35,8 +39,7 @@ type Function interface {
 }
 
 type Publisher interface {
-	do.Healthcheckable
-	do.Shutdownable
+	ServiceDependency
 
 	Publish(ctx context.Context, subject string, msg any) error
 	PublishWaitReply(ctx context.Context, subject string, payload any,
@@ -44,13 +47,15 @@ type Publisher interface {
 }
 
 type Subscriber interface {
-	do.Healthcheckable
-	do.Shutdownable
+	ServiceDependency
 
-	Fetch(ctx context.Context, consumerName, subject string) (Message, error)
+	Next(ctx context.Context, streamName, consumerName, subject string) (Message, error)
 }
 
+// Message is a message received from a pubsub system.
 type Message interface {
 	Data() []byte
 	Headers() map[string][]string
+	Ack() error
+	Nak() error
 }

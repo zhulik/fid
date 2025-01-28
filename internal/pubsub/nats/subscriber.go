@@ -10,18 +10,6 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
-type msgWrapper struct {
-	msg jetstream.Msg
-}
-
-func (m msgWrapper) Headers() map[string][]string {
-	return m.msg.Headers()
-}
-
-func (m msgWrapper) Data() []byte {
-	return m.msg.Data()
-}
-
 type Subscriber struct {
 	nats *Client
 
@@ -64,8 +52,10 @@ func (s Subscriber) Shutdown() error {
 	return nil
 }
 
-func (s Subscriber) Fetch(ctx context.Context, consumerName, subject string) (core.Message, error) { //nolint:ireturn
-	cons, err := s.nats.jetStream.CreateOrUpdateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
+func (s Subscriber) Next(ctx context.Context, //nolint:ireturn
+	streamName, consumerName, subject string,
+) (core.Message, error) {
+	cons, err := s.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		FilterSubject: subject,
 	})
@@ -73,11 +63,24 @@ func (s Subscriber) Fetch(ctx context.Context, consumerName, subject string) (co
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	// TODO: respect ctx cancellation
+	defer func() {
+		logger := s.logger.WithFields(logrus.Fields{
+			"stream":   streamName,
+			"consumer": consumerName,
+			"subject":  subject,
+		})
+		if err := s.nats.jetStream.DeleteConsumer(ctx, streamName, consumerName); err != nil {
+			logger.WithError(err).Error("Failed to delete consumer")
+		}
+
+		logger.Debug("NATS Consumer deleted")
+	}()
+
+	// TODO: respect ctx cancellation https://github.com/nats-io/nats.go/issues/1772
 	msg, err := cons.Next()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch message: %w", err)
 	}
 
-	return msgWrapper{msg}, nil
+	return messageWrapper{msg}, nil
 }

@@ -5,6 +5,8 @@ import (
 )
 
 const (
+	InvocationStreamName = "invocation"
+
 	LabelNameComponent          = "wtf.zhulik.fid.component"
 	LabelNameMaxScale           = "wtf.zhulik.fid.scale.max"
 	LabelNameMinScale           = "wtf.zhulik.fid.scale.min"

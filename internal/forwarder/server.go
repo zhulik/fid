@@ -90,8 +90,9 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	logger.Debug("Function connected, waiting for events...")
 
-	msg, err := s.subscriber.Fetch(c.Request.Context(), functionName,
-		fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName))
+	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
+
+	msg, err := s.subscriber.Next(c.Request.Context(), core.InvocationStreamName, functionName, subject)
 	if err != nil {
 		c.Error(err)
 

@@ -16,15 +16,13 @@ import (
 )
 
 const (
-	InvocationStreamName = "invocation"
-
 	maxBytes = 10 * 1024 * 1024 // 10MB
 	maxMsgs  = 1000
 	maxAge   = 72 * time.Hour
 )
 
 var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
-	Name:      InvocationStreamName,
+	Name:      core.InvocationStreamName,
 	Subjects:  []string{core.InvokeSubjectBase, core.InvokeSubjectBase + ".*"},
 	Storage:   jetstream.FileStorage,
 	Retention: jetstream.WorkQueuePolicy,
@@ -101,7 +99,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	consumerName := uuid.New().String()
 	replySubject := subject + ".reply"
 
-	cons, err := p.nats.jetStream.CreateConsumer(ctx, InvocationStreamName, jetstream.ConsumerConfig{
+	cons, err := p.nats.jetStream.CreateConsumer(ctx, core.InvocationStreamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
 		FilterSubject: replySubject,
 	})
@@ -111,15 +109,17 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 
 	p.logger.WithField("subject", replySubject).Debug("NATS Consumer created")
 
-	defer func() { //nolint:contextcheck
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		if err := p.nats.jetStream.DeleteConsumer(ctx, InvocationStreamName, consumerName); err != nil {
-			p.logger.WithError(err).Errorf("Failed to delete consumer stream=%s consumer=%s", InvocationStreamName, consumerName)
+	defer func() {
+		logger := p.logger.WithFields(logrus.Fields{
+			"stream":   core.InvocationStreamName,
+			"consumer": consumerName,
+			"subject":  subject,
+		})
+		if err := p.nats.jetStream.DeleteConsumer(ctx, core.InvocationStreamName, consumerName); err != nil {
+			logger.WithError(err).Error("Failed to delete consumer")
 		}
 
-		p.logger.WithField("subject", replySubject).Debug("NATS Consumer for deleted")
+		logger.Debug("NATS Consumer deleted")
 	}()
 
 	done, errChan := awaitReply(cons, replyTimeout)

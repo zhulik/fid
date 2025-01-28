@@ -62,7 +62,7 @@ func Serve(handler Handler) error {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set(http.CanonicalHeaderKey("function-name"), functionName)
+	req.Header.Set("Function-Name", functionName)
 
 	for {
 		err := fetchEventAndHandle(req, handler)
