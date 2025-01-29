@@ -22,7 +22,18 @@ const (
 
 var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Name:      core.InvocationStreamName,
-	Subjects:  []string{core.InvokeSubjectBase, core.InvokeSubjectBase + ".*"},
+	Subjects:  []string{core.InvokeSubjectBase + ".*"},
+	Storage:   jetstream.FileStorage,
+	Retention: jetstream.WorkQueuePolicy,
+	MaxAge:    maxAge,
+	MaxMsgs:   maxMsgs,
+	MaxBytes:  maxBytes,
+	Replicas:  1,
+}
+
+var replyStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
+	Name:      core.ReplyStreamName,
+	Subjects:  []string{core.ReplyStreamName + ".*"},
 	Storage:   jetstream.FileStorage,
 	Retention: jetstream.WorkQueuePolicy,
 	MaxAge:    maxAge,
@@ -62,7 +73,7 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 		subscriber: subscriber,
 	}
 
-	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig)
+	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig, replyStreamConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +113,8 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 // PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
 func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any, header map[string][]string, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
-	replySubject := subject + ".reply"
+	requestID := header[core.RequestIDHeaderName][0]
+	replySubject := fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID)
 
 	replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
 	defer cancel()
@@ -140,7 +152,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 }
 
 func (p Publisher) awaitReply(ctx context.Context, subject string) ([]byte, error) {
-	reply, err := p.subscriber.Next(ctx, core.InvocationStreamName, "", subject)
+	reply, err := p.subscriber.Next(ctx, core.ReplySubjectBase, "", subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read reply: %w", err)
 	}

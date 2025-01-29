@@ -6,6 +6,10 @@ import (
 
 const (
 	InvocationStreamName = "invocation"
+	ReplyStreamName      = "reply"
+
+	RequestIDHeaderName       = "Lambda-Runtime-Aws-Request-Id"
+	RequestDeadlineHeaderName = "Lambda-Runtime-Deadline-Ms"
 
 	LabelNameComponent          = "wtf.zhulik.fid.component"
 	LabelNameMaxScale           = "wtf.zhulik.fid.scale.max"
