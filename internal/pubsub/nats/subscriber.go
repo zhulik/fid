@@ -52,7 +52,7 @@ func (s Subscriber) Shutdown() error {
 	return nil
 }
 
-// Next returns the next message from the stream, **does not respect ctx cancellation yet**
+// Next returns the next message from the stream, **does not respect ctx cancellation yet**.
 func (s Subscriber) Next(ctx context.Context, streamName, consumerName, subject string) (core.Message, error) { //nolint:ireturn,lll
 	cons, err := s.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          consumerName,

@@ -2,14 +2,13 @@ package nats
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
@@ -108,8 +107,7 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
 	defer cancel()
 
-	// TODO: use lo.Async
-	done, errChan := p.awaitReply(replyCtx, replySubject)
+	replChan := lo.Async2(func() ([]byte, error) { return p.awaitReply(replyCtx, replySubject) })
 
 	data, ok := payload.([]byte)
 	if !ok {
@@ -136,58 +134,34 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	select {
 	case <-ctx.Done():
 		return nil, fmt.Errorf("failed to consume reply: %w", ctx.Err())
-	case reply := <-done:
-		return reply, nil
-	case err = <-errChan:
-		return nil, err
+	case reply := <-replChan:
+		return reply.Unpack()
 	}
 }
 
-func (p Publisher) awaitReply(ctx context.Context, subject string) (chan []byte, chan error) {
-	consumerName := uuid.New().String()
+func (p Publisher) awaitReply(ctx context.Context, subject string) ([]byte, error) {
+	reply, err := p.subscriber.Next(ctx, core.InvocationStreamName, "", subject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read reply: %w", err)
+	}
 
-	done := make(chan []byte)
-	errChan := make(chan error)
+	if err = reply.Ack(); err != nil {
+		return nil, fmt.Errorf("failed to ack reply: %w", err)
+	}
 
-	go func() {
-		reply, err := p.subscriber.Next(ctx, core.InvocationStreamName, consumerName, subject)
-		if err != nil {
-			errChan <- fmt.Errorf("failed to consume reply: %w", err)
-
-			return
-		}
-		done <- reply.Data()
-
-		err = reply.Ack()
-		if err != nil {
-			errChan <- fmt.Errorf("failed to ack reply: %w", err)
-		}
-	}()
-
-	return done, errChan
+	return reply.Data(), nil
 }
 
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
 	for _, stream := range streams {
 		logger := p.logger.WithField("streamName", stream.Name)
 
-		_, err := p.nats.jetStream.CreateStream(ctx, stream)
+		_, err := p.nats.jetStream.CreateOrUpdateStream(ctx, stream)
 		if err != nil {
-			if errors.Is(err, jetstream.ErrStreamNameAlreadyInUse) {
-				_, err = p.nats.jetStream.UpdateStream(ctx, stream)
-				if err != nil {
-					return fmt.Errorf("failed to update stream: %w", err)
-				}
-
-				logger.Info("Stream updated")
-
-				return nil
-			}
-
-			return fmt.Errorf("failed to create stream: %w", err)
+			return fmt.Errorf("failed to create or update stream: %w", err)
 		}
 
-		logger.Info("Stream created")
+		logger.Info("Stream created or updated")
 	}
 
 	return nil

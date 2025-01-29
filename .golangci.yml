@@ -24,5 +24,9 @@ linters-settings:
     exclude-functions:
       - (*github.com/gin-gonic/gin.Context).Error
 
+  wrapcheck:
+    extra-ignore-sigs:
+      - .Unpack(
+
 issues:
   max-same-issues: 0
