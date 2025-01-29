@@ -41,9 +41,8 @@ type Function interface {
 type Publisher interface {
 	ServiceDependency
 
-	Publish(ctx context.Context, subject string, msg any) error
-	PublishWaitReply(ctx context.Context, subject string, payload any,
-		header map[string][]string, replyTimeout time.Duration) ([]byte, error)
+	Publish(ctx context.Context, msg Msg) error
+	PublishWaitReply(ctx context.Context, msg Msg, replyTimeout time.Duration) ([]byte, error)
 }
 
 type Subscriber interface {

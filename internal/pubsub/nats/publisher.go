@@ -96,13 +96,22 @@ func (p Publisher) Shutdown() error {
 	return nil
 }
 
-func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal message: %w", err)
+func (p Publisher) Publish(ctx context.Context, msg core.Msg) error {
+	data, ok := msg.Data.([]byte)
+	if !ok {
+		var err error
+
+		data, err = json.Marshal(msg.Data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal payload: %w", err)
+		}
 	}
 
-	_, err = p.nats.jetStream.Publish(ctx, subject, payload)
+	message := nats.NewMsg(msg.Subject)
+	message.Data = data
+	message.Header = msg.Header
+
+	_, err := p.nats.jetStream.PublishMsg(ctx, message)
 	if err != nil {
 		return fmt.Errorf("failed to publish: %w", err)
 	}
@@ -112,36 +121,20 @@ func (p Publisher) Publish(ctx context.Context, subject string, msg any) error {
 
 // PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload any, header map[string][]string, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
-	requestID := header[core.RequestIDHeaderName][0]
+func (p Publisher) PublishWaitReply(ctx context.Context, msg core.Msg, replyTimeout time.Duration) ([]byte, error) { //nolint:lll
+	requestID := msg.Header[core.RequestIDHeaderName][0]
 	replySubject := fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID)
 
 	replyCtx, cancel := context.WithTimeout(ctx, replyTimeout)
 	defer cancel()
 
-	replChan := lo.Async2(func() ([]byte, error) { return p.awaitReply(replyCtx, replySubject) })
+	replChan := lo.Async2(func() ([]byte, error) { return p.awaitReply(replyCtx, core.ReplyStreamName, replySubject) })
 
-	data, ok := payload.([]byte)
-	if !ok {
-		var err error
-
-		data, err = json.Marshal(payload)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal payload: %w", err)
-		}
-	}
-
-	msg := nats.NewMsg(subject)
-	msg.Data = data
-	msg.Reply = replySubject
-	msg.Header = header
-
-	_, err := p.nats.jetStream.PublishMsg(ctx, msg)
-	if err != nil {
+	if err := p.Publish(ctx, msg); err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.WithField("subject", subject).Debugf("Message sent, awaiting reply")
+	p.logger.WithField("subject", msg.Subject).Debugf("Message sent, awaiting reply")
 
 	select {
 	case <-ctx.Done():
@@ -151,8 +144,8 @@ func (p Publisher) PublishWaitReply(ctx context.Context, subject string, payload
 	}
 }
 
-func (p Publisher) awaitReply(ctx context.Context, subject string) ([]byte, error) {
-	reply, err := p.subscriber.Next(ctx, core.ReplySubjectBase, "", subject)
+func (p Publisher) awaitReply(ctx context.Context, stream, subject string) ([]byte, error) {
+	reply, err := p.subscriber.Next(ctx, stream, "", subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read reply: %w", err)
 	}

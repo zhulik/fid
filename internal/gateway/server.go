@@ -11,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/nats-io/nats.go"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -58,7 +57,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	return srv, nil
 }
 
-func (s *Server) InvokeHandler(c *gin.Context) {
+func (s *Server) InvokeHandler(c *gin.Context) { //nolint:funlen
 	ctx := c.Request.Context()
 
 	functionName := c.Param("functionName")
@@ -93,10 +92,16 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
-	response, err := s.publisher.PublishWaitReply(ctx, subject, body, nats.Header{
-		core.RequestIDHeaderName:       {invocationUUID},
-		core.RequestDeadlineHeaderName: {strconv.FormatInt(deadline, 10)},
-	}, function.Timeout())
+	msg := core.Msg{
+		Subject: subject,
+		Data:    body,
+		Header: map[string][]string{
+			core.RequestIDHeaderName:       {invocationUUID},
+			core.RequestDeadlineHeaderName: {strconv.FormatInt(deadline, 10)},
+		},
+	}
+
+	reply, err := s.publisher.PublishWaitReply(ctx, msg, function.Timeout())
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			s.Logger.Info("client disconnected while waiting for reply")
@@ -110,7 +115,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 	}
 
 	// TODO: develop protocol.
-	_, err = c.Writer.Write(response)
+	_, err = c.Writer.Write(reply)
 	if err != nil {
 		c.Error(err)
 
