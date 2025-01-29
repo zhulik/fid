@@ -99,7 +99,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 		return
 	}
 
-	logger.Infof("Event received: %s", msg.Headers()["Lambda-Runtime-Aws-Request-Id"][0])
+	logger.Infof("Event received: %s", msg.Headers()[core.RequestIDHeaderName][0])
 
 	for key, values := range msg.Headers() {
 		for _, value := range values {

@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/zhulik/fid/internal/core"
 )
 
 type ContextKey int
@@ -94,7 +96,7 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 
 	var reqErr error
 
-	requestID := resp.Header.Get("Lambda-Runtime-Aws-Request-Id")
+	requestID := resp.Header.Get(core.RequestIDHeaderName)
 
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()
