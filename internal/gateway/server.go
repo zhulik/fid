@@ -68,10 +68,5 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	_, err = c.Writer.Write(reply)
-	if err != nil {
-		c.Error(err)
-
-		return
-	}
+	c.Data(http.StatusOK, "application/octet-stream", reply)
 }

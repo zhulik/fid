@@ -1,7 +1,6 @@
 package forwarder
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -41,6 +40,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	server.Router.Use(JWTMiddleware())
+	server.Router.Use(FunctionMiddleware(backend))
 
 	srv := &Server{
 		Server:     server,
@@ -50,49 +50,22 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	// Mimicking the AWS Lambda runtime API for custom runtimes
 	srv.Router.GET("/2018-06-01/runtime/invocation/next", srv.NextHandler)
-	// TODO:
-	// srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/response", srv.ResponseHandler)
-	// srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/error", srv.ErrorHandler)
-	// srv.Router.POST("/2018-06-01/runtime/init/error", srv.InitErrorHandler)
+	srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/response", srv.ResponseHandler)
+	srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/error", srv.ErrorHandler)
+	srv.Router.POST("/2018-06-01/runtime/init/error", srv.InitErrorHandler)
 
 	return srv, nil
 }
 
 func (s *Server) NextHandler(c *gin.Context) {
-	functionNameAny, ok := c.Get("functionName")
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "function name not found in the context"})
-
-		return
-	}
-
-	functionName, ok := functionNameAny.(string)
-	if !ok || functionName == "" {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "function name not found in the context"})
-
-		return
-	}
-
-	_, err := s.backend.Function(c.Request.Context(), functionName)
-	if err != nil {
-		if errors.Is(err, core.ErrFunctionNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
-
-			return
-		}
-
-		c.Error(err)
-
-		return
-	}
-
-	logger := s.Logger.WithField("function", functionName)
+	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	logger := s.Logger.WithField("function", function.Name())
 
 	logger.Debug("Function connected, waiting for events...")
 
-	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
+	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
 
-	msg, err := s.subscriber.Next(c.Request.Context(), core.InvocationStreamName, functionName, subject)
+	msg, err := s.subscriber.Next(c.Request.Context(), core.InvocationStreamName, function.Name(), subject)
 	if err != nil {
 		c.Error(err)
 
@@ -107,10 +80,20 @@ func (s *Server) NextHandler(c *gin.Context) {
 		}
 	}
 
-	_, err = c.Writer.Write(msg.Data())
-	if err != nil {
-		c.Error(err)
+	c.Data(http.StatusOK, "application/octet-stream", msg.Data())
+}
 
-		return
-	}
+func (s *Server) ResponseHandler(_ *gin.Context) {
+	// TODO: implement
+	panic("not implemented")
+}
+
+func (s *Server) ErrorHandler(_ *gin.Context) {
+	// TODO: implement
+	panic("not implemented")
+}
+
+func (s *Server) InitErrorHandler(_ *gin.Context) {
+	// TODO: implement
+	panic("not implemented")
 }
