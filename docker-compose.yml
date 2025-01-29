@@ -68,7 +68,10 @@ services:
         COMPONENT: "function"
 
     environment:
-      - WS_URI=ws://forwarder/ws/function
+      - AWS_LAMBDA_RUNTIME_API=forwarder:80
+      - FID_FUNCTION_NAME=function
+
+    command: ["tail", "-f", "/dev/null"]
 
     labels:
       wtf.zhulik.fid.component: "function"
