@@ -75,10 +75,10 @@ func (s *Server) InvokeHandler(c *gin.Context) { //nolint:funlen
 		return
 	}
 
-	invocationUUID := uuid.NewString()
+	requestID := uuid.NewString()
 
 	s.Logger.WithFields(logrus.Fields{
-		"requestID":    invocationUUID,
+		"requestID":    requestID,
 		"functionName": functionName,
 	}).Info("Invoking...")
 
@@ -96,12 +96,18 @@ func (s *Server) InvokeHandler(c *gin.Context) { //nolint:funlen
 		Subject: subject,
 		Data:    body,
 		Header: map[string][]string{
-			core.RequestIDHeaderName:       {invocationUUID},
+			core.RequestIDHeaderName:       {requestID},
 			core.RequestDeadlineHeaderName: {strconv.FormatInt(deadline, 10)},
 		},
 	}
 
-	reply, err := s.publisher.PublishWaitReply(ctx, msg, function.Timeout())
+	replyInput := core.PublishWaitReplyInput{
+		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
+		Stream:  core.ReplyStreamName,
+		Timeout: function.Timeout(),
+	}
+
+	reply, err := s.publisher.PublishWaitReply(ctx, msg, replyInput)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
 			s.Logger.Info("client disconnected while waiting for reply")
