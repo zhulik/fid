@@ -62,10 +62,10 @@ func (b Backend) Function(ctx context.Context, name string) (core.Function, erro
 	b.logger.WithField("function", name).Debug("Fetching function info")
 
 	fnFilters := filters.NewArgs()
-	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionComponentLabelValue))
-	fnFilters.Add("name", name)
+	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue))
+	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameFunctionName, name))
 
-	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters})
+	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters, All: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
@@ -91,9 +91,9 @@ func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
 	b.logger.Debug("Fetching function list")
 
 	fnFilters := filters.NewArgs()
-	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionComponentLabelValue))
+	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue))
 
-	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters})
+	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters, All: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}

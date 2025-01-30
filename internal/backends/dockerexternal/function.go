@@ -13,6 +13,7 @@ import (
 type Function struct {
 	container types.ContainerJSON
 
+	name          string
 	timeout       time.Duration
 	scalingConfig core.ScalingConfig
 	env           map[string]string
@@ -23,6 +24,8 @@ func (f Function) Env() map[string]string {
 }
 
 func NewFunction(container types.ContainerJSON) (*Function, error) {
+	name := container.Config.Labels[core.LabelNameFunctionName]
+
 	timeoutStr := container.Config.Labels[core.LabelNameTimeout]
 	timeout := core.DefaultTimeout
 
@@ -59,7 +62,9 @@ func NewFunction(container types.ContainerJSON) (*Function, error) {
 
 	return &Function{
 		container: container,
-		timeout:   timeout,
+
+		name:    name,
+		timeout: timeout,
 		scalingConfig: core.ScalingConfig{
 			Min: minScale,
 			Max: maxScale,
@@ -81,7 +86,7 @@ func parseEnv(env []string) map[string]string {
 }
 
 func (f Function) Name() string {
-	return f.container.Name
+	return f.name
 }
 
 func (f Function) Timeout() time.Duration {
