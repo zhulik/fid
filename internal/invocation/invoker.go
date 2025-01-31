@@ -20,20 +20,20 @@ func NewInvoker(injector *do.Injector) (*Invoker, error) {
 
 	logger = logger.WithField("component", "invocation.Invoker")
 
-	publisher, err := do.Invoke[core.Publisher](injector)
+	pubSuber, err := do.Invoke[core.PubSuber](injector)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Invoker{
-		publisher: publisher,
-		logger:    logger,
+		pubSuber: pubSuber,
+		logger:   logger,
 	}, nil
 }
 
 type Invoker struct {
-	publisher core.Publisher
-	logger    logrus.FieldLogger
+	pubSuber core.PubSuber
+	logger   logrus.FieldLogger
 }
 
 func (i Invoker) HealthCheck() error {
@@ -70,7 +70,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		"functionName": function.Name(),
 	}).Info("Invoking...")
 
-	response, err := i.publisher.PublishWaitResponse(ctx, responseInput)
+	response, err := i.pubSuber.PublishWaitResponse(ctx, responseInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to publish and wait for response: %w", err)
 	}

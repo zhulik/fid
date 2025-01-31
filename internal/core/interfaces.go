@@ -38,16 +38,11 @@ type Function interface {
 	Env() map[string]string
 }
 
-type Publisher interface {
+type PubSuber interface {
 	ServiceDependency
 
 	Publish(ctx context.Context, msg Msg) error
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) ([]byte, error)
-}
-
-type Subscriber interface {
-	ServiceDependency
-
 	Next(ctx context.Context, streamName, consumerName, subject string) (Message, error)
 }
 

@@ -15,9 +15,8 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	backend    core.ContainerBackend
-	subscriber core.Subscriber
-	publisher  core.Publisher
+	backend  core.ContainerBackend
+	pubSuber core.PubSuber
 }
 
 // NewServer creates a new Server instance.
@@ -37,12 +36,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	subscriber, err := do.Invoke[core.Subscriber](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	publisher, err := do.Invoke[core.Publisher](injector)
+	pubSuber, err := do.Invoke[core.PubSuber](injector)
 	if err != nil {
 		return nil, err
 	}
@@ -51,10 +45,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	server.Router.Use(middlewares.FunctionMiddleware(backend))
 
 	srv := &Server{
-		Server:     server,
-		backend:    backend,
-		subscriber: subscriber,
-		publisher:  publisher,
+		Server:   server,
+		backend:  backend,
+		pubSuber: pubSuber,
 	}
 
 	// Mimicking the AWS Lambda runtime API for custom runtimes
@@ -74,7 +67,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
 
-	msg, err := s.subscriber.Next(c.Request.Context(), core.InvocationStreamName, function.Name(), subject)
+	msg, err := s.pubSuber.Next(c.Request.Context(), core.InvocationStreamName, function.Name(), subject)
 	if err != nil {
 		c.Error(err)
 
@@ -111,7 +104,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		Data:    gin.H{"response": response},
 	}
 
-	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
+	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
 		c.Error(err)
 
 		return
@@ -121,7 +114,6 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 }
 
 func (s *Server) ErrorHandler(c *gin.Context) {
-	// TODO: implement
 	requestID := c.Param("requestID")
 
 	logger := s.Logger.WithField("requestID", requestID)
@@ -140,7 +132,7 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 		Data:    gin.H{"error": response},
 	}
 
-	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
+	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
 		c.Error(err)
 
 		return

@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -42,47 +43,40 @@ var responseStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Replicas:  1,
 }
 
-type Publisher struct {
+type PubSuber struct {
 	nats *Client
 
-	logger     logrus.FieldLogger
-	subscriber core.Subscriber
+	logger logrus.FieldLogger
 }
 
-func NewPublisher(injector *do.Injector) (*Publisher, error) {
+func NewPubSuber(injector *do.Injector) (*PubSuber, error) {
 	logger, err := do.Invoke[logrus.FieldLogger](injector)
 	if err != nil {
 		return nil, err
 	}
 
-	logger = logger.WithField("component", "pubsub.nats.Publisher")
+	logger = logger.WithField("component", "pubsub.nats.PubSuber")
 
 	natsClient, err := do.Invoke[*Client](injector)
 	if err != nil {
 		return nil, err
 	}
 
-	subscriber, err := do.Invoke[core.Subscriber](injector)
+	pubSuber := &PubSuber{
+		nats:   natsClient,
+		logger: logger,
+	}
+
+	err = pubSuber.createOrUpdateStreams(context.Background(), invocationStreamConfig, responseStreamConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	publisher := &Publisher{
-		nats:       natsClient,
-		logger:     logger,
-		subscriber: subscriber,
-	}
-
-	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig, responseStreamConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	return publisher, nil
+	return pubSuber, nil
 }
 
-func (p Publisher) HealthCheck() error {
-	p.logger.Debug("Publisher health check...")
+func (p PubSuber) HealthCheck() error {
+	p.logger.Debug("PubSuber health check...")
 
 	err := p.nats.HealthCheck()
 	if err != nil {
@@ -92,11 +86,11 @@ func (p Publisher) HealthCheck() error {
 	return nil
 }
 
-func (p Publisher) Shutdown() error {
+func (p PubSuber) Shutdown() error {
 	return nil
 }
 
-func (p Publisher) Publish(ctx context.Context, msg core.Msg) error {
+func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 	data, ok := msg.Data.([]byte)
 	if !ok {
 		var err error
@@ -121,7 +115,7 @@ func (p Publisher) Publish(ctx context.Context, msg core.Msg) error {
 
 // PublishWaitResponse Publishes a message to "subject", awaits for response on "subject.response".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p Publisher) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) { //nolint:lll
+func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) { //nolint:lll
 	replChan := lo.Async2(func() ([]byte, error) { return p.awaitResponse(ctx, input) })
 
 	if err := p.Publish(ctx, input.Msg); err != nil {
@@ -138,11 +132,11 @@ func (p Publisher) PublishWaitResponse(ctx context.Context, input core.PublishWa
 	}
 }
 
-func (p Publisher) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) {
+func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) {
 	responseCtx, cancel := context.WithTimeout(ctx, input.Timeout)
 	defer cancel()
 
-	response, err := p.subscriber.Next(responseCtx, input.Stream, "", input.Subject)
+	response, err := p.Next(responseCtx, input.Stream, "", input.Subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -154,7 +148,7 @@ func (p Publisher) awaitResponse(ctx context.Context, input core.PublishWaitResp
 	return response.Data(), nil
 }
 
-func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
+func (p PubSuber) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
 	for _, stream := range streams {
 		logger := p.logger.WithField("streamName", stream.Name)
 
@@ -167,4 +161,54 @@ func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstre
 	}
 
 	return nil
+}
+
+// Next returns the next message from the stream, **does not respect ctx cancellation yet**.
+func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject string) (core.Message, error) { //nolint:ireturn,lll
+	cons, err := p.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
+		Name:          consumerName,
+		FilterSubject: subject,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create consumer: %w", err)
+	}
+
+	logger := p.logger.WithFields(logrus.Fields{
+		"stream":   streamName,
+		"consumer": cons.CachedInfo().Name,
+		"subject":  subject,
+	})
+
+	logger.Debug("NATS Consumer created")
+
+	defer func() { //nolint:contextcheck
+		delCtx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		if err := p.nats.jetStream.DeleteConsumer(delCtx, streamName, consumerName); err != nil {
+			logger.WithError(err).Error("Failed to delete consumer")
+		}
+
+		logger.Debug("NATS Consumer deleted")
+	}()
+
+	var msg jetstream.Msg
+
+	for {
+		// TODO: respect ctx cancellation https://github.com/nats-io/nats.go/issues/1772
+		msg, err = cons.Next()
+		if err == nil {
+			break
+		}
+
+		if errors.Is(err, nats.ErrTimeout) {
+			logger.Info("NATS Consumer timeout, resubscribing...")
+
+			continue
+		}
+
+		return nil, fmt.Errorf("failed to fetch message: %w", err)
+	}
+
+	return messageWrapper{msg}, nil
 }
