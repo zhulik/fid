@@ -61,6 +61,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 	responseInput := core.PublishWaitResponseInput{
 		Subject: fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID),
 		Stream:  core.ResponseStreamName,
+		Msg:     msg,
 		Timeout: function.Timeout(),
 	}
 
@@ -69,7 +70,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		"functionName": function.Name(),
 	}).Info("Invoking...")
 
-	response, err := i.publisher.PublishWaitResponse(ctx, msg, responseInput)
+	response, err := i.publisher.PublishWaitResponse(ctx, responseInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to publish and wait for response: %w", err)
 	}

@@ -121,14 +121,14 @@ func (p Publisher) Publish(ctx context.Context, msg core.Msg) error {
 
 // PublishWaitResponse Publishes a message to "subject", awaits for response on "subject.response".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p Publisher) PublishWaitResponse(ctx context.Context, msg core.Msg, responseInput core.PublishWaitResponseInput) ([]byte, error) { //nolint:lll
-	replChan := lo.Async2(func() ([]byte, error) { return p.awaitResponse(ctx, responseInput) })
+func (p Publisher) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) { //nolint:lll
+	replChan := lo.Async2(func() ([]byte, error) { return p.awaitResponse(ctx, input) })
 
-	if err := p.Publish(ctx, msg); err != nil {
+	if err := p.Publish(ctx, input.Msg); err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.WithField("subject", msg.Subject).Debugf("Message sent, awaiting response")
+	p.logger.WithField("subject", input.Msg.Subject).Debugf("Message sent, awaiting response")
 
 	select {
 	case <-ctx.Done():
@@ -138,11 +138,11 @@ func (p Publisher) PublishWaitResponse(ctx context.Context, msg core.Msg, respon
 	}
 }
 
-func (p Publisher) awaitResponse(ctx context.Context, responseInput core.PublishWaitResponseInput) ([]byte, error) {
-	responseCtx, cancel := context.WithTimeout(ctx, responseInput.Timeout)
+func (p Publisher) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) {
+	responseCtx, cancel := context.WithTimeout(ctx, input.Timeout)
 	defer cancel()
 
-	response, err := p.subscriber.Next(responseCtx, responseInput.Stream, "", responseInput.Subject)
+	response, err := p.subscriber.Next(responseCtx, input.Stream, "", input.Subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}

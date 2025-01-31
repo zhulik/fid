@@ -42,7 +42,7 @@ type Publisher interface {
 	ServiceDependency
 
 	Publish(ctx context.Context, msg Msg) error
-	PublishWaitResponse(ctx context.Context, msg Msg, responseInput PublishWaitResponseInput) ([]byte, error)
+	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) ([]byte, error)
 }
 
 type Subscriber interface {
