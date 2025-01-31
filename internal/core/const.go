@@ -20,6 +20,8 @@ const (
 	FunctionComponentLabelValue         = "function"
 	FunctionTemplateComponentLabelValue = "function-template"
 
+	ContentTypeJSON = "application/json; charset=utf-8"
+
 	DefaultTimeout  = 10 * time.Second
 	DefaultMinScale = 1
 	DefaultMaxScale = 10

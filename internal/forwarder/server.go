@@ -82,7 +82,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 		}
 	}
 
-	c.Data(http.StatusOK, "application/octet-stream", msg.Data())
+	c.Data(http.StatusOK, core.ContentTypeJSON, msg.Data())
 }
 
 func (s *Server) ResponseHandler(c *gin.Context) {

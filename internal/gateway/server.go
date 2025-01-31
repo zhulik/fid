@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -70,16 +69,10 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 
 	response, err := s.invoker.Invoke(ctx, function, body)
 	if err != nil {
-		if errors.Is(err, core.ErrFunctionNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
-
-			return
-		}
-
 		c.Error(err)
 
 		return
 	}
 
-	c.Data(http.StatusOK, "application/octet-stream", response)
+	c.Data(http.StatusOK, core.ContentTypeJSON, response)
 }
