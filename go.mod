@@ -8,7 +8,6 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/goccy/go-json v0.10.4
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/websocket v1.5.3
 	github.com/nats-io/nats.go v1.38.0
 	github.com/samber/do v1.6.0
 	github.com/samber/lo v1.47.0
@@ -20,7 +19,6 @@ require (
 	github.com/bytedance/sonic v1.12.7 // indirect
 	github.com/bytedance/sonic/loader v0.2.2 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
