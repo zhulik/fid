@@ -96,9 +96,9 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 	logger := s.Logger.WithField("requestID", requestID)
 
-	logger.Debug("Sending response...")
+	logger.Debug("Sending reply...")
 
-	payload, err := io.ReadAll(c.Request.Body)
+	reply, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Error(err)
 
@@ -107,7 +107,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 	msg := core.Msg{
 		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
-		Data:    payload,
+		Data:    gin.H{"reply": reply},
 	}
 
 	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
@@ -116,12 +116,36 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		return
 	}
 
-	logger.Info("Response sent")
+	logger.Info("Reply sent")
 }
 
-func (s *Server) ErrorHandler(_ *gin.Context) {
+func (s *Server) ErrorHandler(c *gin.Context) {
 	// TODO: implement
-	panic("not implemented")
+	requestID := c.Param("requestID")
+
+	logger := s.Logger.WithField("requestID", requestID)
+
+	logger.Debug("Sending error reply...")
+
+	reply, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.Error(err)
+
+		return
+	}
+
+	msg := core.Msg{
+		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
+		Data:    gin.H{"error": reply},
+	}
+
+	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
+		c.Error(err)
+
+		return
+	}
+
+	logger.Info("Error reply sent")
 }
 
 func (s *Server) InitErrorHandler(_ *gin.Context) {
