@@ -16,9 +16,10 @@ import (
 )
 
 const (
-	maxBytes = 10 * 1024 * 1024 // 10MB
-	maxMsgs  = 1000
-	maxAge   = 72 * time.Hour
+	maxBytes    = 10 * 1024 * 1024 // 10MB
+	maxMsgs     = 1000
+	maxAge      = 72 * time.Hour
+	nextTimeout = 10 * time.Second
 )
 
 var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
@@ -163,7 +164,8 @@ func (p PubSuber) createOrUpdateStreams(ctx context.Context, streams ...jetstrea
 	return nil
 }
 
-// Next returns the next message from the stream, **does not respect ctx cancellation yet**.
+// Next returns the next message from the stream, **does not respect ctx cancellation yet**, but checks ctx status
+// when reaches timeout in the nats client, so ctx cancellation will be respected in the next iteration.
 func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject string) (core.Message, error) { //nolint:ireturn,lll
 	cons, err := p.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
 		Name:          consumerName,
@@ -196,12 +198,16 @@ func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject st
 
 	for {
 		// TODO: respect ctx cancellation https://github.com/nats-io/nats.go/issues/1772
-		msg, err = cons.Next()
+		msg, err = cons.Next(jetstream.FetchMaxWait(nextTimeout))
 		if err == nil {
 			break
 		}
 
 		if errors.Is(err, nats.ErrTimeout) {
+			if ctx.Err() != nil {
+				return nil, fmt.Errorf("context cancelled: %w", ctx.Err())
+			}
+
 			logger.Info("NATS Consumer timeout, resubscribing...")
 
 			continue
