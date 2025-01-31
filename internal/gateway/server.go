@@ -68,7 +68,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	reply, err := s.invoker.Invoke(ctx, function, body)
+	response, err := s.invoker.Invoke(ctx, function, body)
 	if err != nil {
 		if errors.Is(err, core.ErrFunctionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
@@ -81,5 +81,5 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	c.Data(http.StatusOK, "application/octet-stream", reply)
+	c.Data(http.StatusOK, "application/octet-stream", response)
 }

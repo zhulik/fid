@@ -31,9 +31,9 @@ var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Replicas:  1,
 }
 
-var replyStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
-	Name:      core.ReplyStreamName,
-	Subjects:  []string{core.ReplyStreamName + ".*"},
+var responseStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
+	Name:      core.ResponseStreamName,
+	Subjects:  []string{core.ResponseStreamName + ".*"},
 	Storage:   jetstream.FileStorage,
 	Retention: jetstream.WorkQueuePolicy,
 	MaxAge:    maxAge,
@@ -73,7 +73,7 @@ func NewPublisher(injector *do.Injector) (*Publisher, error) {
 		subscriber: subscriber,
 	}
 
-	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig, replyStreamConfig)
+	err = publisher.createOrUpdateStreams(context.Background(), invocationStreamConfig, responseStreamConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -119,39 +119,39 @@ func (p Publisher) Publish(ctx context.Context, msg core.Msg) error {
 	return nil
 }
 
-// PublishWaitReply Publishes a message to "subject", awaits for response on "subject.reply".
+// PublishWaitResponse Publishes a message to "subject", awaits for response on "subject.response".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p Publisher) PublishWaitReply(ctx context.Context, msg core.Msg, replyInput core.PublishWaitReplyInput) ([]byte, error) { //nolint:lll
-	replChan := lo.Async2(func() ([]byte, error) { return p.awaitReply(ctx, replyInput) })
+func (p Publisher) PublishWaitResponse(ctx context.Context, msg core.Msg, responseInput core.PublishWaitResponseInput) ([]byte, error) { //nolint:lll
+	replChan := lo.Async2(func() ([]byte, error) { return p.awaitResponse(ctx, responseInput) })
 
 	if err := p.Publish(ctx, msg); err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.WithField("subject", msg.Subject).Debugf("Message sent, awaiting reply")
+	p.logger.WithField("subject", msg.Subject).Debugf("Message sent, awaiting response")
 
 	select {
 	case <-ctx.Done():
-		return nil, fmt.Errorf("failed to consume reply: %w", ctx.Err())
-	case reply := <-replChan:
-		return reply.Unpack()
+		return nil, fmt.Errorf("failed to consume response: %w", ctx.Err())
+	case response := <-replChan:
+		return response.Unpack()
 	}
 }
 
-func (p Publisher) awaitReply(ctx context.Context, replyInput core.PublishWaitReplyInput) ([]byte, error) {
-	replyCtx, cancel := context.WithTimeout(ctx, replyInput.Timeout)
+func (p Publisher) awaitResponse(ctx context.Context, responseInput core.PublishWaitResponseInput) ([]byte, error) {
+	responseCtx, cancel := context.WithTimeout(ctx, responseInput.Timeout)
 	defer cancel()
 
-	reply, err := p.subscriber.Next(replyCtx, replyInput.Stream, "", replyInput.Subject)
+	response, err := p.subscriber.Next(responseCtx, responseInput.Stream, "", responseInput.Subject)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read reply: %w", err)
+		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	if err = reply.Ack(); err != nil {
-		return nil, fmt.Errorf("failed to ack reply: %w", err)
+	if err = response.Ack(); err != nil {
+		return nil, fmt.Errorf("failed to ack response: %w", err)
 	}
 
-	return reply.Data(), nil
+	return response.Data(), nil
 }
 
 func (p Publisher) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {

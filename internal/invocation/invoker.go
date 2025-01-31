@@ -58,9 +58,9 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		},
 	}
 
-	replyInput := core.PublishWaitReplyInput{
-		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
-		Stream:  core.ReplyStreamName,
+	responseInput := core.PublishWaitResponseInput{
+		Subject: fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID),
+		Stream:  core.ResponseStreamName,
 		Timeout: function.Timeout(),
 	}
 
@@ -69,10 +69,10 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		"functionName": function.Name(),
 	}).Info("Invoking...")
 
-	reply, err := i.publisher.PublishWaitReply(ctx, msg, replyInput)
+	response, err := i.publisher.PublishWaitResponse(ctx, msg, responseInput)
 	if err != nil {
-		return nil, fmt.Errorf("failed to publish and wait for reply: %w", err)
+		return nil, fmt.Errorf("failed to publish and wait for response: %w", err)
 	}
 
-	return reply, nil
+	return response, nil
 }

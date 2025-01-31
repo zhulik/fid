@@ -97,9 +97,9 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 	logger := s.Logger.WithField("requestID", requestID)
 
-	logger.Debug("Sending reply...")
+	logger.Debug("Sending response...")
 
-	reply, err := io.ReadAll(c.Request.Body)
+	response, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Error(err)
 
@@ -107,8 +107,8 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
-		Data:    gin.H{"reply": reply},
+		Subject: fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID),
+		Data:    gin.H{"response": response},
 	}
 
 	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
@@ -117,7 +117,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		return
 	}
 
-	logger.Info("Reply sent")
+	logger.Info("Response sent")
 }
 
 func (s *Server) ErrorHandler(c *gin.Context) {
@@ -126,9 +126,9 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 
 	logger := s.Logger.WithField("requestID", requestID)
 
-	logger.Debug("Sending error reply...")
+	logger.Debug("Sending error response...")
 
-	reply, err := io.ReadAll(c.Request.Body)
+	response, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Error(err)
 
@@ -136,8 +136,8 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
-		Data:    gin.H{"error": reply},
+		Subject: fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID),
+		Data:    gin.H{"error": response},
 	}
 
 	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
@@ -146,7 +146,7 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 		return
 	}
 
-	logger.Info("Error reply sent")
+	logger.Info("Error response sent")
 }
 
 func (s *Server) InitErrorHandler(_ *gin.Context) {

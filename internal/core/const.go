@@ -6,7 +6,7 @@ import (
 
 const (
 	InvocationStreamName = "invocation"
-	ReplyStreamName      = "reply"
+	ResponseStreamName   = "response"
 
 	RequestIDHeaderName       = "Lambda-Runtime-Aws-Request-Id"
 	RequestDeadlineHeaderName = "Lambda-Runtime-Deadline-Ms"
