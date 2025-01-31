@@ -54,7 +54,7 @@ type Subscriber interface {
 type Invoker interface {
 	ServiceDependency
 
-	Invoke(ctx context.Context, name string, payload []byte) ([]byte, error)
+	Invoke(ctx context.Context, function Function, payload []byte) ([]byte, error)
 }
 
 // Message is a message received from a pubsub system.

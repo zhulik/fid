@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/middlewares"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
 
@@ -47,7 +48,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	server.Router.Use(JWTMiddleware())
-	server.Router.Use(FunctionMiddleware(backend))
+	server.Router.Use(middlewares.FunctionMiddleware(backend))
 
 	srv := &Server{
 		Server:     server,

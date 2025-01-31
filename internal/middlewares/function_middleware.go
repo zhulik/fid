@@ -1,4 +1,4 @@
-package forwarder
+package middlewares
 
 import (
 	"errors"

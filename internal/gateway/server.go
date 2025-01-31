@@ -9,11 +9,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/middlewares"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
 
 type Server struct {
 	*httpserver.Server
+
+	backend core.ContainerBackend
 
 	invoker core.Invoker
 }
@@ -30,14 +33,22 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
+	backend, err := do.Invoke[core.ContainerBackend](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	invoker, err := do.Invoke[core.Invoker](injector)
 	if err != nil {
 		return nil, err
 	}
 
+	server.Router.Use(middlewares.FunctionMiddleware(backend))
+
 	srv := &Server{
 		Server:  server,
 		invoker: invoker,
+		backend: backend,
 	}
 
 	srv.Router.POST("/invoke/:functionName", srv.InvokeHandler)
@@ -48,6 +59,8 @@ func NewServer(injector *do.Injector) (*Server, error) {
 func (s *Server) InvokeHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.Error(err)
@@ -55,7 +68,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	reply, err := s.invoker.Invoke(ctx, c.Param("functionName"), body)
+	reply, err := s.invoker.Invoke(ctx, function, body)
 	if err != nil {
 		if errors.Is(err, core.ErrFunctionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})

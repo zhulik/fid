@@ -20,25 +20,18 @@ func NewInvoker(injector *do.Injector) (*Invoker, error) {
 
 	logger = logger.WithField("component", "invocation.Invoker")
 
-	backend, err := do.Invoke[core.ContainerBackend](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	publisher, err := do.Invoke[core.Publisher](injector)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Invoker{
-		backend:   backend,
 		publisher: publisher,
 		logger:    logger,
 	}, nil
 }
 
 type Invoker struct {
-	backend   core.ContainerBackend
 	publisher core.Publisher
 	logger    logrus.FieldLogger
 }
@@ -51,14 +44,9 @@ func (i Invoker) Shutdown() error {
 	return nil
 }
 
-func (i Invoker) Invoke(ctx context.Context, name string, payload []byte) ([]byte, error) {
-	function, err := i.backend.Function(ctx, name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get function: %w", err)
-	}
-
+func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []byte) ([]byte, error) {
 	requestID := uuid.NewString()
-	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, name)
+	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
 	msg := core.Msg{
@@ -78,7 +66,7 @@ func (i Invoker) Invoke(ctx context.Context, name string, payload []byte) ([]byt
 
 	i.logger.WithFields(logrus.Fields{
 		"requestID":    requestID,
-		"functionName": name,
+		"functionName": function.Name(),
 	}).Info("Invoking...")
 
 	reply, err := i.publisher.PublishWaitReply(ctx, msg, replyInput)
