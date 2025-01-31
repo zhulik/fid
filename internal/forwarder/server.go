@@ -2,6 +2,7 @@ package forwarder
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,7 @@ type Server struct {
 
 	backend    core.ContainerBackend
 	subscriber core.Subscriber
+	publisher  core.Publisher
 }
 
 // NewServer creates a new Server instance.
@@ -39,6 +41,11 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
+	publisher, err := do.Invoke[core.Publisher](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	server.Router.Use(JWTMiddleware())
 	server.Router.Use(FunctionMiddleware(backend))
 
@@ -46,6 +53,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		Server:     server,
 		backend:    backend,
 		subscriber: subscriber,
+		publisher:  publisher,
 	}
 
 	// Mimicking the AWS Lambda runtime API for custom runtimes
@@ -83,9 +91,32 @@ func (s *Server) NextHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/octet-stream", msg.Data())
 }
 
-func (s *Server) ResponseHandler(_ *gin.Context) {
-	// TODO: implement
-	panic("not implemented")
+func (s *Server) ResponseHandler(c *gin.Context) {
+	requestID := c.Param("requestID")
+
+	logger := s.Logger.WithField("requestID", requestID)
+
+	logger.Debug("Sending response...")
+
+	payload, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.Error(err)
+
+		return
+	}
+
+	msg := core.Msg{
+		Subject: fmt.Sprintf("%s.%s", core.ReplySubjectBase, requestID),
+		Data:    payload,
+	}
+
+	if err := s.publisher.Publish(c.Request.Context(), msg); err != nil {
+		c.Error(err)
+
+		return
+	}
+
+	logger.Info("Response sent")
 }
 
 func (s *Server) ErrorHandler(_ *gin.Context) {
