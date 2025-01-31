@@ -2,8 +2,10 @@ package nats
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -81,9 +83,21 @@ func (s Subscriber) Next(ctx context.Context, streamName, consumerName, subject 
 		logger.Debug("NATS Consumer deleted")
 	}()
 
-	// TODO: respect ctx cancellation https://github.com/nats-io/nats.go/issues/1772
-	msg, err := cons.Next()
-	if err != nil {
+	var msg jetstream.Msg
+
+	for {
+		// TODO: respect ctx cancellation https://github.com/nats-io/nats.go/issues/1772
+		msg, err = cons.Next()
+		if err == nil {
+			break
+		}
+
+		if errors.Is(err, nats.ErrTimeout) {
+			logger.Info("NATS Consumer timeout, resubscribing...")
+
+			continue
+		}
+
 		return nil, fmt.Errorf("failed to fetch message: %w", err)
 	}
 

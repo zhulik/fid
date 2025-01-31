@@ -16,11 +16,13 @@ func FunctionMiddleware(backend core.ContainerBackend) gin.HandlerFunc {
 		if err != nil {
 			if errors.Is(err, core.ErrFunctionNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
+				c.Abort()
 
 				return
 			}
 
 			c.Error(err)
+			c.Abort()
 
 			return
 		}
