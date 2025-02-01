@@ -10,7 +10,17 @@ import (
 
 func FunctionMiddleware(backend core.ContainerBackend) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		functionName := c.MustGet("functionName").(string) //nolint:forcetypeassert
+		functionName := c.GetString("functionName")
+		if functionName == "" {
+			functionName = c.Param("functionName")
+		}
+
+		if functionName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "function name is required"})
+			c.Abort()
+
+			return
+		}
 
 		function, err := backend.Function(c.Request.Context(), functionName)
 		if err != nil {
