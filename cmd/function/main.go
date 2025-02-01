@@ -32,7 +32,7 @@ type Request struct {
 }
 
 func handler(ctx context.Context, input []byte) ([]byte, error) {
-	requestID := ctx.Value(sdk.RequestID).(string)
+	requestID := ctx.Value(sdk.RequestID).(string) // nolint:forcetypeassert
 
 	log.Printf("Handling request %s, input %s:", requestID, string(input))
 

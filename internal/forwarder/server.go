@@ -74,7 +74,13 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 		return
 	}
-	defer msg.Ack()
+
+	err = msg.Ack()
+	if err != nil {
+		c.Error(err)
+
+		return
+	}
 
 	logger.Infof("Event received: %s", msg.Headers()[core.RequestIDHeaderName][0])
 
