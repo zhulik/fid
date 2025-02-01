@@ -70,7 +70,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	streamName := s.pubSuber.FunctionStreamName(function.Name())
 
-	msg, err := s.pubSuber.Next(ctx, streamName, "", subject)
+	msg, err := s.pubSuber.Next(ctx, streamName, subject, function.Name())
 	if err != nil {
 		c.Error(err)
 
@@ -117,7 +117,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 	msg := core.Msg{
 		Subject: subject,
-		Data:    gin.H{"response": response},
+		Data:    response,
 	}
 
 	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
@@ -150,8 +150,8 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: s.pubSuber.ResponseSubjectName(function.Name(), requestID),
-		Data:    gin.H{"error": response},
+		Subject: s.pubSuber.ErrorSubjectName(function.Name(), requestID),
+		Data:    response,
 	}
 
 	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {

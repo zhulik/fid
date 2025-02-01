@@ -110,7 +110,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 	responseCtx, cancel := context.WithTimeout(ctx, input.Timeout)
 	defer cancel()
 
-	response, err := p.Next(responseCtx, input.Stream, "", input.Subject)
+	response, err := p.Next(responseCtx, input.Stream, input.Subject, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -155,22 +155,22 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 
 // Next returns the next message from the stream, **does not respect ctx cancellation yet**, but checks ctx status
 // when reaches timeout in the nats client, so ctx cancellation will be respected in the next iteration.
-func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject string) (core.Message, error) { //nolint:ireturn,lll
+func (p PubSuber) Next(ctx context.Context, streamName, subject, durableName string) (core.Message, error) { //nolint:ireturn,lll
 	cons, err := p.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
-		Name:          consumerName,
+		Durable:       durableName,
 		FilterSubject: subject,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
-	if consumerName == "" {
-		consumerName = cons.CachedInfo().Name
+	if durableName == "" {
+		durableName = cons.CachedInfo().Name
 	}
 
 	logger := p.logger.WithFields(logrus.Fields{
 		"stream":   streamName,
-		"consumer": consumerName,
+		"consumer": durableName,
 		"subject":  subject,
 	})
 
@@ -180,7 +180,7 @@ func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject st
 		delCtx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		if err := p.nats.jetStream.DeleteConsumer(delCtx, streamName, consumerName); err != nil {
+		if err := p.nats.jetStream.DeleteConsumer(delCtx, streamName, durableName); err != nil {
 			logger.WithError(err).Error("Failed to delete consumer")
 		}
 

@@ -45,7 +45,7 @@ type PubSuber interface {
 
 	Publish(ctx context.Context, msg Msg) error
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) ([]byte, error)
-	Next(ctx context.Context, streamName, consumerName, subject string) (Message, error)
+	Next(ctx context.Context, streamName, subject, durableName string) (Message, error)
 
 	FunctionStreamName(functionName string) string
 	InvokeSubjectName(functionName string) string

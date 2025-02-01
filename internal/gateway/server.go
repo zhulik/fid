@@ -47,6 +47,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	defer cancel()
 
 	server.Logger.Debug("Creating or updating function streams.")
+
 	functions, err := backend.Functions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get functions: %w", err)
