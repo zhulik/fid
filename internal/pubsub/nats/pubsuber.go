@@ -35,7 +35,7 @@ var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 
 var responseStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
 	Name:      core.ResponseStreamName,
-	Subjects:  []string{core.ResponseStreamName + ".*"},
+	Subjects:  []string{core.ResponseSubjectBase + ".*"},
 	Storage:   jetstream.FileStorage,
 	Retention: jetstream.WorkQueuePolicy,
 	MaxAge:    maxAge,
@@ -123,7 +123,7 @@ func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWai
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.WithField("subject", input.Msg.Subject).Debugf("Message sent, awaiting response")
+	p.logger.WithField("subject", input.Msg.Subject).Debug("Message sent, awaiting response")
 
 	select {
 	case <-ctx.Done():
@@ -175,9 +175,13 @@ func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject st
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
 
+	if consumerName == "" {
+		consumerName = cons.CachedInfo().Name
+	}
+
 	logger := p.logger.WithFields(logrus.Fields{
 		"stream":   streamName,
-		"consumer": cons.CachedInfo().Name,
+		"consumer": consumerName,
 		"subject":  subject,
 	})
 
@@ -216,5 +220,5 @@ func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject st
 		return nil, fmt.Errorf("failed to fetch message: %w", err)
 	}
 
-	return messageWrapper{msg}, nil
+	return &messageWrapper{msg}, nil
 }

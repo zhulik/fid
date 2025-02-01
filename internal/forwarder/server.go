@@ -60,6 +60,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 }
 
 func (s *Server) NextHandler(c *gin.Context) {
+	ctx := c.Request.Context()
 	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
 	logger := s.Logger.WithField("function", function.Name())
 
@@ -67,12 +68,13 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
 
-	msg, err := s.pubSuber.Next(c.Request.Context(), core.InvocationStreamName, function.Name(), subject)
+	msg, err := s.pubSuber.Next(ctx, core.InvocationStreamName, "", subject)
 	if err != nil {
 		c.Error(err)
 
 		return
 	}
+	defer msg.Ack()
 
 	logger.Infof("Event received: %s", msg.Headers()[core.RequestIDHeaderName][0])
 
@@ -87,8 +89,12 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
+	subject := fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID)
 
-	logger := s.Logger.WithField("requestID", requestID)
+	logger := s.Logger.WithFields(map[string]interface{}{
+		"requestID": requestID,
+		"subject":   subject,
+	})
 
 	logger.Debug("Sending response...")
 
@@ -100,7 +106,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID),
+		Subject: subject,
 		Data:    gin.H{"response": response},
 	}
 
@@ -110,7 +116,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		return
 	}
 
-	logger.Info("Response sent")
+	logger.Debug("Response sent")
 }
 
 func (s *Server) ErrorHandler(c *gin.Context) {
