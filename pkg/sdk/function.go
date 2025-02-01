@@ -123,6 +123,8 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 		return fmt.Errorf("failed to create response request: %w", err)
 	}
 
+	respReq.Header.Set("Function-Name", functionName)
+
 	err = postResponse(respReq)
 	if err != nil {
 		return err
