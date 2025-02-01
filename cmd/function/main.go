@@ -32,7 +32,9 @@ type Request struct {
 }
 
 func handler(ctx context.Context, input []byte) ([]byte, error) {
-	log.Printf("Handling %s:", string(input))
+	requestID := ctx.Value(sdk.RequestID).(string)
+
+	log.Printf("Handling request %s, input %s:", requestID, string(input))
 
 	request, err := json.Unmarshal[Request](input)
 	if err != nil {
