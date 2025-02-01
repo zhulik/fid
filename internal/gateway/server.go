@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,8 +15,6 @@ import (
 
 type Server struct {
 	*httpserver.Server
-
-	backend core.ContainerBackend
 
 	invoker core.Invoker
 }
@@ -44,10 +43,27 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 	server.Router.Use(middlewares.FunctionMiddleware(backend))
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	server.Logger.Debug("Creating or updating function streams.")
+	functions, err := backend.Functions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get functions: %w", err)
+	}
+
+	for _, function := range functions {
+		err := invoker.CreateOrUpdateFunctionStream(ctx, function)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create or update function stream: %w", err)
+		}
+	}
+
+	// TODO: delete streams for deleted functions.
+
 	srv := &Server{
 		Server:  server,
 		invoker: invoker,
-		backend: backend,
 	}
 
 	srv.Router.POST("/invoke/:functionName", srv.InvokeHandler)

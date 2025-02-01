@@ -5,8 +5,7 @@ import (
 )
 
 const (
-	InvocationStreamName = "invocation"
-	ResponseStreamName   = "response"
+	InvocationStreamName = "INVOCATION" // used as INVOCATION:<function_name>
 
 	RequestIDHeaderName       = "Lambda-Runtime-Aws-Request-Id"
 	RequestDeadlineHeaderName = "Lambda-Runtime-Deadline-Ms"

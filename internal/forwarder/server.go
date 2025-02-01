@@ -62,13 +62,15 @@ func NewServer(injector *do.Injector) (*Server, error) {
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	subject := s.pubSuber.InvokeSubjectName(function.Name())
+
 	logger := s.Logger.WithField("function", function.Name())
 
 	logger.Debug("Function connected, waiting for events...")
 
-	subject := fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
+	streamName := s.pubSuber.FunctionStreamName(function.Name())
 
-	msg, err := s.pubSuber.Next(ctx, core.InvocationStreamName, "", subject)
+	msg, err := s.pubSuber.Next(ctx, streamName, "", subject)
 	if err != nil {
 		c.Error(err)
 
@@ -95,9 +97,11 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	subject := fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID)
+	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	subject := s.pubSuber.ResponseSubjectName(function.Name(), requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
+		"function":  function.Name(),
 		"requestID": requestID,
 		"subject":   subject,
 	})
@@ -127,8 +131,14 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 func (s *Server) ErrorHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
+	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	subject := s.pubSuber.ErrorSubjectName(function.Name(), requestID)
 
-	logger := s.Logger.WithField("requestID", requestID)
+	logger := s.Logger.WithFields(map[string]interface{}{
+		"function":  function.Name(),
+		"requestID": requestID,
+		"subject":   subject,
+	})
 
 	logger.Debug("Sending error response...")
 
@@ -140,7 +150,7 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: fmt.Sprintf("%s.%s", core.ResponseSubjectBase, requestID),
+		Subject: s.pubSuber.ResponseSubjectName(function.Name(), requestID),
 		Data:    gin.H{"error": response},
 	}
 

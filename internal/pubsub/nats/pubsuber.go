@@ -22,28 +22,6 @@ const (
 	nextTimeout = 10 * time.Second
 )
 
-var invocationStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
-	Name:      core.InvocationStreamName,
-	Subjects:  []string{core.InvokeSubjectBase + ".*"},
-	Storage:   jetstream.FileStorage,
-	Retention: jetstream.WorkQueuePolicy,
-	MaxAge:    maxAge,
-	MaxMsgs:   maxMsgs,
-	MaxBytes:  maxBytes,
-	Replicas:  1,
-}
-
-var responseStreamConfig = jetstream.StreamConfig{ //nolint:gochecknoglobals
-	Name:      core.ResponseStreamName,
-	Subjects:  []string{core.ResponseSubjectBase + ".*"},
-	Storage:   jetstream.FileStorage,
-	Retention: jetstream.WorkQueuePolicy,
-	MaxAge:    maxAge,
-	MaxMsgs:   maxMsgs,
-	MaxBytes:  maxBytes,
-	Replicas:  1,
-}
-
 type PubSuber struct {
 	nats *Client
 
@@ -66,11 +44,6 @@ func NewPubSuber(injector *do.Injector) (*PubSuber, error) {
 	pubSuber := &PubSuber{
 		nats:   natsClient,
 		logger: logger,
-	}
-
-	err = pubSuber.createOrUpdateStreams(context.Background(), invocationStreamConfig, responseStreamConfig)
-	if err != nil {
-		return nil, err
 	}
 
 	return pubSuber, nil
@@ -149,17 +122,33 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 	return response.Data(), nil
 }
 
-func (p PubSuber) createOrUpdateStreams(ctx context.Context, streams ...jetstream.StreamConfig) error {
-	for _, stream := range streams {
-		logger := p.logger.WithField("streamName", stream.Name)
+// CreateOrUpdateFunctionStream creates or updates a stream for function invocation.
+// TODO: something more universal, for any kind of streams?
+func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName string) error {
+	streamName := p.FunctionStreamName(functionName)
+	logger := p.logger.WithField("streamName", streamName)
 
-		_, err := p.nats.jetStream.CreateOrUpdateStream(ctx, stream)
-		if err != nil {
-			return fmt.Errorf("failed to create or update stream: %w", err)
-		}
-
-		logger.Info("Stream created or updated")
+	cfg := jetstream.StreamConfig{
+		Name: streamName,
+		Subjects: []string{
+			p.InvokeSubjectName(functionName),
+			p.ResponseSubjectName(functionName, "*"),
+			p.ErrorSubjectName(functionName, "*"),
+		},
+		Storage:   jetstream.FileStorage,
+		Retention: jetstream.WorkQueuePolicy,
+		MaxAge:    maxAge,
+		MaxMsgs:   maxMsgs,
+		MaxBytes:  maxBytes,
+		Replicas:  1,
 	}
+
+	_, err := p.nats.jetStream.CreateOrUpdateStream(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create or update stream: %w", err)
+	}
+
+	logger.Info("Stream created or updated")
 
 	return nil
 }
@@ -221,4 +210,20 @@ func (p PubSuber) Next(ctx context.Context, streamName, consumerName, subject st
 	}
 
 	return &messageWrapper{msg}, nil
+}
+
+func (p PubSuber) FunctionStreamName(functionName string) string {
+	return fmt.Sprintf("%s:%s", core.InvocationStreamName, functionName)
+}
+
+func (p PubSuber) InvokeSubjectName(functionName string) string {
+	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
+}
+
+func (p PubSuber) ResponseSubjectName(functionName, requestID string) string {
+	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, functionName, requestID)
+}
+
+func (p PubSuber) ErrorSubjectName(functionName, requestID string) string {
+	return fmt.Sprintf("%s.%s.%s.error", core.ResponseSubjectBase, functionName, requestID)
 }

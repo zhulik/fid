@@ -41,13 +41,22 @@ type Function interface {
 type PubSuber interface {
 	ServiceDependency
 
+	CreateOrUpdateFunctionStream(ctx context.Context, functionName string) error
+
 	Publish(ctx context.Context, msg Msg) error
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) ([]byte, error)
 	Next(ctx context.Context, streamName, consumerName, subject string) (Message, error)
+
+	FunctionStreamName(functionName string) string
+	InvokeSubjectName(functionName string) string
+	ResponseSubjectName(functionName, requestID string) string
+	ErrorSubjectName(functionName, requestID string) string
 }
 
 type Invoker interface {
 	ServiceDependency
+
+	CreateOrUpdateFunctionStream(ctx context.Context, function Function) error
 
 	Invoke(ctx context.Context, function Function, payload []byte) ([]byte, error)
 }
