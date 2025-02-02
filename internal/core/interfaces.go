@@ -69,3 +69,12 @@ type Message interface {
 	Ack() error
 	Nak() error
 }
+
+type KV interface {
+	ServiceDependency
+
+	CreateBucket(ctx context.Context, name string) error
+	Get(ctx context.Context, bucket, key string) ([]byte, error)
+	Put(ctx context.Context, bucket, key string, value []byte) error
+	Delete(ctx context.Context, bucket, key string) error
+}

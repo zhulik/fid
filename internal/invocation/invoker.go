@@ -12,6 +12,8 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
+// TODO: move to pubusub?
+
 func NewInvoker(injector *do.Injector) (*Invoker, error) {
 	logger, err := do.Invoke[logrus.FieldLogger](injector)
 	if err != nil {

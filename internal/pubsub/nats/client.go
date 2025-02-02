@@ -10,32 +10,6 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
-type Client struct {
-	nats      *libNats.Conn
-	jetStream jetstream.JetStream
-}
-
-func (c Client) HealthCheck() error {
-	_, err := c.nats.GetClientID()
-	if err != nil {
-		return fmt.Errorf("healthcheck failed: %w", err)
-	}
-
-	_, err = c.jetStream.AccountInfo(context.Background())
-	if err != nil {
-		return fmt.Errorf("healthcheck failed: %w", err)
-	}
-
-	return nil
-}
-
-func (c Client) Shutdown() error {
-	c.jetStream.CleanupPublisher()
-	c.nats.Close()
-
-	return nil
-}
-
 func NewClient(injector *do.Injector) (*Client, error) {
 	config, err := do.Invoke[core.Config](injector)
 	if err != nil {
@@ -49,11 +23,38 @@ func NewClient(injector *do.Injector) (*Client, error) {
 
 	jetStream, err := jetstream.New(natsClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build jetStream client: %w", err)
+		return nil, fmt.Errorf("failed to build JetStream client: %w", err)
 	}
 
 	return &Client{
-		nats:      natsClient,
-		jetStream: jetStream,
+		Nats:      natsClient,
+		JetStream: jetStream,
 	}, nil
+}
+
+type Client struct {
+	Nats      *libNats.Conn
+	JetStream jetstream.JetStream
+	KV        libNats.KeyValue
+}
+
+func (c Client) HealthCheck() error {
+	_, err := c.Nats.GetClientID()
+	if err != nil {
+		return fmt.Errorf("healthcheck failed: %w", err)
+	}
+
+	_, err = c.JetStream.AccountInfo(context.Background())
+	if err != nil {
+		return fmt.Errorf("healthcheck failed: %w", err)
+	}
+
+	return nil
+}
+
+func (c Client) Shutdown() error {
+	c.JetStream.CleanupPublisher()
+	c.Nats.Close()
+
+	return nil
 }

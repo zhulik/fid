@@ -12,6 +12,7 @@ import (
 	"github.com/zhulik/fid/internal/gateway"
 	"github.com/zhulik/fid/internal/infoserver"
 	"github.com/zhulik/fid/internal/invocation"
+	"github.com/zhulik/fid/internal/kv"
 	"github.com/zhulik/fid/internal/pubsub"
 )
 
@@ -42,6 +43,7 @@ func New() *do.Injector {
 	backends.Register(injector)
 	gateway.Register(injector)
 	pubsub.Register(injector)
+	kv.Register(injector)
 	invocation.Register(injector)
 	infoserver.Register(injector)
 

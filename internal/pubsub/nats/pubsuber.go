@@ -34,7 +34,7 @@ func NewPubSuber(injector *do.Injector) (*PubSuber, error) {
 		return nil, err
 	}
 
-	logger = logger.WithField("component", "pubsub.nats.PubSuber")
+	logger = logger.WithField("component", "pubsub.Nats.PubSuber")
 
 	natsClient, err := do.Invoke[*Client](injector)
 	if err != nil {
@@ -79,7 +79,7 @@ func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 	message.Data = data
 	message.Header = msg.Header
 
-	_, err := p.nats.jetStream.PublishMsg(ctx, message)
+	_, err := p.nats.JetStream.PublishMsg(ctx, message)
 	if err != nil {
 		return fmt.Errorf("failed to publish: %w", err)
 	}
@@ -143,7 +143,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 		Replicas:  1,
 	}
 
-	_, err := p.nats.jetStream.CreateOrUpdateStream(ctx, cfg)
+	_, err := p.nats.JetStream.CreateOrUpdateStream(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create or update stream: %w", err)
 	}
@@ -154,7 +154,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 }
 
 // Next returns the next message from the stream, **does not respect ctx cancellation properly yet**,
-// but checks ctx status when reaches timeout in the nats client, so ctx cancellation will be
+// but checks ctx status when reaches timeout in the Nats client, so ctx cancellation will be
 // respected in the next iteration.
 func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string, durableName string) (core.Message, error) { //nolint:ireturn,lll
 	var inactiveThreshold time.Duration
@@ -168,7 +168,7 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 		InactiveThreshold: inactiveThreshold,
 	}
 
-	cons, err := p.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, config)
+	cons, err := p.nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
