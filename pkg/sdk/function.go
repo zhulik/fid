@@ -9,10 +9,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/pkg/json"
 )
 
 type ContextKey int
@@ -37,6 +40,12 @@ var (
 	ErrUnexpectedStatus    = errors.New("unexpected status code")
 	ErrCannotParseDeadline = errors.New("cannot parse deadline")
 )
+
+type Error struct {
+	ErrorMessage string   `json:"errorMessage"`
+	ErrorType    string   `json:"errorType"`
+	StackTrace   []string `json:"stackTrace"`
+}
 
 type Handler func(ctx context.Context, req []byte) ([]byte, error)
 
@@ -105,12 +114,7 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 
 	result, err := handler(ctx, event)
 	if err != nil {
-		// TODO: properly serialize error
-		respReq, reqErr = http.NewRequest(
-			http.MethodPost,
-			fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/%s/error", apiURL, requestID),
-			bytes.NewReader(result),
-		)
+		respReq, reqErr = errorRequest(err, requestID)
 	} else {
 		respReq, reqErr = http.NewRequest(
 			http.MethodPost,
@@ -131,6 +135,25 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 	}
 
 	return nil
+}
+
+func errorRequest(err error, requestID string) (*http.Request, error) {
+	errorBody := Error{
+		ErrorMessage: err.Error(),
+		ErrorType:    fmt.Sprintf("%T", err),
+		StackTrace:   GetStackTrace(),
+	}
+
+	data, err := json.Marshal(errorBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal error: %w", err)
+	}
+
+	return http.NewRequest( //nolint:noctx,wrapcheck
+		http.MethodPost,
+		fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/%s/error", apiURL, requestID),
+		bytes.NewReader(data),
+	)
 }
 
 func fetchNextEvent(nextReq *http.Request) (*http.Response, error) {
@@ -220,4 +243,24 @@ func server(handler Handler) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// GetStackTrace returns the current goroutine's stack trace.
+func GetStackTrace() []string {
+	buf := make([]byte, 1024) //nolint:mnd
+
+	for {
+		n := runtime.Stack(buf, false)
+		if n < len(buf) {
+			buf = buf[:n]
+
+			break
+		}
+
+		buf = make([]byte, 2*len(buf)) //nolint:mnd
+	}
+
+	stackTrace := string(buf)
+
+	return strings.Split(stackTrace, "\n")
 }

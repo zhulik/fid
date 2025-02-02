@@ -89,8 +89,8 @@ func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 
 // PublishWaitResponse Publishes a message to "subject", awaits for response on "subject.response".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) { //nolint:lll
-	replChan := lo.Async2(func() ([]byte, error) { return p.awaitResponse(ctx, input) })
+func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:ireturn,lll
+	replChan := lo.Async2(func() (core.Message, error) { return p.awaitResponse(ctx, input) })
 
 	if err := p.Publish(ctx, input.Msg); err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
@@ -106,11 +106,11 @@ func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWai
 	}
 }
 
-func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) ([]byte, error) {
+func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:ireturn,lll
 	responseCtx, cancel := context.WithTimeout(ctx, input.Timeout)
 	defer cancel()
 
-	response, err := p.Next(responseCtx, input.Stream, input.Subject, "")
+	response, err := p.Next(responseCtx, input.Stream, input.Subjects, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
@@ -119,7 +119,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 		return nil, fmt.Errorf("failed to ack response: %w", err)
 	}
 
-	return response.Data(), nil
+	return response, nil
 }
 
 // CreateOrUpdateFunctionStream creates or updates a stream for function invocation.
@@ -156,7 +156,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 // Next returns the next message from the stream, **does not respect ctx cancellation properly yet**,
 // but checks ctx status when reaches timeout in the nats client, so ctx cancellation will be
 // respected in the next iteration.
-func (p PubSuber) Next(ctx context.Context, streamName, subject, durableName string) (core.Message, error) { //nolint:ireturn,lll
+func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string, durableName string) (core.Message, error) { //nolint:ireturn,lll
 	var inactiveThreshold time.Duration
 	if durableName != "" {
 		inactiveThreshold = core.MaxTimeout
@@ -164,7 +164,7 @@ func (p PubSuber) Next(ctx context.Context, streamName, subject, durableName str
 
 	config := jetstream.ConsumerConfig{
 		Durable:           durableName,
-		FilterSubject:     subject,
+		FilterSubjects:    subjects,
 		InactiveThreshold: inactiveThreshold,
 	}
 
@@ -180,7 +180,7 @@ func (p PubSuber) Next(ctx context.Context, streamName, subject, durableName str
 	logger := p.logger.WithFields(logrus.Fields{
 		"stream":   streamName,
 		"consumer": durableName,
-		"subject":  subject,
+		"subjects": subjects,
 	})
 
 	logger.Debug("NATS Consumer created")

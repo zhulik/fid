@@ -44,8 +44,8 @@ type PubSuber interface {
 	CreateOrUpdateFunctionStream(ctx context.Context, functionName string) error
 
 	Publish(ctx context.Context, msg Msg) error
-	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) ([]byte, error)
-	Next(ctx context.Context, streamName, subject, durableName string) (Message, error)
+	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (Message, error)
+	Next(ctx context.Context, streamName string, subjects []string, durableName string) (Message, error)
 
 	FunctionStreamName(functionName string) string
 	InvokeSubjectName(functionName string) string
@@ -63,6 +63,7 @@ type Invoker interface {
 
 // Message is a message received from a pubsub system.
 type Message interface {
+	Subject() string
 	Data() []byte
 	Headers() map[string][]string
 	Ack() error

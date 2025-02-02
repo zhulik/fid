@@ -5,10 +5,10 @@ import (
 )
 
 type PublishWaitResponseInput struct {
-	Subject string
-	Stream  string
-
 	Msg Msg
 
-	Timeout time.Duration
+	Stream string // To listen for response on
+
+	Subjects []string      // To listen for response on
+	Timeout  time.Duration // Give up waiting after this duration
 }

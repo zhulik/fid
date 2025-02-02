@@ -70,7 +70,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	streamName := s.pubSuber.FunctionStreamName(function.Name())
 
-	msg, err := s.pubSuber.Next(ctx, streamName, subject, function.Name())
+	msg, err := s.pubSuber.Next(ctx, streamName, []string{subject}, function.Name())
 	if err != nil {
 		c.Error(err)
 

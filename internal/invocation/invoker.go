@@ -58,8 +58,13 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		},
 	}
 
+	errorSubject := i.pubSuber.ErrorSubjectName(function.Name(), requestID)
+
 	responseInput := core.PublishWaitResponseInput{
-		Subject: i.pubSuber.ResponseSubjectName(function.Name(), requestID),
+		Subjects: []string{
+			i.pubSuber.ResponseSubjectName(function.Name(), requestID),
+			errorSubject,
+		},
 		Stream:  i.pubSuber.FunctionStreamName(function.Name()),
 		Msg:     msg,
 		Timeout: function.Timeout(),
@@ -75,7 +80,12 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		return nil, fmt.Errorf("failed to publish and wait for response: %w", err)
 	}
 
-	return response, nil
+	data := response.Data()
+	if response.Subject() == errorSubject {
+		return nil, fmt.Errorf("%w: %s", core.ErrFunctionErrored, string(data))
+	}
+
+	return data, nil
 }
 
 func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, function core.Function) error {

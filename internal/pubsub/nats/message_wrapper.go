@@ -9,6 +9,10 @@ type messageWrapper struct {
 	msg jetstream.Msg
 }
 
+func (m messageWrapper) Subject() string {
+	return m.msg.Subject()
+}
+
 func (m messageWrapper) Ack() error {
 	return m.msg.Ack() //nolint:wrapcheck
 }
