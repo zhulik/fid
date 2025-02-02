@@ -21,6 +21,7 @@ const (
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
+	MaxTimeout      = 15 * time.Minute
 	DefaultTimeout  = 10 * time.Second
 	DefaultMinScale = 1
 	DefaultMaxScale = 10

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"math/rand/v2"
 	"time"
@@ -31,6 +32,10 @@ type Request struct {
 	Calculations int
 }
 
+type Response struct {
+	Message string
+}
+
 func handler(ctx context.Context, input []byte) ([]byte, error) {
 	requestID := ctx.Value(sdk.RequestID).(string) //nolint:forcetypeassert
 
@@ -51,17 +56,17 @@ func handler(ctx context.Context, input []byte) ([]byte, error) {
 		return nil, ErrTestError
 	}
 
-	if request.Error {
-		return nil, ErrTestError
-	}
-
 	if request.Calculations != 0 {
 		ctx, cancel := context.WithTimeout(ctx, time.Duration(request.Calculations)*time.Second)
 		cpuIntensiveCalculations(ctx)
 		cancel()
 	}
 
-	return []byte("success"), nil
+	response := Response{
+		Message: fmt.Sprintf("Event %s handled successfully", requestID),
+	}
+
+	return json.Marshal(response) //nolint:wrapcheck
 }
 
 func main() {

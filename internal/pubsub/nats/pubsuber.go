@@ -19,7 +19,7 @@ const (
 	maxBytes    = 10 * 1024 * 1024 // 10MB
 	maxMsgs     = 1000
 	maxAge      = 72 * time.Hour
-	nextTimeout = 10 * time.Second
+	nextTimeout = 30 * time.Second
 )
 
 type PubSuber struct {
@@ -153,13 +153,22 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 	return nil
 }
 
-// Next returns the next message from the stream, **does not respect ctx cancellation yet**, but checks ctx status
-// when reaches timeout in the nats client, so ctx cancellation will be respected in the next iteration.
+// Next returns the next message from the stream, **does not respect ctx cancellation properly yet**,
+// but checks ctx status when reaches timeout in the nats client, so ctx cancellation will be
+// respected in the next iteration.
 func (p PubSuber) Next(ctx context.Context, streamName, subject, durableName string) (core.Message, error) { //nolint:ireturn,lll
-	cons, err := p.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
-		Durable:       durableName,
-		FilterSubject: subject,
-	})
+	var inactiveThreshold time.Duration
+	if durableName != "" {
+		inactiveThreshold = core.MaxTimeout
+	}
+
+	config := jetstream.ConsumerConfig{
+		Durable:           durableName,
+		FilterSubject:     subject,
+		InactiveThreshold: inactiveThreshold,
+	}
+
+	cons, err := p.nats.jetStream.CreateOrUpdateConsumer(ctx, streamName, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumer: %w", err)
 	}
@@ -175,17 +184,6 @@ func (p PubSuber) Next(ctx context.Context, streamName, subject, durableName str
 	})
 
 	logger.Debug("NATS Consumer created")
-
-	defer func() { //nolint:contextcheck
-		delCtx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		if err := p.nats.jetStream.DeleteConsumer(delCtx, streamName, durableName); err != nil {
-			logger.WithError(err).Error("Failed to delete consumer")
-		}
-
-		logger.Debug("NATS Consumer deleted")
-	}()
 
 	var msg jetstream.Msg
 
