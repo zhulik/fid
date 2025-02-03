@@ -16,35 +16,34 @@ import (
 
 var _ = Describe("Nats KV", Ordered, func() {
 	injector := do.New()
-	ctx := context.Background()
 
 	do.ProvideValue[core.Config](injector, config.Config{})
 	do.Provide(injector, natsPubSub.NewClient)
 
 	kv := lo.Must(nats.NewKV(injector))
 
-	BeforeEach(func() {
-		lo.Must0(kv.CreateBucket(context.Background(), "test"))
+	BeforeEach(func(ctx SpecContext) {
+		lo.Must0(kv.CreateBucket(ctx, "test"))
 
 		lo.Must0(kv.Create(ctx, "test", "key", []byte("some - value")))
 	})
 
-	AfterEach(func() {
-		kv.DeleteBucket(context.Background(), "test") //nolint:errcheck
+	AfterEach(func(ctx SpecContext) {
+		kv.DeleteBucket(ctx, "test") //nolint:errcheck
 	})
 
 	Describe("CreateBucket", func() {
 		Context("when bucket exists", func() {
-			It("does not return an error", func() {
-				err := kv.CreateBucket(context.Background(), "test")
+			It("does not return an error", func(ctx SpecContext) {
+				err := kv.CreateBucket(ctx, "test")
 
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
 		Context("when bucket does not exists", func() {
-			It("creates the bucket", func() {
-				err := kv.CreateBucket(context.Background(), "test2")
+			It("creates the bucket", func(ctx SpecContext) {
+				err := kv.CreateBucket(ctx, "test2")
 				Expect(err).NotTo(HaveOccurred())
 
 				lo.Must0(kv.DeleteBucket(ctx, "test2"))
@@ -54,15 +53,15 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	Describe("DeleteBucket", func() {
 		Context("when bucket exists", func() {
-			It("deletes the bucket", func() {
-				err := kv.DeleteBucket(context.Background(), "test")
+			It("deletes the bucket", func(ctx SpecContext) {
+				err := kv.DeleteBucket(ctx, "test")
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 
 		Context("when bucket does not exists", func() {
-			It("returns an error", func() {
-				err := kv.DeleteBucket(context.Background(), "test2")
+			It("returns an error", func(ctx SpecContext) {
+				err := kv.DeleteBucket(ctx, "test2")
 				Expect(err).To(MatchError(core.ErrBucketNotFound))
 			})
 		})
@@ -70,7 +69,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	Describe("Get", func() {
 		Context("when key exists", func() {
-			It("returns value", func() {
+			It("returns value", func(ctx SpecContext) {
 				value, err := kv.Get(ctx, "test", "key")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -79,7 +78,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 
 		Context("when key does not exists", func() {
-			It("returns an error", func() {
+			It("returns an error", func(ctx SpecContext) {
 				_, err := kv.Get(ctx, "test", "key2")
 
 				Expect(err).To(MatchError(core.ErrKeyNotFound))
@@ -89,7 +88,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	Describe("Put", func() {
 		Context("when key exists", func() {
-			It("updates the value", func() {
+			It("updates the value", func(ctx SpecContext) {
 				err := kv.Put(ctx, "test", "key", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
@@ -101,7 +100,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 
 		Context("when key does not exists", func() {
-			It("creates the value", func() {
+			It("creates the value", func(ctx SpecContext) {
 				err := kv.Put(ctx, "test", "key2", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
@@ -115,7 +114,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	Describe("Create", func() {
 		Context("when key exists", func() {
-			It("returns an error", func() {
+			It("returns an error", func(ctx SpecContext) {
 				err := kv.Create(ctx, "test", "key", []byte("new - value"))
 
 				Expect(err).To(MatchError(core.ErrKeyExists))
@@ -123,7 +122,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 
 		Context("when key does not exists", func() {
-			It("creates the value", func() {
+			It("creates the value", func(ctx SpecContext) {
 				err := kv.Create(ctx, "test", "key2", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
@@ -137,7 +136,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	Describe("Delete", func() {
 		Context("when key exists", func() {
-			It("deletes the key", func() {
+			It("deletes the key", func(ctx SpecContext) {
 				err := kv.Delete(ctx, "test", "key")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -148,7 +147,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 
 		Context("when key does not exists", func() {
-			It("does not return an error", func() {
+			It("does not return an error", func(ctx SpecContext) {
 				err := kv.Delete(ctx, "test", "key2")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -158,7 +157,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	Describe("WaitCreated", func() {
 		Context("when key exists", func() {
-			It("returns the value", func() {
+			It("returns the value", func(ctx SpecContext) {
 				value, err := kv.WaitCreated(ctx, "test", "key")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -167,7 +166,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 
 		Context("when key does not exists", func() {
-			It("waits for the key to be created", func() {
+			It("waits for the key to be created", func(ctx SpecContext) {
 				done := lo.Async0(func() {
 					value, err := kv.WaitCreated(ctx, "test", "key3")
 
@@ -178,7 +177,18 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 				lo.Must0(kv.Create(ctx, "test", "key3", []byte("new - value")))
 
-				<-done
+				Eventually(done).Should(Receive())
+			})
+		})
+
+		Context("when context timeout reaches", func() {
+			It("waits for the key to be created", func(ctx SpecContext) {
+				waitCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+				defer cancel()
+
+				_, err := kv.WaitCreated(waitCtx, "test", "key3")
+
+				Expect(err).To(MatchError(context.DeadlineExceeded))
 			})
 		})
 	})
