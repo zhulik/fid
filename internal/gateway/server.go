@@ -41,7 +41,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	server.Router.Use(middlewares.FunctionMiddleware(backend))
+	server.Router.Use(middlewares.FunctionMiddleware(backend, func(c *gin.Context) string {
+		return c.Param("functionName")
+	}))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

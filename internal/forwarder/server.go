@@ -1,9 +1,11 @@
 package forwarder
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do"
@@ -11,6 +13,8 @@ import (
 	"github.com/zhulik/fid/internal/middlewares"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
+
+var ErrFunctionNameNotGiven = errors.New("function name is not provided as env FUNCTION_NAME")
 
 type Server struct {
 	*httpserver.Server
@@ -41,8 +45,16 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	server.Router.Use(JWTMiddleware())
-	server.Router.Use(middlewares.FunctionMiddleware(backend))
+	functionName := os.Getenv("FUNCTION_NAME")
+
+	// TODO: move to config
+	if functionName == "" {
+		return nil, ErrFunctionNameNotGiven
+	}
+
+	server.Router.Use(middlewares.FunctionMiddleware(backend, func(c *gin.Context) string {
+		return functionName
+	}))
 
 	srv := &Server{
 		Server:   server,

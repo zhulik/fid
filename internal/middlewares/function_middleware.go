@@ -8,12 +8,10 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
-func FunctionMiddleware(backend core.ContainerBackend) gin.HandlerFunc {
+func FunctionMiddleware(backend core.ContainerBackend, getName func(c *gin.Context) string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		functionName := c.GetString("functionName")
-		if functionName == "" {
-			functionName = c.Param("functionName")
-		}
+		ctx := c.Request.Context()
+		functionName := getName(c)
 
 		if functionName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "function name is required"})
@@ -22,7 +20,7 @@ func FunctionMiddleware(backend core.ContainerBackend) gin.HandlerFunc {
 			return
 		}
 
-		function, err := backend.Function(c.Request.Context(), functionName)
+		function, err := backend.Function(ctx, functionName)
 		if err != nil {
 			if errors.Is(err, core.ErrFunctionNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})

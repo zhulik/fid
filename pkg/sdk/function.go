@@ -34,9 +34,6 @@ var (
 	apiURL  = os.Getenv("AWS_LAMBDA_RUNTIME_API")                                 //nolint:gochecknoglobals
 	nextURL = fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/next", apiURL) //nolint:gochecknoglobals
 
-	// TODO: use jwt instead.
-	functionName = os.Getenv("FID_FUNCTION_NAME") //nolint:gochecknoglobals
-
 	ErrUnexpectedStatus    = errors.New("unexpected status code")
 	ErrCannotParseDeadline = errors.New("cannot parse deadline")
 )
@@ -72,8 +69,6 @@ func Serve(handler Handler) error {
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-
-	req.Header.Set("Function-Name", functionName)
 
 	for {
 		err := fetchEventAndHandle(req, handler)
@@ -126,8 +121,6 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 	if reqErr != nil {
 		return fmt.Errorf("failed to create response request: %w", err)
 	}
-
-	respReq.Header.Set("Function-Name", functionName)
 
 	err = postResponse(respReq)
 	if err != nil {
