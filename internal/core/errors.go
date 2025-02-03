@@ -6,8 +6,9 @@ import (
 
 var (
 	// Function errors.
-	ErrFunctionNotFound = errors.New("function not found")
-	ErrFunctionErrored  = errors.New("function returned an error")
+	ErrFunctionNotFound     = errors.New("function not found")
+	ErrFunctionErrored      = errors.New("function returned an error")
+	ErrFunctionNameNotGiven = errors.New("function name is not provided as env FUNCTION_NAME")
 
 	// KV errors.
 	ErrKeyNotFound    = errors.New("key not found")

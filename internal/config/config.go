@@ -4,14 +4,11 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-const (
-	DefaultHTTPPort = 8180
-)
-
 type Config struct {
-	HTTPPort int    `env:"HTTP_PORT"`
-	WSPort   int    `env:"WS_PORT"   envDefault:"8181"`
-	InfoPort int    `env:"INFO_PORT" envDefault:"8182"`
+	HttpPort int `env:"HTTP_PORT" envDefault:"8180"` //nolint:stylecheck
+
+	Functionname string `env:"FUNCTION_NAME"`
+
 	NATSURL  string `env:"NATS_URL"`
 	Loglevel string `env:"LOG_LEVEL" envDefault:"info"`
 }
@@ -24,30 +21,14 @@ func (c Config) NatsURL() string {
 	return c.NATSURL
 }
 
-func (c Config) GatewayPort() int {
-	if c.HTTPPort != 0 {
-		return c.HTTPPort
-	}
-
-	return DefaultHTTPPort
-}
-
-func (c Config) ForwarderPort() int {
-	if c.HTTPPort != 0 {
-		return c.HTTPPort
-	}
-
-	return c.WSPort
-}
-
-func (c Config) InfoServerPort() int {
-	if c.HTTPPort != 0 {
-		return c.HTTPPort
-	}
-
-	return c.InfoPort
+func (c Config) HTTPPort() int {
+	return c.HttpPort
 }
 
 func (c Config) LogLevel() string {
 	return c.Loglevel
+}
+
+func (c Config) FunctionName() string {
+	return c.Functionname
 }
