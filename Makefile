@@ -1,10 +1,15 @@
 GOLANGCI_LINT_VERSION = "1.63.4"
 
+check: lint test
+
 lint_fix: | bin/golangci-lint
 	./bin/golangci-lint run --fix
 
 lint: | bin/golangci-lint
 	./bin/golangci-lint run
+
+test:
+	ginkgo run ./...
 
 bin/golangci-lint:
 	set -eu
@@ -15,4 +20,4 @@ bin/golangci-lint:
     | sh -s v$(GOLANGCI_LINT_VERSION)
 
 
-.PHONY: lint lint_fix
+.PHONY: lint lint_fix test

@@ -20,6 +20,7 @@ linters-settings:
       - c *gin.Context
       - ok bool
       - kv jetstream.KeyValue
+      - kv *nats.KV
 
   errcheck:
     exclude-functions:
@@ -28,6 +29,12 @@ linters-settings:
   wrapcheck:
     extra-ignore-sigs:
       - .Unpack(
+
+  revive:
+    rules:
+      - name: dot-imports
+        disabled: true
+
 
 issues:
   max-same-issues: 0
