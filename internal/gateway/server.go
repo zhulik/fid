@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do"
+	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/middlewares"
 	"github.com/zhulik/fid/pkg/httpserver"
@@ -26,7 +27,14 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, err
 	}
 
-	server, err := httpserver.NewServer(injector, "gateway.Server", config.HTTPPort())
+	logger, err := do.Invoke[logrus.FieldLogger](injector)
+	if err != nil {
+		return nil, err
+	}
+
+	logger = logger.WithField("component", "gateway.Server")
+
+	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}

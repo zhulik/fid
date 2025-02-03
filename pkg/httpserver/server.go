@@ -19,14 +19,7 @@ type Server struct {
 	error error
 }
 
-func NewServer(injector *do.Injector, name string, port int) (*Server, error) {
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger = logger.WithField("component", name)
-
+func NewServer(injector *do.Injector, logger logrus.FieldLogger, port int) (*Server, error) {
 	defer logger.Info("Server created.")
 
 	router := gin.New()
