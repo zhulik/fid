@@ -19,6 +19,7 @@ linters-settings:
       - r *http.Request
       - c *gin.Context
       - ok bool
+      - kv jetstream.KeyValue
 
   errcheck:
     exclude-functions:
