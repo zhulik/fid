@@ -11,35 +11,37 @@ import (
 )
 
 const (
+	DefaultTimeout          = 200 * time.Millisecond
 	DefaultUpdateMultiplier = 0.75
 	DefaultPollMultiplier   = 0.25
 )
 
 var ErrInvalidTTL = errors.New("TTL must be configured for the KeyValue bucket")
 
+type KV interface {
+	TTL() time.Duration
+	Get(ctx context.Context, key string) ([]byte, error)
+	Create(ctx context.Context, key string, value []byte) (uint64, error)
+	Update(ctx context.Context, key string, value []byte, seq uint64) (uint64, error)
+}
+
 type Elect struct {
-	KV jetstream.KeyValue
+	KV KV
 
 	Config Config
 }
 
-// TODO: use a custom interface for kv
-// TODO: use timeouts when calling kv methods
-func New(ctx context.Context, kv jetstream.KeyValue, key string, id string, opts ...Option) (*Elect, error) {
-	status, err := kv.Status(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get KV status: %w", err)
-	}
-
-	if status.TTL() == 0 {
+func New(kv KV, key string, id string, opts ...Option) (*Elect, error) {
+	if kv.TTL() == 0 {
 		return nil, ErrInvalidTTL
 	}
 
 	config := &Config{
 		Key:            key,
 		ID:             []byte(id),
-		UpdateInterval: time.Duration(float64(status.TTL()) * DefaultUpdateMultiplier),
-		PollInterval:   time.Duration(float64(status.TTL()) * DefaultPollMultiplier),
+		Timeout:        DefaultTimeout,
+		UpdateInterval: time.Duration(float64(kv.TTL()) * DefaultUpdateMultiplier),
+		PollInterval:   time.Duration(float64(kv.TTL()) * DefaultPollMultiplier),
 	}
 
 	for _, opt := range opts {
@@ -86,7 +88,10 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 			case Unknown:
 				ticker.Stop()
 
-				seq, err = e.KV.Create(ctx, e.Config.Key, e.Config.ID)
+				createCtx, cancel := context.WithTimeout(ctx, e.Config.Timeout)
+				defer cancel()
+
+				seq, err = e.KV.Create(createCtx, e.Config.Key, e.Config.ID)
 				if err == nil {
 					status = Won
 
@@ -130,7 +135,10 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 func (e Elect) tick(ctx context.Context, status ElectionStatus, seq uint64) (ElectionStatus, uint64, error) {
 	var err error
 
-	entry, err := e.KV.Get(ctx, e.Config.Key)
+	getCtx, cancel := context.WithTimeout(ctx, e.Config.Timeout)
+	defer cancel()
+
+	leaderID, err := e.KV.Get(getCtx, e.Config.Key)
 	if err != nil {
 		if errors.Is(err, jetstream.ErrKeyNotFound) {
 			err = nil
@@ -141,12 +149,15 @@ func (e Elect) tick(ctx context.Context, status ElectionStatus, seq uint64) (Ele
 
 	switch status {
 	case Won:
-		if !bytes.Equal(entry.Value(), e.Config.ID) {
+		if !bytes.Equal(leaderID, e.Config.ID) {
 			// someone else is the leader
 			return Unknown, 0, nil
 		}
 
-		seq, err = e.KV.Update(ctx, e.Config.Key, e.Config.ID, seq)
+		updateCtx, cancel := context.WithTimeout(ctx, e.Config.Timeout)
+		defer cancel()
+
+		seq, err = e.KV.Update(updateCtx, e.Config.Key, e.Config.ID, seq)
 	case Lost:
 		// do nothing, we performed the check in the beginning
 	case Unknown, Error, Cancelled:

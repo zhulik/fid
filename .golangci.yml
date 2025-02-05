@@ -21,6 +21,7 @@ linters-settings:
       - ok bool
       - kv jetstream.KeyValue
       - kv *nats.KV
+      - kv KV
       - id string
 
   errcheck:
