@@ -3,7 +3,8 @@ package elect
 type ElectionStatus int
 
 const (
-	Won ElectionStatus = iota
+	Unknown ElectionStatus = iota
+	Won
 	Lost
 	Error
 	Cancelled
