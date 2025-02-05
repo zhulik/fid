@@ -1,6 +1,7 @@
 package elect
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -22,6 +23,8 @@ type Elect struct {
 	Config Config
 }
 
+// TODO: use a custom interface for kv
+// TODO: use timeouts when calling kv methods
 func New(ctx context.Context, kv jetstream.KeyValue, key string, id string, opts ...Option) (*Elect, error) {
 	status, err := kv.Status(ctx)
 	if err != nil {
@@ -34,7 +37,7 @@ func New(ctx context.Context, kv jetstream.KeyValue, key string, id string, opts
 
 	config := &Config{
 		Key:            key,
-		ID:             id,
+		ID:             []byte(id),
 		UpdateInterval: time.Duration(float64(status.TTL()) * DefaultUpdateMultiplier),
 		PollInterval:   time.Duration(float64(status.TTL()) * DefaultPollMultiplier),
 	}
@@ -74,30 +77,16 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 		case <-ctx.Done():
 			status = Cancelled
 		case <-ticker.C:
-			switch status {
-			case Won:
-				seq, err = e.KV.Update(ctx, e.Config.Key, []byte(e.Config.ID), seq)
-				if errors.Is(err, jetstream.ErrKeyExists) {
-					status = Lost
-				}
-			case Lost:
-				_, err = e.KV.Get(ctx, e.Config.Key)
-				if errors.Is(err, jetstream.ErrKeyNotFound) {
-					status = Unknown
-
-					continue
-				}
-
+			status, seq, err = e.tick(ctx, status, seq)
+			if err != nil {
 				status = Error
-			case Unknown, Error, Cancelled:
-				panic(fmt.Sprintf("unexpected status: %v", status))
 			}
 		default:
 			switch status {
 			case Unknown:
 				ticker.Stop()
 
-				seq, err = e.KV.Create(ctx, e.Config.Key, []byte(e.Config.ID))
+				seq, err = e.KV.Create(ctx, e.Config.Key, e.Config.ID)
 				if err == nil {
 					status = Won
 
@@ -136,4 +125,33 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 			}
 		}
 	}
+}
+
+func (e Elect) tick(ctx context.Context, status ElectionStatus, seq uint64) (ElectionStatus, uint64, error) {
+	var err error
+
+	entry, err := e.KV.Get(ctx, e.Config.Key)
+	if err != nil {
+		if errors.Is(err, jetstream.ErrKeyNotFound) {
+			err = nil
+		}
+
+		return Unknown, 0, err
+	}
+
+	switch status {
+	case Won:
+		if !bytes.Equal(entry.Value(), e.Config.ID) {
+			// someone else is the leader
+			return Unknown, 0, nil
+		}
+
+		seq, err = e.KV.Update(ctx, e.Config.Key, e.Config.ID, seq)
+	case Lost:
+		// do nothing, we performed the check in the beginning
+	case Unknown, Error, Cancelled:
+		panic(fmt.Sprintf("unexpected status: %v, ticker must have been stopped", status))
+	}
+
+	return status, seq, err //nolint:wrapcheck
 }
