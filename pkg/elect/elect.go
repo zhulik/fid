@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/nats-io/nats.go/jetstream"
 )
 
 const (
@@ -17,13 +15,6 @@ const (
 )
 
 var ErrInvalidTTL = errors.New("TTL must be configured for the KeyValue bucket")
-
-type KV interface {
-	TTL() time.Duration
-	Get(ctx context.Context, key string) ([]byte, error)
-	Create(ctx context.Context, key string, value []byte) (uint64, error)
-	Update(ctx context.Context, key string, value []byte, seq uint64) (uint64, error)
-}
 
 type Elect struct {
 	KV KV
@@ -98,7 +89,7 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 					continue
 				}
 
-				if errors.Is(err, jetstream.ErrKeyExists) {
+				if errors.Is(err, ErrKeyExists) {
 					status = Lost
 				} else {
 					status = Error
@@ -140,7 +131,7 @@ func (e Elect) tick(ctx context.Context, status ElectionStatus, seq uint64) (Ele
 
 	leaderID, err := e.KV.Get(getCtx, e.Config.Key)
 	if err != nil {
-		if errors.Is(err, jetstream.ErrKeyNotFound) {
+		if errors.Is(err, ErrKeyNotFound) {
 			err = nil
 		}
 
