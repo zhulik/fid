@@ -23,6 +23,7 @@ linters-settings:
       - kv *nats.KV
       - kv KV
       - id string
+      - wg *sync.WaitGroup
 
   errcheck:
     exclude-functions:

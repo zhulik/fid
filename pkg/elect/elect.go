@@ -75,14 +75,17 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 				status = Error
 			}
 		default:
+			// TODO: do nothing if status didn't change
 			switch status {
 			case Unknown:
 				ticker.Stop()
 
 				createCtx, cancel := context.WithTimeout(ctx, e.Config.Timeout)
-				defer cancel()
 
 				seq, err = e.KV.Create(createCtx, e.Config.Key, e.Config.ID)
+
+				cancel()
+
 				if err == nil {
 					status = Won
 
