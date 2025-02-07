@@ -54,7 +54,9 @@ func (e Elect) Start(ctx context.Context) chan Outcome {
 }
 
 func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolint:cyclop,funlen
-	var status ElectionStatus
+	var currentStatus ElectionStatus
+
+	newStatusCh := make(chan ElectionStatus, 1)
 
 	var seq uint64
 
@@ -68,15 +70,21 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 	for {
 		select {
 		case <-ctx.Done():
-			status = Cancelled
+			newStatusCh <- Cancelled
 		case <-ticker.C:
-			status, seq, err = e.tick(ctx, status, seq)
+			var status ElectionStatus
+
+			status, seq, err = e.tick(ctx, currentStatus, seq)
 			if err != nil {
-				status = Error
+				newStatusCh <- Error
+
+				continue
 			}
-		default:
-			// TODO: do nothing if status didn't change
-			switch status {
+			newStatusCh <- status
+		case newStatus := <-newStatusCh:
+			currentStatus = newStatus
+
+			switch newStatus {
 			case Unknown:
 				ticker.Stop()
 
@@ -87,15 +95,15 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 				cancel()
 
 				if err == nil {
-					status = Won
+					newStatusCh <- Won
 
 					continue
 				}
 
 				if errors.Is(err, ErrKeyExists) {
-					status = Lost
+					newStatusCh <- Lost
 				} else {
-					status = Error
+					newStatusCh <- Error
 				}
 			case Won:
 				outcomeCh <- Outcome{

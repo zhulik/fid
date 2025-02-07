@@ -72,6 +72,12 @@ func main() {
 		}
 	}()
 
+	if len(os.Args) > 1 {
+		if os.Args[1] == "now" {
+			signalChannel <- syscall.SIGUSR1
+		}
+	}
+
 	log.Printf("Waiting for USR1 signal to start the election process, this instance instanceID is %s", instanceID)
 
 	<-ctx.Done()
