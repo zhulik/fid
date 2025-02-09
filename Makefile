@@ -9,7 +9,7 @@ lint: | bin/golangci-lint
 	./bin/golangci-lint run
 
 test:
-	ginkgo run ./...
+	go run github.com/onsi/ginkgo/v2/ginkgo -r
 
 bin/golangci-lint:
 	set -eu
