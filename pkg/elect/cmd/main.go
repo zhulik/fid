@@ -22,7 +22,7 @@ const (
 
 var (
 	nc = lo.Must(nats.Connect(nats.DefaultURL)) //nolint:gochecknoglobals
-	js = lo.Must(jetstream.New(nc))             //nolint:gochecknoglobals,varnamelen
+	js = lo.Must(jetstream.New(nc))             //nolint:gochecknoglobals
 )
 
 func main() {

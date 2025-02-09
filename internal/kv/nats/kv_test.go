@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"github.com/samber/do"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/config"
