@@ -30,6 +30,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
 
+      - name: Start NATS
+        run: docker compose up -d nats
+
       - name: Download dependencies
         run: go mod download
 
