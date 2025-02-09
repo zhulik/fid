@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DefaultTimeout          = 200 * time.Millisecond
+	DefaultTimeout          = 100 * time.Millisecond
 	DefaultUpdateMultiplier = 0.75
 	DefaultPollMultiplier   = 0.25
 )
@@ -57,6 +57,7 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 	var currentStatus ElectionStatus
 
 	newStatusCh := make(chan ElectionStatus, 1)
+	defer close(newStatusCh)
 
 	var seq uint64
 
@@ -67,10 +68,17 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 	defer close(outcomeCh)
 	defer ticker.Stop()
 
+	newStatusCh <- Unknown
+
 	for {
 		select {
 		case <-ctx.Done():
-			newStatusCh <- Cancelled
+			outcomeCh <- Outcome{
+				Status: Cancelled,
+				Error:  ctx.Err(),
+			}
+
+			return
 		case <-ticker.C:
 			var status ElectionStatus
 
@@ -82,6 +90,7 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 			}
 			newStatusCh <- status
 		case newStatus := <-newStatusCh:
+
 			currentStatus = newStatus
 
 			switch newStatus {
@@ -123,12 +132,7 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 
 				return
 			case Cancelled:
-				outcomeCh <- Outcome{
-					Status: Cancelled,
-					Error:  ctx.Err(),
-				}
-
-				return
+				panic("should not happen")
 			}
 		}
 	}
@@ -163,7 +167,7 @@ func (e Elect) tick(ctx context.Context, status ElectionStatus, seq uint64) (Ele
 	case Lost:
 		// do nothing, we performed the check in the beginning
 	case Unknown, Error, Cancelled:
-		panic(fmt.Sprintf("unexpected status: %v, ticker must have been stopped", status))
+		panic(fmt.Sprintf("unexpected status: '%v', ticker must have been stopped", status))
 	}
 
 	return status, seq, err //nolint:wrapcheck
