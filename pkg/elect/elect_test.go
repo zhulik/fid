@@ -19,74 +19,100 @@ const (
 	instanceID = "instanceID"
 )
 
+var (
+	nc = lo.Must(nats.Connect(nats.DefaultURL))
+	js = lo.Must(jetstream.New(nc))
+)
+
 var _ = Describe("Elect", Ordered, func() {
-	nc := lo.Must(nats.Connect(nats.DefaultURL))
-	js := lo.Must(jetstream.New(nc))
+	Describe(".Start", func() {
+		var jsKV jetstream.KeyValue
+		var kv elect.JetStreamKV //nolint:varnamelen
+		var elector *elect.Elect
 
-	var jsKV jetstream.KeyValue
-	var kv elect.JetStreamKV //nolint:varnamelen
-	var elector *elect.Elect
+		BeforeAll(func(sc SpecContext) {
+			jsKV = lo.Must(js.CreateKeyValue(sc, jetstream.KeyValueConfig{
+				Bucket: bucketName,
+				TTL:    bucketTTL,
+			}))
 
-	BeforeAll(func(sc SpecContext) {
-		jsKV = lo.Must(js.CreateKeyValue(sc, jetstream.KeyValueConfig{
-			Bucket: bucketName,
-			TTL:    bucketTTL,
-		}))
+			kv = elect.JetStreamKV{
+				KV:  jsKV,
+				Ttl: bucketTTL,
+			}
+			elector = lo.Must(elect.New(kv, leaderKey, instanceID))
+		})
 
-		kv = elect.JetStreamKV{
-			KV:  jsKV,
-			Ttl: bucketTTL,
-		}
-		elector = lo.Must(elect.New(kv, leaderKey, instanceID))
-	})
+		AfterAll(func(sc SpecContext) {
+			lo.Must0(js.DeleteKeyValue(sc, bucketName))
+		})
 
-	AfterAll(func(sc SpecContext) {
-		lo.Must0(js.DeleteKeyValue(sc, bucketName))
-	})
+		AfterEach(func(sc SpecContext) {
+			lo.Must0(jsKV.Purge(sc, leaderKey))
+		})
 
-	AfterEach(func(sc SpecContext) {
-		lo.Must0(jsKV.Purge(sc, leaderKey))
-	})
+		Describe("Run", func() {
+			Context("when no concurrent nominees", func() {
+				Context("when the value does not exist", func() {
+					It("returns a channel with won status", func(sc SpecContext) {
+						ctx, cancel := context.WithCancel(sc)
 
-	Describe("Run", func() {
-		Context("when no concurrent nominees", func() {
-			Context("when the value does not exist", func() {
-				It("returns a channel with won status", func(sc SpecContext) {
-					ctx, cancel := context.WithCancel(sc)
+						outcomeCh := elector.Start(ctx)
 
-					outcomeCh := elector.Start(ctx)
+						outcome := <-outcomeCh
 
-					outcome := <-outcomeCh
+						Expect(outcome.Status).To(Equal(elect.Won))
 
-					Expect(outcome.Status).To(Equal(elect.Won))
+						cancel()
 
-					cancel()
+						outcome = <-outcomeCh
 
-					outcome = <-outcomeCh
-
-					Expect(outcome.Status).To(Equal(elect.Cancelled))
-				})
-			})
-
-			Context("when the value exists", func() {
-				BeforeEach(func(sc SpecContext) {
-					lo.Must(kv.Create(sc, leaderKey, []byte(instanceID)))
+						Expect(outcome.Status).To(Equal(elect.Cancelled))
+					})
 				})
 
-				It("returns a channel with lost status", func(sc SpecContext) {
-					ctx, cancel := context.WithCancel(sc)
+				Context("when the value exists", func() {
+					BeforeEach(func(sc SpecContext) {
+						lo.Must(kv.Create(sc, leaderKey, []byte("anotherInstanceID")))
+					})
 
-					outcomeCh := elector.Start(ctx)
+					It("returns a channel with lost status", func(sc SpecContext) {
+						ctx, cancel := context.WithCancel(sc)
 
-					outcome := <-outcomeCh
+						outcomeCh := elector.Start(ctx)
 
-					Expect(outcome.Status).To(Equal(elect.Lost))
+						outcome := <-outcomeCh
 
-					cancel()
+						Expect(outcome.Status).To(Equal(elect.Lost))
 
-					outcome = <-outcomeCh
+						cancel()
 
-					Expect(outcome.Status).To(Equal(elect.Cancelled))
+						outcome = <-outcomeCh
+
+						Expect(outcome.Status).To(Equal(elect.Cancelled))
+					})
+
+					It("becomes a leader if the value is deleted", func(sc SpecContext) {
+						ctx, cancel := context.WithCancel(sc)
+
+						outcomeCh := elector.Start(ctx)
+
+						outcome := <-outcomeCh
+
+						Expect(outcome.Status).To(Equal(elect.Lost))
+
+						//time.Sleep(2 * time.Second)
+
+						outcome = <-outcomeCh
+
+						Expect(outcome.Status).To(Equal(elect.Won))
+
+						cancel()
+
+						outcome = <-outcomeCh
+
+						Expect(outcome.Status).To(Equal(elect.Cancelled))
+					})
 				})
 			})
 		})

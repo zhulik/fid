@@ -34,6 +34,9 @@ linters-settings:
     extra-ignore-sigs:
       - .Unpack(
 
+  gochecknoglobals:
+
+
   revive:
     rules:
       - name: dot-imports
@@ -42,3 +45,8 @@ linters-settings:
 
 issues:
   max-same-issues: 0
+
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gochecknoglobals
