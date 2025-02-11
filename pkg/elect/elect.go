@@ -88,6 +88,7 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 
 				continue
 			}
+
 			if currentStatus != status {
 				newStatusCh <- status
 			}
