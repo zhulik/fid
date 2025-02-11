@@ -70,6 +70,31 @@ var _ = Describe("Elect", Ordered, func() {
 						Expect(outcome.Status).To(Equal(elect.Cancelled))
 					})
 
+					It("keeps the record updated", func(sctx SpecContext) {
+						ctx, cancel := context.WithCancel(sctx)
+
+						outcomeCh := elector.Start(ctx)
+
+						outcome := <-outcomeCh
+
+						entry := lo.Must(jsKV.Get(ctx, leaderKey))
+
+						Expect(outcome.Status).To(Equal(elect.Won))
+
+						revision := entry.Revision()
+
+						time.Sleep(bucketTTL)
+
+						entry = lo.Must(jsKV.Get(ctx, leaderKey))
+						Expect(entry.Revision()).To(Equal(revision + 1))
+
+						cancel()
+
+						outcome = <-outcomeCh
+
+						Expect(outcome.Status).To(Equal(elect.Cancelled))
+					})
+
 					It("becomes a looser if the value changes", func(sctx SpecContext) {
 						ctx, cancel := context.WithCancel(sctx)
 
