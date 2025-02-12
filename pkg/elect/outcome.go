@@ -1,6 +1,6 @@
 package elect
 
-type ElectionStatus int
+type ElectionStatus int32
 
 const (
 	Unknown ElectionStatus = iota
