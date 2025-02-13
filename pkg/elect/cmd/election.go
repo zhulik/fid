@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"sync"
 	"time"
@@ -15,7 +14,7 @@ const (
 	leaderKey = "leader"
 )
 
-func runElection(ctx context.Context, instanceID string, kv jetstream.KeyValue, ttl time.Duration, wg *sync.WaitGroup) {
+func runElection(instanceID string, kv jetstream.KeyValue, ttl time.Duration, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	kvWrapper := elect.JetStreamKV{
@@ -25,7 +24,7 @@ func runElection(ctx context.Context, instanceID string, kv jetstream.KeyValue, 
 
 	el := lo.Must(elect.New(kvWrapper, leaderKey, instanceID))
 
-	outcomeCh := el.Start(ctx)
+	outcomeCh := el.Start()
 
 	for outcome := range outcomeCh {
 		switch outcome.Status {
@@ -37,7 +36,7 @@ func runElection(ctx context.Context, instanceID string, kv jetstream.KeyValue, 
 			log.Printf("Error: %s", outcome.Error)
 
 			return
-		case elect.Cancelled:
+		case elect.Stopped:
 			log.Println("Election stopped")
 
 			return

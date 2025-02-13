@@ -7,10 +7,10 @@ const (
 	Won
 	Lost
 	Error
-	Cancelled
+	Stopped
 )
 
 type Outcome struct {
 	Status ElectionStatus
-	Error  error // only set if Status is Error or Cancelled
+	Error  error // only set if Status is Error or Stopped
 }

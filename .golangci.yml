@@ -25,6 +25,7 @@ linters-settings:
       - id string
       - wg *sync.WaitGroup
       - js jetstream.JetStream
+      - i int
 
   errcheck:
     exclude-functions:

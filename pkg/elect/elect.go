@@ -20,6 +20,8 @@ type Elect struct {
 	KV KV
 
 	Config Config
+
+	stop chan struct{}
 }
 
 func New(kv KV, key string, id string, opts ...Option) (*Elect, error) {
@@ -42,18 +44,24 @@ func New(kv KV, key string, id string, opts ...Option) (*Elect, error) {
 	return &Elect{
 		KV:     kv,
 		Config: *config,
+
+		stop: make(chan struct{}),
 	}, nil
 }
 
-func (e Elect) Start(ctx context.Context) chan Outcome {
+func (e Elect) Start() chan Outcome {
 	outcomeCh := make(chan Outcome, 1)
 
-	go e.election(ctx, outcomeCh)
+	go e.election(outcomeCh)
 
 	return outcomeCh
 }
 
-func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolint:cyclop,funlen
+func (e Elect) Stop() {
+	close(e.stop)
+}
+
+func (e Elect) election(outcomeCh chan<- Outcome) { //nolint:cyclop,funlen
 	var currentStatus ElectionStatus
 
 	newStatusCh := make(chan ElectionStatus, 1)
@@ -70,12 +78,15 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 
 	newStatusCh <- Unknown
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	for {
 		select {
-		case <-ctx.Done():
+		case <-e.stop:
+			cancel()
 			outcomeCh <- Outcome{
-				Status: Cancelled,
-				Error:  ctx.Err(),
+				Status: Stopped,
 			}
 
 			return
@@ -133,7 +144,7 @@ func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolin
 				}
 
 				return
-			case Cancelled:
+			case Stopped:
 				panic("should not happen")
 			}
 		}
@@ -168,7 +179,7 @@ func (e Elect) tick(ctx context.Context, status ElectionStatus, seq uint64) (Ele
 		seq, err = e.KV.Update(updateCtx, e.Config.Key, e.Config.ID, seq)
 	case Lost:
 		// do nothing, we performed the check in the beginning
-	case Unknown, Error, Cancelled:
+	case Unknown, Error, Stopped:
 		panic(fmt.Sprintf("unexpected status: '%v', ticker must have been stopped", status))
 	}
 

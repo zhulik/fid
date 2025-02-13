@@ -65,7 +65,7 @@ func main() {
 				log.Println("Starting election process...")
 				wg.Add(1)
 
-				go runElection(ctx, instanceID, kv, bucketTTL, wg)
+				go runElection(instanceID, kv, bucketTTL, wg)
 
 				started = true
 			}
