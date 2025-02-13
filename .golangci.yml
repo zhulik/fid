@@ -5,7 +5,7 @@ linters:
   enable-all: true
   disable:
     # Deprecated
-    - exportloopref
+    - tenv
 
     # Disabled purposely
     - exhaustruct # Does not make any sense
