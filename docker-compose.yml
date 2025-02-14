@@ -60,6 +60,21 @@ services:
     ports:
       - "8082:80"
 
+  scaler:
+    image: fid/scaler
+    build:
+      context: .
+      args:
+        COMPONENT: "scaler"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "scaler"
+
+    ports:
+      - "8082:80"
+
   function:
     image: fid/demo-function
     build:

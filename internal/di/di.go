@@ -2,6 +2,7 @@ package di
 
 import (
 	"fmt"
+	"github.com/zhulik/fid/internal/scaler"
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -46,6 +47,7 @@ func New() *do.Injector {
 	kv.Register(injector)
 	invocation.Register(injector)
 	infoserver.Register(injector)
+	scaler.Register(injector)
 
 	return injector
 }
