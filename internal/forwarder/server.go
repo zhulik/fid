@@ -183,21 +183,3 @@ func (s *Server) InitErrorHandler(_ *gin.Context) {
 	// TODO: implement
 	panic("not implemented")
 }
-
-func (s *Server) HealthCheck() error {
-	s.Logger.Debug("Forwarder Server health check.")
-
-	if err := s.Server.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	if err := s.backend.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	if err := s.pubSuber.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	return nil
-}

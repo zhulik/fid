@@ -90,20 +90,6 @@ func (s *Server) FunctionHandler(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, serializeFunction(function))
 }
 
-func (s *Server) HealthCheck() error {
-	s.Logger.Debug("Info Server health check.")
-
-	if err := s.Server.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	if err := s.backend.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	return nil
-}
-
 func serializeFunction(fn core.Function) gin.H {
 	return gin.H{
 		"name":     fn.Name(),

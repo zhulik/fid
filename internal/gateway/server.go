@@ -103,17 +103,3 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 
 	c.Data(http.StatusOK, core.ContentTypeJSON, response)
 }
-
-func (s *Server) HealthCheck() error {
-	s.Logger.Debug("Gateway Server health check.")
-
-	if err := s.Server.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	if err := s.invoker.HealthCheck(); err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	return nil
-}
