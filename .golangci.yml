@@ -31,6 +31,7 @@ linters-settings:
   errcheck:
     exclude-functions:
       - (*github.com/gin-gonic/gin.Context).Error
+      - (github.com/zhulik/fid/internal/core.Message).Ack
 
   wrapcheck:
     extra-ignore-sigs:
