@@ -147,7 +147,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 	}
 }
 
-func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) { //nolint:ireturn
+func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 	sub, err := s.pubSuber.Subscribe(ctx,
 		s.pubSuber.FunctionStreamName(s.function.Name()),
 		[]string{s.pubSuber.ScaleSubjectName(s.function.Name())},
@@ -176,32 +176,39 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 			return fmt.Errorf("failed to scaling request: %w", err)
 		}
 
-		msg.Ack()
-
 		switch req.Type {
 		case core.ScalingRequestTypeScaleUp:
 			if req.Count == 0 {
 				s.logger.Warn("Scaling up with 0 instances")
 
+				msg.Ack()
+
 				continue
 			}
 
+			// TODO: reply to scale request with instance IDs
 			err = s.scaleUp(req)
 			if err != nil {
 				return err
 			}
+
+			msg.Ack()
 		case core.ScalingRequestTypeScaleDown:
 			if len(req.InstanceIDs) == 0 {
 				s.logger.Warn("Killing 0 instances")
 
+				msg.Ack()
+
 				continue
 			}
 
+			// TODO: reply to scale request when deleted
 			err = s.killInstances(req)
 			if err != nil {
 				return err
 			}
 
+			msg.Ack()
 		default:
 			s.logger.Warnf("Unknown scaling request type: %d", req.Type)
 		}
@@ -212,7 +219,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 
 func (s Scaler) killInstances(req core.ScalingRequest) error {
 	s.logger.Infof("Killing instances: %+v", req.InstanceIDs)
-	// TODO: reply to scale request when deleted
+
 	for _, instanceID := range req.InstanceIDs {
 		err := s.backend.KillInstance(context.Background(), s.function, instanceID)
 		if err != nil {
@@ -225,7 +232,6 @@ func (s Scaler) killInstances(req core.ScalingRequest) error {
 
 func (s Scaler) scaleUp(req core.ScalingRequest) error {
 	s.logger.Infof("Scaling up with %d instances", req.Count)
-	// TODO: reply to scale request with instance IDs
 	instances := make([]string, req.Count)
 
 	for i := range req.Count {

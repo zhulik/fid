@@ -89,7 +89,7 @@ func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 
 // PublishWaitResponse Publishes a message to "subject", awaits for response on "subject.response".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:ireturn,lll
+func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:lll
 	replChan := lo.Async2(func() (core.Message, error) { return p.awaitResponse(ctx, input) })
 
 	if err := p.Publish(ctx, input.Msg); err != nil {
@@ -106,7 +106,7 @@ func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWai
 	}
 }
 
-func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:ireturn,lll
+func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:lll
 	responseCtx, cancel := context.WithTimeout(ctx, input.Timeout)
 	defer cancel()
 
@@ -157,7 +157,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 // Next returns the next message from the stream, **does not respect ctx cancellation properly yet**,
 // but checks ctx status when reaches timeout in the Nats client, so ctx cancellation will be
 // respected in the next iteration.
-func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string, durableName string) (core.Message, error) { //nolint:ireturn,lll
+func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string, durableName string) (core.Message, error) { //nolint:lll
 	var inactiveThreshold time.Duration
 	if durableName != "" {
 		inactiveThreshold = core.MaxTimeout
@@ -211,7 +211,7 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 	return &messageWrapper{msg}, nil
 }
 
-func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (core.Subscription, error) { //nolint:ireturn,lll
+func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (core.Subscription, error) { //nolint:lll
 	var inactiveThreshold time.Duration
 	if durableName != "" {
 		inactiveThreshold = core.MaxTimeout

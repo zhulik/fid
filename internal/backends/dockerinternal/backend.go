@@ -52,7 +52,7 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(_ context.Context, _ string) (core.Function, error) { //nolint:ireturn
+func (b Backend) Function(_ context.Context, _ string) (core.Function, error) {
 	return nil, core.ErrFunctionNotFound
 }
 

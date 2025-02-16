@@ -181,7 +181,7 @@ func (k KV) Shutdown() error {
 	return nil
 }
 
-func (k KV) getBucket(ctx context.Context, bucket string) (jetstream.KeyValue, error) { //nolint:ireturn
+func (k KV) getBucket(ctx context.Context, bucket string) (jetstream.KeyValue, error) {
 	kv, err := k.Nats.JetStream.KeyValue(ctx, bucket)
 	if err != nil {
 		if errors.Is(err, jetstream.ErrBucketNotFound) {

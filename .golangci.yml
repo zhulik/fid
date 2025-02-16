@@ -11,6 +11,7 @@ linters:
     - exhaustruct # Does not make any sense
     - godox # Does not make any sense
     - depguard # Too boring to configure and maintain
+    - ireturn # Removes it's own nolints and then complains
 
 linters-settings:
   varnamelen:

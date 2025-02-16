@@ -60,7 +60,7 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(ctx context.Context, name string) (core.Function, error) { //nolint:ireturn
+func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
 	b.logger.WithField("function", name).Debug("Fetching function info")
 
 	fnFilters := filters.NewArgs()
@@ -225,7 +225,7 @@ func (b Backend) KillInstance(ctx context.Context, function core.Function, insta
 
 	err := b.docker.ContainerStop(ctx, containerName, container.StopOptions{})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to stop container '%s': %w", containerName, err)
 	}
 
 	b.logger.Infof("Forwarder container stopped '%s'.", containerName)

@@ -7,7 +7,7 @@ import (
 	"github.com/goccy/go-json"
 )
 
-func Unmarshal[T any](data []byte) (T, error) { //nolint:ireturn
+func Unmarshal[T any](data []byte) (T, error) {
 	var result T
 
 	err := libJSON.Unmarshal(data, &result)
