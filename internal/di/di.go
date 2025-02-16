@@ -2,7 +2,6 @@ package di
 
 import (
 	"fmt"
-	"github.com/zhulik/fid/internal/scaler"
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -15,6 +14,7 @@ import (
 	"github.com/zhulik/fid/internal/invocation"
 	"github.com/zhulik/fid/internal/kv"
 	"github.com/zhulik/fid/internal/pubsub"
+	"github.com/zhulik/fid/internal/scaler"
 )
 
 func New() *do.Injector {

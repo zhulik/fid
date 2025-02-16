@@ -27,14 +27,21 @@ func NewInvoker(injector *do.Injector) (*Invoker, error) {
 		return nil, err
 	}
 
+	kv, err := do.Invoke[core.KV](injector)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Invoker{
 		pubSuber: pubSuber,
 		logger:   logger,
+		kv:       kv,
 	}, nil
 }
 
 type Invoker struct {
 	pubSuber core.PubSuber
+	kv       core.KV
 	logger   logrus.FieldLogger
 }
 
@@ -90,10 +97,15 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 	return data, nil
 }
 
-func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, function core.Function) error {
+func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, config core.Config, function core.Function) error {
 	err := i.pubSuber.CreateOrUpdateFunctionStream(ctx, function.Name())
 	if err != nil {
 		return fmt.Errorf("failed to create or update function stream: %w", err)
+	}
+
+	err = i.kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
+	if err != nil {
+		return fmt.Errorf("failed to create or update function elections bucket: %w", err)
 	}
 
 	return nil

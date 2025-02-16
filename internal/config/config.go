@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/nats-io/nats.go"
 )
 
@@ -11,6 +13,12 @@ type Config struct {
 
 	NATSURL  string `env:"NATS_URL"`
 	Loglevel string `env:"LOG_LEVEL" envDefault:"info"`
+
+	ElectionsBucketTtl time.Duration `env:"ELECTIONS_BUCKET_TTL" envDefault:"2s"` //nolint:stylecheck
+}
+
+func (c Config) ElectionsBucketTTL() time.Duration {
+	return c.ElectionsBucketTtl
 }
 
 func (c Config) NatsURL() string {

@@ -64,7 +64,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	for _, function := range functions {
-		err := invoker.CreateOrUpdateFunctionStream(ctx, function)
+		err := invoker.CreateOrUpdateFunctionStream(ctx, config, function)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create or update function stream: %w", err)
 		}

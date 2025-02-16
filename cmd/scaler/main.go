@@ -2,13 +2,11 @@ package main
 
 import (
 	"errors"
-
 	"net/http"
 	"syscall"
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/scaler"
 )

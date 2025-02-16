@@ -19,6 +19,8 @@ type Config interface {
 
 	NatsURL() string
 	LogLevel() string
+
+	ElectionsBucketTTL() time.Duration
 }
 
 type ContainerBackend interface {
@@ -57,7 +59,7 @@ type PubSuber interface {
 type Invoker interface {
 	ServiceDependency
 
-	CreateOrUpdateFunctionStream(ctx context.Context, function Function) error
+	CreateOrUpdateFunctionStream(ctx context.Context, config Config, function Function) error
 
 	Invoke(ctx context.Context, function Function, payload []byte) ([]byte, error)
 }
@@ -74,11 +76,12 @@ type Message interface {
 type KV interface {
 	ServiceDependency
 
-	CreateBucket(ctx context.Context, name string) error
+	CreateBucket(ctx context.Context, name string, ttl time.Duration) error
 	Get(ctx context.Context, bucket, key string) ([]byte, error)
 
-	Create(ctx context.Context, bucket, key string, value []byte) error
+	Create(ctx context.Context, bucket, key string, value []byte) (uint64, error)
 	Put(ctx context.Context, bucket, key string, value []byte) error
+	Update(ctx context.Context, bucket, key string, value []byte, seq uint64) (uint64, error)
 
 	Delete(ctx context.Context, bucket, key string) error
 }

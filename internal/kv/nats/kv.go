@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do"
@@ -26,9 +27,10 @@ type KV struct {
 	Nats *pubsubNats.Client
 }
 
-func (k KV) CreateBucket(ctx context.Context, name string) error {
+func (k KV) CreateBucket(ctx context.Context, name string, ttl time.Duration) error {
 	_, err := k.Nats.JetStream.CreateKeyValue(ctx, jetstream.KeyValueConfig{
 		Bucket: name,
+		TTL:    ttl,
 	})
 	if err != nil {
 		if errors.Is(err, jetstream.ErrBucketExists) {
@@ -86,22 +88,40 @@ func (k KV) Put(ctx context.Context, bucket, key string, value []byte) error {
 	return nil
 }
 
-func (k KV) Create(ctx context.Context, bucket, key string, value []byte) error {
+func (k KV) Create(ctx context.Context, bucket, key string, value []byte) (uint64, error) {
 	kv, err := k.getBucket(ctx, bucket)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	_, err = kv.Create(ctx, key, value)
+	seq, err := kv.Create(ctx, key, value)
 	if err != nil {
 		if errors.Is(err, jetstream.ErrKeyExists) {
-			return fmt.Errorf("%w: %w", core.ErrKeyExists, err)
+			return 0, fmt.Errorf("%w: %w", core.ErrKeyExists, err)
 		}
 
-		return fmt.Errorf("failed to put value: %w", err)
+		return 0, fmt.Errorf("failed to put value: %w", err)
 	}
 
-	return nil
+	return seq, nil
+}
+
+func (k KV) Update(ctx context.Context, bucket, key string, value []byte, seq uint64) (uint64, error) {
+	kv, err := k.getBucket(ctx, bucket)
+	if err != nil {
+		return 0, err
+	}
+
+	seq, err = kv.Update(ctx, key, value, seq)
+	if err != nil {
+		if errors.Is(err, jetstream.ErrKeyNotFound) {
+			return 0, fmt.Errorf("%w: %w", core.ErrKeyNotFound, err)
+		}
+
+		return 0, fmt.Errorf("failed to put value: %w", err)
+	}
+
+	return seq, nil
 }
 
 func (k KV) WaitCreated(ctx context.Context, bucket, key string) ([]byte, error) {

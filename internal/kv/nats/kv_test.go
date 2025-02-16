@@ -23,9 +23,9 @@ var _ = Describe("Nats KV", Ordered, func() {
 	kv := lo.Must(nats.NewKV(injector))
 
 	BeforeEach(func(ctx SpecContext) {
-		lo.Must0(kv.CreateBucket(ctx, "test"))
+		lo.Must0(kv.CreateBucket(ctx, "test", 0))
 
-		lo.Must0(kv.Create(ctx, "test", "key", []byte("some - value")))
+		lo.Must(kv.Create(ctx, "test", "key", []byte("some - value")))
 	})
 
 	AfterEach(func(ctx SpecContext) {
@@ -35,7 +35,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 	Describe("CreateBucket", func() {
 		Context("when bucket exists", func() {
 			It("does not return an error", func(ctx SpecContext) {
-				err := kv.CreateBucket(ctx, "test")
+				err := kv.CreateBucket(ctx, "test", 0)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -43,7 +43,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 		Context("when bucket does not exists", func() {
 			It("creates the bucket", func(ctx SpecContext) {
-				err := kv.CreateBucket(ctx, "test2")
+				err := kv.CreateBucket(ctx, "test2", 0)
 				Expect(err).NotTo(HaveOccurred())
 
 				lo.Must0(kv.DeleteBucket(ctx, "test2"))
@@ -115,7 +115,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 	Describe("Create", func() {
 		Context("when key exists", func() {
 			It("returns an error", func(ctx SpecContext) {
-				err := kv.Create(ctx, "test", "key", []byte("new - value"))
+				_, err := kv.Create(ctx, "test", "key", []byte("new - value"))
 
 				Expect(err).To(MatchError(core.ErrKeyExists))
 			})
@@ -123,7 +123,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 		Context("when key does not exists", func() {
 			It("creates the value", func(ctx SpecContext) {
-				err := kv.Create(ctx, "test", "key2", []byte("new - value"))
+				_, err := kv.Create(ctx, "test", "key2", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
 				value, err := kv.Get(ctx, "test", "key2")
@@ -175,7 +175,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 				})
 				time.Sleep(10 * time.Millisecond)
 
-				lo.Must0(kv.Create(ctx, "test", "key3", []byte("new - value")))
+				lo.Must(kv.Create(ctx, "test", "key3", []byte("new - value")))
 
 				Eventually(done).Should(Receive())
 			})
