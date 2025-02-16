@@ -25,4 +25,6 @@ const (
 	DefaultTimeout  = 10 * time.Second
 	DefaultMinScale = 1
 	DefaultMaxScale = 10
+
+	ForwarderImageName = "ghcr.io/zhulik/fid-forwarder"
 )

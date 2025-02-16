@@ -10,6 +10,8 @@ var (
 	ErrFunctionErrored      = errors.New("function returned an error")
 	ErrFunctionNameNotGiven = errors.New("function name is not provided as env FUNCTION_NAME")
 
+	ErrInstanceNotFound = errors.New("function instance not found")
+
 	// KV errors.
 	ErrKeyNotFound    = errors.New("key not found")
 	ErrBucketNotFound = errors.New("bucket not found")

@@ -7,7 +7,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/google/uuid"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -18,6 +20,46 @@ type Backend struct {
 	docker *client.Client
 
 	logger logrus.FieldLogger
+}
+
+func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
+	instanceID := uuid.NewString()
+	networkName := networkName(function, instanceID)
+
+	b.logger.Debug("Creating network '%s' for function '%s' instance '%s'.", networkName, function.Name(), instanceID)
+
+	networkResp, err := b.docker.NetworkCreate(ctx, networkName, network.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to create network '%s': %w", networkName, err)
+	}
+
+	b.logger.Infof("Network created '%s', id=%s.", networkName, networkResp.ID)
+
+	return instanceID, nil
+}
+
+func (b Backend) KillInstance(ctx context.Context, function core.Function, instanceID string) error {
+	networks, err := b.docker.NetworkList(ctx, network.ListOptions{
+		Filters: filters.NewArgs(filters.Arg("name", networkName(function, instanceID))),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list networks: %w", err)
+	}
+
+	if len(networks) == 0 {
+		return core.ErrInstanceNotFound
+	}
+
+	b.logger.Debugf("Removing network '%s'.", networks[0].Name)
+
+	err = b.docker.NetworkRemove(ctx, networks[0].ID)
+	if err != nil {
+		return fmt.Errorf("failed to remove network '%s': %w", networks[0].Name, err)
+	}
+
+	b.logger.Infof("Network deleted '%s', id=%s.", networks[0].Name, networks[0].ID)
+
+	return nil
 }
 
 func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
@@ -135,4 +177,8 @@ func (b Backend) Shutdown() error {
 	}
 
 	return nil
+}
+
+func networkName(function core.Function, instanceID string) string {
+	return fmt.Sprintf("fid-%s-%s", function.Name(), instanceID)
 }

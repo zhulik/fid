@@ -30,6 +30,9 @@ type ContainerBackend interface {
 
 	Function(ctx context.Context, name string) (Function, error)
 	Functions(ctx context.Context) ([]Function, error)
+
+	AddInstance(ctx context.Context, function Function) (string, error)
+	KillInstance(ctx context.Context, function Function, instanceID string) error
 }
 
 type Function interface {

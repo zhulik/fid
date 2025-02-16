@@ -169,14 +169,14 @@ func (s Scaler) Shutdown() error {
 
 func (s Scaler) runScaler(sub core.Subscription) error {
 	for msg := range sub.C() {
-		s.logger.Infof("Scaler received message: %s", msg.Data())
-
-		msg.Ack() // TODO: move to the end
+		s.logger.Debugf("Scaler received message: %s", msg.Data())
 
 		req, err := json.Unmarshal[core.ScalingRequest](msg.Data())
 		if err != nil {
 			return fmt.Errorf("failed to scaling request: %w", err)
 		}
+
+		msg.Ack()
 
 		switch req.Type {
 		case core.ScalingRequestTypeScaleUp:
@@ -186,19 +186,55 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 				continue
 			}
 
-			s.logger.Infof("Scaling up with %d instances", req.Count)
+			err = s.scaleUp(req)
+			if err != nil {
+				return err
+			}
 		case core.ScalingRequestTypeScaleDown:
-			if req.Count == 0 {
-				s.logger.Warn("Scaling up with 0 instances")
+			if len(req.InstanceIDs) == 0 {
+				s.logger.Warn("Killing 0 instances")
 
 				continue
 			}
 
-			s.logger.Infof("Killing instances: %+v", req.InstanceIDs)
+			err = s.killInstances(req)
+			if err != nil {
+				return err
+			}
 
 		default:
 			s.logger.Warnf("Unknown scaling request type: %d", req.Type)
 		}
+	}
+
+	return nil
+}
+
+func (s Scaler) killInstances(req core.ScalingRequest) error {
+	s.logger.Infof("Killing instances: %+v", req.InstanceIDs)
+	// TODO: reply to scale request when deleted
+	for _, instanceID := range req.InstanceIDs {
+		err := s.backend.KillInstance(context.Background(), s.function, instanceID)
+		if err != nil {
+			return fmt.Errorf("failed to add instance: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s Scaler) scaleUp(req core.ScalingRequest) error {
+	s.logger.Infof("Scaling up with %d instances", req.Count)
+	// TODO: reply to scale request with instance IDs
+	instances := make([]string, req.Count)
+
+	for i := range req.Count {
+		instanceID, err := s.backend.AddInstance(context.Background(), s.function)
+		if err != nil {
+			return fmt.Errorf("failed to add instance: %w", err)
+		}
+
+		instances[i] = instanceID
 	}
 
 	return nil

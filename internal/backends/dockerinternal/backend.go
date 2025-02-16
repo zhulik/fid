@@ -16,6 +16,14 @@ type Backend struct {
 	logger logrus.FieldLogger
 }
 
+func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
+	panic("implement me")
+}
+
+func (b Backend) KillInstance(ctx context.Context, function core.Function, instanceID string) error {
+	panic("implement me")
+}
+
 func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
 	logger, err := do.Invoke[logrus.FieldLogger](injector)
 	if err != nil {

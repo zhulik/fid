@@ -9,7 +9,7 @@ services:
     command: [ "-js" ]
 
   gateway:
-    image: fid/gateway
+    image: ghcr.io/zhulik/fid-gateway
     build:
       context: .
       args:
@@ -25,7 +25,7 @@ services:
       - "8080:80"
 
   forwarder:
-    image: fid/forwarder
+    image: ghcr.io/zhulik/fid-forwarder
     build:
       context: .
       args:
@@ -46,7 +46,7 @@ services:
       - "8081:80"
 
   infoserver:
-    image: fid/infoserver
+    image: ghcr.io/zhulik/fid-infoserver
     build:
       context: .
       args:
@@ -61,7 +61,7 @@ services:
       - "8082:80"
 
   scaler:
-    image: fid/scaler
+    image: ghcr.io/zhulik/fid-scaler
     build:
       context: .
       args:
@@ -76,7 +76,7 @@ services:
       - "8082:80"
 
   function:
-    image: fid/demo-function
+    image: ghcr.io/zhulik/fid-demo-function
     build:
       context: .
       args:
