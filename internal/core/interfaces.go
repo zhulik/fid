@@ -41,7 +41,12 @@ type Function interface {
 	Env() map[string]string
 }
 
-type PubSuber interface {
+type Subscription interface {
+	C() <-chan Message
+	Stop()
+}
+
+type PubSuber interface { //nolint:interfacebloat
 	ServiceDependency
 
 	CreateOrUpdateFunctionStream(ctx context.Context, functionName string) error
@@ -50,7 +55,10 @@ type PubSuber interface {
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (Message, error)
 	Next(ctx context.Context, streamName string, subjects []string, durableName string) (Message, error)
 
+	Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (Subscription, error)
+
 	FunctionStreamName(functionName string) string
+	ScaleSubjectName(functionName string) string
 	InvokeSubjectName(functionName string) string
 	ResponseSubjectName(functionName, requestID string) string
 	ErrorSubjectName(functionName, requestID string) string

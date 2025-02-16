@@ -131,6 +131,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName
 	cfg := jetstream.StreamConfig{
 		Name: streamName,
 		Subjects: []string{
+			p.ScaleSubjectName(functionName),
 			p.InvokeSubjectName(functionName),
 			p.ResponseSubjectName(functionName, "*"),
 			p.ErrorSubjectName(functionName, "*"),
@@ -170,7 +171,7 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 
 	cons, err := p.nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create consumer: %w", err)
+		return nil, fmt.Errorf("failed to create consumerCtx: %w", err)
 	}
 
 	if durableName == "" {
@@ -178,9 +179,9 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 	}
 
 	logger := p.logger.WithFields(logrus.Fields{
-		"stream":   streamName,
-		"consumer": durableName,
-		"subjects": subjects,
+		"stream":      streamName,
+		"consumerCtx": durableName,
+		"subjects":    subjects,
 	})
 
 	logger.Debug("NATS Consumer created")
@@ -210,8 +211,42 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 	return &messageWrapper{msg}, nil
 }
 
+func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (core.Subscription, error) { //nolint:ireturn,lll
+	var inactiveThreshold time.Duration
+	if durableName != "" {
+		inactiveThreshold = core.MaxTimeout
+	}
+
+	config := jetstream.ConsumerConfig{
+		Durable:           durableName,
+		FilterSubjects:    subjects,
+		InactiveThreshold: inactiveThreshold,
+	}
+
+	cons, err := p.nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create consumerCtx: %w", err)
+	}
+
+	if durableName == "" {
+		durableName = cons.CachedInfo().Name
+	}
+
+	logger := p.logger.WithFields(logrus.Fields{
+		"stream":      streamName,
+		"consumerCtx": durableName,
+		"subjects":    subjects,
+	})
+
+	return newSubscriptionWrapper(cons, logger)
+}
+
 func (p PubSuber) FunctionStreamName(functionName string) string {
 	return fmt.Sprintf("%s:%s", core.InvocationStreamName, functionName)
+}
+
+func (p PubSuber) ScaleSubjectName(functionName string) string {
+	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, functionName)
 }
 
 func (p PubSuber) InvokeSubjectName(functionName string) string {
