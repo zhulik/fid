@@ -16,6 +16,7 @@ const (
 	LabelNameTimeout      = "wtf.zhulik.fid.timeout"
 	LabelNameFunctionName = "wtf.zhulik.fid.name"
 
+	ForwarderComponentLabelValue        = "forwarder"
 	FunctionComponentLabelValue         = "function"
 	FunctionTemplateComponentLabelValue = "function-template"
 
@@ -26,5 +27,8 @@ const (
 	DefaultMinScale = 1
 	DefaultMaxScale = 10
 
-	ForwarderImageName = "ghcr.io/zhulik/fid-forwarder"
+	ImageNameForwarder = "ghcr.io/zhulik/fid-forwarder"
+
+	EnvNameFunctionName = "FUNCTION_NAME"
+	EnvNameInstanceID   = "FUNCTION_INSTANCE_ID"
 )

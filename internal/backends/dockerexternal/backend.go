@@ -22,46 +22,6 @@ type Backend struct {
 	logger logrus.FieldLogger
 }
 
-func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
-	instanceID := uuid.NewString()
-	networkName := networkName(function, instanceID)
-
-	b.logger.Debug("Creating network '%s' for function '%s' instance '%s'.", networkName, function.Name(), instanceID)
-
-	networkResp, err := b.docker.NetworkCreate(ctx, networkName, network.CreateOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to create network '%s': %w", networkName, err)
-	}
-
-	b.logger.Infof("Network created '%s', id=%s.", networkName, networkResp.ID)
-
-	return instanceID, nil
-}
-
-func (b Backend) KillInstance(ctx context.Context, function core.Function, instanceID string) error {
-	networks, err := b.docker.NetworkList(ctx, network.ListOptions{
-		Filters: filters.NewArgs(filters.Arg("name", networkName(function, instanceID))),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to list networks: %w", err)
-	}
-
-	if len(networks) == 0 {
-		return core.ErrInstanceNotFound
-	}
-
-	b.logger.Debugf("Removing network '%s'.", networks[0].Name)
-
-	err = b.docker.NetworkRemove(ctx, networks[0].ID)
-	if err != nil {
-		return fmt.Errorf("failed to remove network '%s': %w", networks[0].Name, err)
-	}
-
-	b.logger.Infof("Network deleted '%s', id=%s.", networks[0].Name, networks[0].ID)
-
-	return nil
-}
-
 func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
 	logger, err := do.Invoke[logrus.FieldLogger](injector)
 	if err != nil {
@@ -175,6 +135,129 @@ func (b Backend) Shutdown() error {
 	if err != nil {
 		return fmt.Errorf("failed to shut down the backend: %w", err)
 	}
+
+	return nil
+}
+
+func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
+	instanceID := uuid.NewString()
+
+	networkID, err := b.createNetwork(ctx, function, instanceID)
+	if err != nil {
+		return "", err
+	}
+
+	err = b.createForwarder(ctx, function, instanceID, networkID)
+	if err != nil {
+		return "", err
+	}
+
+	return instanceID, nil
+}
+
+func (b Backend) createForwarder(ctx context.Context, function core.Function, instanceID string, networkID string) error { //nolint:lll
+	containerName := b.forwarderContainerName(function, instanceID)
+
+	containerConfig := &container.Config{
+		Image: core.ImageNameForwarder,
+		Env: []string{
+			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
+			fmt.Sprintf("%s=%s", core.EnvNameInstanceID, instanceID),
+			"NATS_URL=" + "nats://nats:4222", // TODO: get this value from somewhere else, remove hardcoded value
+		},
+		Labels: map[string]string{
+			core.LabelNameComponent: core.ForwarderComponentLabelValue,
+		},
+	}
+	hostConfig := &container.HostConfig{
+		Binds: []string{
+			"/var/run/docker.sock:/var/run/docker.sock", // Replace with your paths
+		},
+		AutoRemove: true,
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			networkID: {},
+			"nats":    {}, // TODO: get this network name from somewhere else, remove hardcoded value
+		},
+	}
+
+	b.logger.Debugf("Creating forwarder container '%s'.", containerName)
+
+	resp, err := b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
+	if err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+
+	b.logger.Debugf("Forwarder container created '%s'.", containerName)
+
+	err = b.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to start container: %w", err)
+	}
+
+	b.logger.Infof("Forwarder container started '%s'.", containerName)
+
+	return nil
+}
+
+func (b Backend) forwarderContainerName(function core.Function, instanceID string) string {
+	return fmt.Sprintf("fid-%s-%s-forwarder", function.Name(), instanceID)
+}
+
+func (b Backend) createNetwork(ctx context.Context, function core.Function, instanceID string) (string, error) {
+	networkName := networkName(function, instanceID)
+
+	b.logger.Debug("Creating network '%s' for function '%s' instance '%s'.", networkName, function.Name(), instanceID)
+
+	networkResp, err := b.docker.NetworkCreate(ctx, networkName, network.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to create network '%s': %w", networkName, err)
+	}
+
+	b.logger.Infof("Network created '%s', id=%s.", networkName, networkResp.ID)
+
+	return networkResp.ID, nil
+}
+
+func (b Backend) KillInstance(ctx context.Context, function core.Function, instanceID string) error {
+	containerName := b.forwarderContainerName(function, instanceID)
+
+	err := b.docker.ContainerStop(ctx, containerName, container.StopOptions{})
+	if err != nil {
+		return err
+	}
+
+	b.logger.Infof("Forwarder container stopped '%s'.", containerName)
+
+	err = b.deleteNetwork(ctx, function, instanceID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b Backend) deleteNetwork(ctx context.Context, function core.Function, instanceID string) error {
+	networks, err := b.docker.NetworkList(ctx, network.ListOptions{
+		Filters: filters.NewArgs(filters.Arg("name", networkName(function, instanceID))),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list networks: %w", err)
+	}
+
+	if len(networks) == 0 {
+		return core.ErrInstanceNotFound
+	}
+
+	b.logger.Debugf("Removing network '%s'.", networks[0].Name)
+
+	err = b.docker.NetworkRemove(ctx, networks[0].ID)
+	if err != nil {
+		return fmt.Errorf("failed to remove network '%s': %w", networks[0].Name, err)
+	}
+
+	b.logger.Infof("Network deleted '%s', id=%s.", networks[0].Name, networks[0].ID)
 
 	return nil
 }
