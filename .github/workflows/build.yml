@@ -17,6 +17,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
 
+      - name: Download dependencies
+        run: go mod download
+
       - name: Run linter
         run: make lint
 
