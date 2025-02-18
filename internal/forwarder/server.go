@@ -82,7 +82,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	logger := s.Logger.WithField("function", function.Name())
 
-	logger.Debug("Function connected, waiting for events...")
+	logger.Info("Function connected, waiting for events...")
 
 	streamName := s.pubSuber.FunctionStreamName(function.Name())
 
@@ -117,7 +117,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		"subject":   subject,
 	})
 
-	logger.Debug("Sending response...")
+	logger.Info("Sending response...")
 
 	response, err := io.ReadAll(c.Request.Body)
 	if err != nil {
