@@ -31,7 +31,7 @@ const (
 
 var (
 	// TODO: extract constants.
-	apiURL  = os.Getenv("AWS_LAMBDA_RUNTIME_API")                                 //nolint:gochecknoglobals
+	apiURL  = os.Getenv(core.EnvNameAWSLambdaRuntimeAPI)                          //nolint:gochecknoglobals
 	nextURL = fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/next", apiURL) //nolint:gochecknoglobals
 
 	ErrUnexpectedStatus    = errors.New("unexpected status code")

@@ -1,7 +1,7 @@
 .git/
 
 .dockerignore
+.golangci.yml
+
 Dockerfile
 docker-compose.yml
-
-bin/

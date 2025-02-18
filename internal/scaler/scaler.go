@@ -223,7 +223,7 @@ func (s Scaler) killInstances(req core.ScalingRequest) error {
 	for _, instanceID := range req.InstanceIDs {
 		err := s.backend.KillInstance(context.Background(), s.function, instanceID)
 		if err != nil {
-			return fmt.Errorf("failed to add instance: %w", err)
+			return fmt.Errorf("failed to kill instance: %w", err)
 		}
 	}
 

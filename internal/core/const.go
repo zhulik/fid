@@ -29,6 +29,8 @@ const (
 
 	ImageNameForwarder = "ghcr.io/zhulik/fid-forwarder"
 
-	EnvNameFunctionName = "FUNCTION_NAME"
-	EnvNameInstanceID   = "FUNCTION_INSTANCE_ID"
+	EnvNameAWSLambdaRuntimeAPI = "AWS_LAMBDA_RUNTIME_API"
+	EnvNameFunctionName        = "FUNCTION_NAME"
+	EnvNameInstanceID          = "FUNCTION_INSTANCE_ID"
+	EnvNameNatsURL             = "NATS_URL"
 )

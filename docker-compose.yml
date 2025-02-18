@@ -29,27 +29,27 @@ services:
     networks:
       - nats
 
-#  forwarder:
-#    image: ghcr.io/zhulik/fid-forwarder
-#    build:
-#      context: .
-#      args:
-#        COMPONENT: "forwarder"
-#
-#    depends_on:
-#      - nats
-#
-#    environment:
-#      - NATS_URL=nats://nats:4222
-#    volumes:
-#      - /var/run/docker.sock:/var/run/docker.sock
-#    deploy:
-#      labels:
-#        wtf.zhulik.fid.component: "forwarder"
-#
-#    ports:
-#      - "8081:80"
-#
+  forwarder:
+    image: ghcr.io/zhulik/fid-forwarder
+    build:
+      context: .
+      args:
+        COMPONENT: "forwarder"
+
+    depends_on:
+      - nats
+
+    environment:
+      - NATS_URL=nats://nats:4222
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      labels:
+        wtf.zhulik.fid.component: "forwarder"
+
+    ports:
+      - "8081:80"
+
 
   infoserver:
     image: ghcr.io/zhulik/fid-infoserver
