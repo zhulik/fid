@@ -82,6 +82,7 @@ services:
       - "8082:80"
 
   function:
+    container_name: demo-function
     image: ghcr.io/zhulik/fid-demo-function
     build:
       context: .

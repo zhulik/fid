@@ -115,9 +115,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	if err = response.Ack(); err != nil {
-		return nil, fmt.Errorf("failed to ack response: %w", err)
-	}
+	response.Ack()
 
 	return response, nil
 }
