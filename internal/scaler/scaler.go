@@ -186,14 +186,20 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 				continue
 			}
 
-			// TODO: run in background, fire and forget
-			// TODO: reply to scale request with instance IDs
-			err = s.scaleUp(req)
-			if err != nil {
-				return err
-			}
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				defer cancel()
 
-			msg.Ack()
+				// TODO: reply to scale request with instance IDs
+				err = s.scaleUp(ctx, req)
+				if err != nil {
+					s.logger.Errorf("Failed to scale up %+v", err)
+
+					return
+				}
+
+				msg.Ack()
+			}()
 		case core.ScalingRequestTypeScaleDown:
 			if len(req.InstanceIDs) == 0 {
 				s.logger.Warn("Killing 0 instances")
@@ -203,14 +209,21 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 				continue
 			}
 
-			// TODO: run in background, fire and forget
-			// TODO: reply to scale request when deleted
-			err = s.killInstances(req)
-			if err != nil {
-				return err
-			}
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), s.function.Timeout())
+				defer cancel()
 
-			msg.Ack()
+				// TODO: reply to scale request when deleted
+				err = s.killInstances(ctx, req)
+				if err != nil {
+					s.logger.Errorf("Failed to scale down %+v", err)
+
+					return
+				}
+
+				msg.Ack()
+			}()
+
 		default:
 			s.logger.Warnf("Unknown scaling request type: %d", req.Type)
 		}
@@ -219,9 +232,9 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 	return nil
 }
 
-func (s Scaler) killInstances(req core.ScalingRequest) error {
+func (s Scaler) killInstances(ctx context.Context, req core.ScalingRequest) error {
 	for _, instanceID := range req.InstanceIDs {
-		err := s.backend.KillInstance(context.Background(), s.function, instanceID)
+		err := s.backend.KillInstance(ctx, s.function, instanceID)
 		if err != nil {
 			return fmt.Errorf("failed to kill instance: %w", err)
 		}
@@ -230,12 +243,12 @@ func (s Scaler) killInstances(req core.ScalingRequest) error {
 	return nil
 }
 
-func (s Scaler) scaleUp(req core.ScalingRequest) error {
+func (s Scaler) scaleUp(ctx context.Context, req core.ScalingRequest) error {
 	s.logger.Infof("Scaling up with %d instances", req.Count)
 	instances := make([]string, req.Count)
 
 	for i := range req.Count {
-		instanceID, err := s.backend.AddInstance(context.Background(), s.function)
+		instanceID, err := s.backend.AddInstance(ctx, s.function)
 		if err != nil {
 			return fmt.Errorf("failed to add instance: %w", err)
 		}
