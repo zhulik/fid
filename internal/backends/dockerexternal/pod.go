@@ -12,6 +12,10 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
+const (
+	APIDNSName = "api"
+)
+
 // FunctionPod is a struct that represents a group of a function instance and it's forwader living in the same network.
 type FunctionPod struct {
 	UUID string // Of the "pod"
@@ -111,7 +115,9 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 	}
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{
-			p.UUID: {},
+			p.UUID: {
+				Aliases: []string{APIDNSName},
+			},
 			"nats": {}, // TODO: get this network name from somewhere else, remove hardcoded value
 		},
 	}
@@ -138,7 +144,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 		Image: function.Image(),
 		Env: []string{
 			// TODO: merge with env from containerJSON
-			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, p.runtimeAPIContainerName()),
+			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, APIDNSName),
 		},
 		Labels: map[string]string{
 			core.LabelNameComponent: core.FunctionComponentLabelValue,
