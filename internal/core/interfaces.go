@@ -65,6 +65,7 @@ type PubSuber interface { //nolint:interfacebloat
 	FunctionStreamName(functionName string) string
 	ScaleSubjectName(functionName string) string
 	InvokeSubjectName(functionName string) string
+	ConsumeSubjectName(functionName string) string
 	ResponseSubjectName(functionName, requestID string) string
 	ErrorSubjectName(functionName, requestID string) string
 }

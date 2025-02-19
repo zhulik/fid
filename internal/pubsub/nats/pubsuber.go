@@ -251,6 +251,10 @@ func (p PubSuber) InvokeSubjectName(functionName string) string {
 	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
 }
 
+func (p PubSuber) ConsumeSubjectName(functionName string) string {
+	return fmt.Sprintf("%s.%s.consume", core.InvokeSubjectBase, functionName)
+}
+
 func (p PubSuber) ResponseSubjectName(functionName, requestID string) string {
 	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, functionName, requestID)
 }

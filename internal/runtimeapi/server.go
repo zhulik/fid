@@ -78,7 +78,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
-	subject := s.pubSuber.InvokeSubjectName(function.Name())
+	subject := s.pubSuber.ConsumeSubjectName(function.Name())
 
 	logger := s.Logger.WithField("function", function.Name())
 
