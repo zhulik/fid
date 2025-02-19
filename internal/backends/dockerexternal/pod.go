@@ -134,10 +134,8 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 
 	stopTimeout := int((function.Timeout() + time.Second) / time.Second)
 
-	containerJSON := function.(*Function).container //nolint:forcetypeassert
-
 	containerConfig := &container.Config{
-		Image: containerJSON.Image,
+		Image: function.Image(),
 		Env: []string{
 			// TODO: merge with env from containerJSON
 			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, p.forwarderContainerName()),

@@ -19,6 +19,10 @@ type Function struct {
 	env           map[string]string
 }
 
+func (f Function) Image() string {
+	return f.container.Image
+}
+
 func (f Function) Env() map[string]string {
 	return f.env
 }

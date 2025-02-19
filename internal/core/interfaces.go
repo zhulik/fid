@@ -38,6 +38,8 @@ type ContainerBackend interface {
 type Function interface {
 	Name() string
 
+	Image() string
+
 	Timeout() time.Duration
 	ScalingConfig() ScalingConfig
 
