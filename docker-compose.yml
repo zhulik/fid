@@ -29,12 +29,12 @@ services:
     networks:
       - nats
 
-  forwarder:
-    image: ghcr.io/zhulik/fid-forwarder
+  runtimeapi:
+    image: ghcr.io/zhulik/fid-runtimeapi
     build:
       context: .
       args:
-        COMPONENT: "forwarder"
+        COMPONENT: "runtimeapi"
 
     depends_on:
       - nats
@@ -45,7 +45,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     deploy:
       labels:
-        wtf.zhulik.fid.component: "forwarder"
+        wtf.zhulik.fid.component: "runtimeapi"
 
     ports:
       - "8081:80"
@@ -91,7 +91,7 @@ services:
 
     environment:
       # Provided by the runtime
-      # - AWS_LAMBDA_RUNTIME_API=forwarder:80
+      # - AWS_LAMBDA_RUNTIME_API=runtimeapi:80
       # - FID_FUNCTION_NAME=demo-function to be replaced with JWT
 
       # For tests

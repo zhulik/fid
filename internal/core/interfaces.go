@@ -15,7 +15,7 @@ type ServiceDependency interface {
 type Config interface {
 	HTTPPort() int // For every component
 
-	FunctionName() string // For forwarder
+	FunctionName() string // For runtimeapi
 
 	NatsURL() string
 	LogLevel() string

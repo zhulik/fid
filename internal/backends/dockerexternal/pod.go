@@ -32,7 +32,7 @@ func CreateFunctionPod(ctx context.Context, docker *client.Client, function core
 		return nil, err
 	}
 
-	err = pod.createForwarder(ctx, function)
+	err = pod.createRuntimeAPI(ctx, function)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (p FunctionPod) Delete(ctx context.Context) error {
 		return fmt.Errorf("failed to stop container '%s': %w", containerName, err)
 	}
 
-	containerName = p.forwarderContainerName()
+	containerName = p.runtimeAPIContainerName()
 
 	err = p.docker.ContainerStop(ctx, containerName, container.StopOptions{})
 	if err != nil {
@@ -88,11 +88,11 @@ func (p FunctionPod) deleteNetwork(ctx context.Context) error {
 	return nil
 }
 
-func (p FunctionPod) createForwarder(ctx context.Context, function core.Function) error {
-	containerName := p.forwarderContainerName()
+func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Function) error {
+	containerName := p.runtimeAPIContainerName()
 
 	containerConfig := &container.Config{
-		Image: core.ImageNameForwarder,
+		Image: core.ImageNameRuntimeAPI,
 		Env: []string{
 			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
 			fmt.Sprintf("%s=%s", core.EnvNameInstanceID, p.UUID),
@@ -100,7 +100,7 @@ func (p FunctionPod) createForwarder(ctx context.Context, function core.Function
 			fmt.Sprintf("%s=%s", core.EnvNameNatsURL, "nats://nats:4222"),
 		},
 		Labels: map[string]string{
-			core.LabelNameComponent: core.ForwarderComponentLabelValue,
+			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,
 		},
 	}
 	hostConfig := &container.HostConfig{
@@ -138,7 +138,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 		Image: function.Image(),
 		Env: []string{
 			// TODO: merge with env from containerJSON
-			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, p.forwarderContainerName()),
+			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, p.runtimeAPIContainerName()),
 		},
 		Labels: map[string]string{
 			core.LabelNameComponent: core.FunctionComponentLabelValue,
@@ -167,8 +167,8 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 	return nil
 }
 
-func (p FunctionPod) forwarderContainerName() string {
-	return p.UUID + "-forwarder"
+func (p FunctionPod) runtimeAPIContainerName() string {
+	return p.UUID + "-runtimeapi"
 }
 
 func (p FunctionPod) functionContainerName() string {

@@ -16,7 +16,7 @@ const (
 	LabelNameTimeout      = "wtf.zhulik.fid.timeout"
 	LabelNameFunctionName = "wtf.zhulik.fid.name"
 
-	ForwarderComponentLabelValue        = "forwarder"
+	RuntimeAPIComponentLabelValue       = "runtimeapi"
 	FunctionComponentLabelValue         = "function"
 	FunctionTemplateComponentLabelValue = "function-template"
 
@@ -27,7 +27,7 @@ const (
 	DefaultMinScale = 1
 	DefaultMaxScale = 10
 
-	ImageNameForwarder = "ghcr.io/zhulik/fid-forwarder"
+	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
 
 	EnvNameAWSLambdaRuntimeAPI = "AWS_LAMBDA_RUNTIME_API"
 	EnvNameFunctionName        = "FUNCTION_NAME"

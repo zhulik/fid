@@ -1,4 +1,4 @@
-package forwarder
+package runtimeapi
 
 import (
 	"fmt"
@@ -37,7 +37,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	logger = logger.WithFields(map[string]interface{}{
-		"component":    "forwarder.Server",
+		"component":    "runtimeapi.Server",
 		"functionName": config.FunctionName(),
 	})
 
