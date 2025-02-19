@@ -186,6 +186,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 				continue
 			}
 
+			// TODO: run in background, fire and forget
 			// TODO: reply to scale request with instance IDs
 			err = s.scaleUp(req)
 			if err != nil {
@@ -202,6 +203,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 				continue
 			}
 
+			// TODO: run in background, fire and forget
 			// TODO: reply to scale request when deleted
 			err = s.killInstances(req)
 			if err != nil {
@@ -218,8 +220,6 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 }
 
 func (s Scaler) killInstances(req core.ScalingRequest) error {
-	s.logger.Infof("Killing instances: %+v", req.InstanceIDs)
-
 	for _, instanceID := range req.InstanceIDs {
 		err := s.backend.KillInstance(context.Background(), s.function, instanceID)
 		if err != nil {

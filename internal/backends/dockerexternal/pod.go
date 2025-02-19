@@ -1,0 +1,178 @@
+package dockerexternal
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
+	"github.com/google/uuid"
+	"github.com/zhulik/fid/internal/core"
+)
+
+// FunctionPod is a struct that represents a group of a function instance and it's forwader living in the same network.
+type FunctionPod struct {
+	UUID string // Of the "pod"
+
+	docker *client.Client
+}
+
+func CreateFunctionPod(ctx context.Context, docker *client.Client, function core.Function) (*FunctionPod, error) {
+	podID := uuid.NewString()
+
+	pod := &FunctionPod{
+		UUID:   podID,
+		docker: docker,
+	}
+
+	err := pod.createNetwork(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pod.createForwarder(ctx, function)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pod.createFunction(ctx, function)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: cleanup on error
+
+	return pod, nil
+}
+
+func (p FunctionPod) Delete(ctx context.Context) error {
+	containerName := p.functionContainerName()
+
+	err := p.docker.ContainerStop(ctx, containerName, container.StopOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to stop container '%s': %w", containerName, err)
+	}
+
+	containerName = p.forwarderContainerName()
+
+	err = p.docker.ContainerStop(ctx, containerName, container.StopOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to stop container '%s': %w", containerName, err)
+	}
+
+	err = p.deleteNetwork(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p FunctionPod) createNetwork(ctx context.Context) error {
+	_, err := p.docker.NetworkCreate(ctx, p.UUID, network.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create network '%s': %w", p.UUID, err)
+	}
+
+	return nil
+}
+
+func (p FunctionPod) deleteNetwork(ctx context.Context) error {
+	err := p.docker.NetworkRemove(ctx, p.UUID)
+	if err != nil {
+		return fmt.Errorf("failed to remove network '%s': %w", p.UUID, err)
+	}
+
+	return nil
+}
+
+func (p FunctionPod) createForwarder(ctx context.Context, function core.Function) error {
+	containerName := p.forwarderContainerName()
+
+	containerConfig := &container.Config{
+		Image: core.ImageNameForwarder,
+		Env: []string{
+			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
+			fmt.Sprintf("%s=%s", core.EnvNameInstanceID, p.UUID),
+			// TODO: get this value from somewhere else, remove hardcoded value
+			fmt.Sprintf("%s=%s", core.EnvNameNatsURL, "nats://nats:4222"),
+		},
+		Labels: map[string]string{
+			core.LabelNameComponent: core.ForwarderComponentLabelValue,
+		},
+	}
+	hostConfig := &container.HostConfig{
+		Binds: []string{
+			"/var/run/docker.sock:/var/run/docker.sock", // Replace with your paths
+		},
+		AutoRemove: true,
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			p.UUID: {},
+			"nats": {}, // TODO: get this network name from somewhere else, remove hardcoded value
+		},
+	}
+
+	resp, err := p.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
+	if err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+
+	err = p.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to start container: %w", err)
+	}
+
+	return nil
+}
+
+func (p FunctionPod) createFunction(ctx context.Context, function core.Function) error {
+	containerName := p.functionContainerName()
+
+	stopTimeout := int((function.Timeout() + time.Second) / time.Second)
+
+	containerJSON := function.(*Function).container //nolint:forcetypeassert
+
+	containerConfig := &container.Config{
+		Image: containerJSON.Image,
+		Env: []string{
+			// TODO: merge with env from containerJSON
+			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, p.forwarderContainerName()),
+		},
+		Labels: map[string]string{
+			core.LabelNameComponent: core.FunctionComponentLabelValue,
+		},
+		StopTimeout: &stopTimeout,
+	}
+	hostConfig := &container.HostConfig{
+		// AutoRemove: true,
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			p.UUID: {},
+		},
+	}
+
+	resp, err := p.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
+	if err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+
+	err = p.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to start container: %w", err)
+	}
+
+	return nil
+}
+
+func (p FunctionPod) forwarderContainerName() string {
+	return p.UUID + "-forwarder"
+}
+
+func (p FunctionPod) functionContainerName() string {
+	return p.UUID + "-function"
+}
