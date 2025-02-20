@@ -10,111 +10,24 @@ services:
     networks:
       - nats
 
-  gateway:
-    image: ghcr.io/zhulik/fid-gateway
+  # Does not exist yet
+  init:
+    image: ghcr.io/zhulik/fid-init
     build:
       context: .
       args:
-        COMPONENT: "gateway"
+        COMPONENT: "init"
     environment:
       - NATS_URL=nats://nats:4222
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    deploy:
-      labels:
-        wtf.zhulik.fid.component: "gateway"
-    ports:
-      - "8080:80"
+      - ./functions.yaml:/functions.yaml
 
     networks:
       - nats
 
-  runtimeapi:
-    image: ghcr.io/zhulik/fid-runtimeapi
-    build:
-      context: .
-      args:
-        COMPONENT: "runtimeapi"
-
     depends_on:
-      - nats
-
-    environment:
-      - NATS_URL=nats://nats:4222
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    deploy:
-      labels:
-        wtf.zhulik.fid.component: "runtimeapi"
-
-    ports:
-      - "8081:80"
-
-
-  infoserver:
-    image: ghcr.io/zhulik/fid-infoserver
-    build:
-      context: .
-      args:
-        COMPONENT: "infoserver"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    deploy:
-      labels:
-        wtf.zhulik.fid.component: "infoserver"
-
-    ports:
-      - "8082:80"
-
-  scaler:
-    image: ghcr.io/zhulik/fid-scaler
-    build:
-      context: .
-      args:
-        COMPONENT: "scaler"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    deploy:
-      labels:
-        wtf.zhulik.fid.component: "scaler"
-
-    ports:
-      - "8082:80"
-
-  function:
-    container_name: demo-function
-    image: ghcr.io/zhulik/fid-demo-function
-    build:
-      context: .
-      args:
-        COMPONENT: "function"
-
-    environment:
-      # Provided by the runtime
-      # - AWS_LAMBDA_RUNTIME_API=runtimeapi:80
-      # - FID_FUNCTION_NAME=demo-function to be replaced with JWT
-
-      # For tests
-      - SOME_VAR=1
-      - SOME_OTHER_VAR="=1"
-      - ANOTHER_VAR=
-
-    command: ["echo", "ok"]
-
-    labels:
-      wtf.zhulik.fid.name: "demo-function"
-      wtf.zhulik.fid.component: "function-template"
-      wtf.zhulik.fid.scale.min: 3
-      wtf.zhulik.fid.scale.max: 10
-      wtf.zhulik.fid.timeout: 10
-
-    deploy:
-      labels:
-        wtf.zhulik.fid.name: "demo-function"
-        wtf.zhulik.fid.component: "function-template"
-        wtf.zhulik.fid.scale.min: 3
-        wtf.zhulik.fid.scale.max: 10
-        wtf.zhulik.fid.timeout: 10
+      nats:
+        condition: service_healthy
 
 volumes:
   nats_data:
