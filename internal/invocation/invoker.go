@@ -55,7 +55,7 @@ func (i Invoker) Shutdown() error {
 
 func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []byte) ([]byte, error) {
 	requestID := uuid.NewString()
-	subject := i.pubSuber.InvokeSubjectName(function.Name())
+	subject := i.pubSuber.InvokeSubjectName(function)
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
 	msg := core.Msg{
@@ -67,14 +67,14 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		},
 	}
 
-	errorSubject := i.pubSuber.ErrorSubjectName(function.Name(), requestID)
+	errorSubject := i.pubSuber.ErrorSubjectName(function, requestID)
 
 	responseInput := core.PublishWaitResponseInput{
 		Subjects: []string{
-			i.pubSuber.ResponseSubjectName(function.Name(), requestID),
+			i.pubSuber.ResponseSubjectName(function, requestID),
 			errorSubject,
 		},
-		Stream:  i.pubSuber.FunctionStreamName(function.Name()),
+		Stream:  i.pubSuber.FunctionStreamName(function),
 		Msg:     msg,
 		Timeout: function.Timeout(),
 	}
@@ -98,7 +98,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 }
 
 func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, config core.Config, function core.Function) error {
-	err := i.pubSuber.CreateOrUpdateFunctionStream(ctx, function.Name())
+	err := i.pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to create or update function stream: %w", err)
 	}

@@ -149,8 +149,8 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 
 func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 	sub, err := s.pubSuber.Subscribe(ctx,
-		s.pubSuber.FunctionStreamName(s.function.Name()),
-		[]string{s.pubSuber.ScaleSubjectName(s.function.Name())},
+		s.pubSuber.FunctionStreamName(s.function),
+		[]string{s.pubSuber.ScaleSubjectName(s.function)},
 		s.function.Name()+"-scaler",
 	)
 	if err != nil {

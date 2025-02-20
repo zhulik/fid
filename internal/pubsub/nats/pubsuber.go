@@ -122,17 +122,17 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 
 // CreateOrUpdateFunctionStream creates or updates a stream for function invocation.
 // TODO: something more universal, for any kind of streams?
-func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, functionName string) error {
-	streamName := p.FunctionStreamName(functionName)
+func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function core.Function) error {
+	streamName := p.FunctionStreamName(function)
 	logger := p.logger.WithField("streamName", streamName)
 
 	cfg := jetstream.StreamConfig{
 		Name: streamName,
 		Subjects: []string{
-			p.ScaleSubjectName(functionName),
-			p.InvokeSubjectName(functionName),
-			p.ResponseSubjectName(functionName, "*"),
-			p.ErrorSubjectName(functionName, "*"),
+			p.ScaleSubjectName(function),
+			p.InvokeSubjectName(function),
+			p.ResponseSubjectName(function, "*"),
+			p.ErrorSubjectName(function, "*"),
 		},
 		Storage:   jetstream.FileStorage,
 		Retention: jetstream.WorkQueuePolicy,
@@ -239,26 +239,26 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 	return newSubscriptionWrapper(cons, logger)
 }
 
-func (p PubSuber) FunctionStreamName(functionName string) string {
-	return fmt.Sprintf("%s:%s", core.InvocationStreamName, functionName)
+func (p PubSuber) FunctionStreamName(function core.Function) string {
+	return fmt.Sprintf("%s:%s", core.InvocationStreamName, function.Name())
 }
 
-func (p PubSuber) ScaleSubjectName(functionName string) string {
-	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, functionName)
+func (p PubSuber) ScaleSubjectName(function core.Function) string {
+	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, function.Name())
 }
 
-func (p PubSuber) InvokeSubjectName(functionName string) string {
-	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, functionName)
+func (p PubSuber) InvokeSubjectName(function core.Function) string {
+	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
 }
 
-func (p PubSuber) ConsumeSubjectName(functionName string) string {
-	return fmt.Sprintf("%s.%s.consume", core.InvokeSubjectBase, functionName)
+func (p PubSuber) ConsumeSubjectName(function core.Function) string {
+	return fmt.Sprintf("%s.%s.consume", core.InvokeSubjectBase, function.Name())
 }
 
-func (p PubSuber) ResponseSubjectName(functionName, requestID string) string {
-	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, functionName, requestID)
+func (p PubSuber) ResponseSubjectName(function core.Function, requestID string) string {
+	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, function.Name(), requestID)
 }
 
-func (p PubSuber) ErrorSubjectName(functionName, requestID string) string {
-	return fmt.Sprintf("%s.%s.%s.error", core.ResponseSubjectBase, functionName, requestID)
+func (p PubSuber) ErrorSubjectName(function core.Function, requestID string) string {
+	return fmt.Sprintf("%s.%s.%s.error", core.ResponseSubjectBase, function.Name(), requestID)
 }

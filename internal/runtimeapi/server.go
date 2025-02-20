@@ -78,13 +78,13 @@ func NewServer(injector *do.Injector) (*Server, error) {
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
-	subject := s.pubSuber.ConsumeSubjectName(function.Name())
+	subject := s.pubSuber.ConsumeSubjectName(function)
 
 	logger := s.Logger.WithField("function", function.Name())
 
 	logger.Info("Function connected, waiting for events...")
 
-	streamName := s.pubSuber.FunctionStreamName(function.Name())
+	streamName := s.pubSuber.FunctionStreamName(function)
 
 	msg, err := s.pubSuber.Next(ctx, streamName, []string{subject}, function.Name())
 	if err != nil {
@@ -109,7 +109,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
 	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
-	subject := s.pubSuber.ResponseSubjectName(function.Name(), requestID)
+	subject := s.pubSuber.ResponseSubjectName(function, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
 		"function":  function.Name(),
@@ -143,7 +143,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 func (s *Server) ErrorHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
 	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
-	subject := s.pubSuber.ErrorSubjectName(function.Name(), requestID)
+	subject := s.pubSuber.ErrorSubjectName(function, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
 		"function":  function.Name(),
@@ -161,7 +161,7 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	}
 
 	msg := core.Msg{
-		Subject: s.pubSuber.ErrorSubjectName(function.Name(), requestID),
+		Subject: s.pubSuber.ErrorSubjectName(function, requestID),
 		Data:    response,
 	}
 

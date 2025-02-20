@@ -54,20 +54,20 @@ type Subscription interface {
 type PubSuber interface { //nolint:interfacebloat
 	ServiceDependency
 
-	CreateOrUpdateFunctionStream(ctx context.Context, functionName string) error
-
 	Publish(ctx context.Context, msg Msg) error
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (Message, error)
 	Next(ctx context.Context, streamName string, subjects []string, durableName string) (Message, error)
 
 	Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (Subscription, error)
 
-	FunctionStreamName(functionName string) string
-	ScaleSubjectName(functionName string) string
-	InvokeSubjectName(functionName string) string
-	ConsumeSubjectName(functionName string) string
-	ResponseSubjectName(functionName, requestID string) string
-	ErrorSubjectName(functionName, requestID string) string
+	CreateOrUpdateFunctionStream(ctx context.Context, function Function) error
+
+	FunctionStreamName(function Function) string
+	ScaleSubjectName(function Function) string
+	InvokeSubjectName(function Function) string
+	ConsumeSubjectName(function Function) string
+	ResponseSubjectName(function Function, requestID string) string
+	ErrorSubjectName(function Function, requestID string) string
 }
 
 type Invoker interface {
