@@ -4,7 +4,7 @@ all:
 
 check: lint test
 
-COMPONENTS := gateway runtimeapi infoserver scaler demo-function
+COMPONENTS := init gateway runtimeapi infoserver scaler demo-function
 
 lint_fix:
 	 go tool github.com/golangci/golangci-lint/cmd/golangci-lint run --fix

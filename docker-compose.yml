@@ -26,8 +26,7 @@ services:
       - nats
 
     depends_on:
-      nats:
-        condition: service_healthy
+      - nats
 
 volumes:
   nats_data:

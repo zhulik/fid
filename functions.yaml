@@ -1,12 +1,12 @@
 demo_function:
   image: ghcr.io/zhulik/fid-demo-function
 
-  environment:
-    - SOME_VAR=1
-    - SOME_OTHER_VAR="=1"
-    - ANOTHER_VAR=
+  env:
+    SOME_VAR: 1
+    SOME_OTHER_VAR: "=1"
+    ANOTHER_VAR:
 
   min: 3
-  max: 10
+  max: 5
 
-  timeout: 10
+  timeout: 10s
