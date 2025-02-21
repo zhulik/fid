@@ -28,6 +28,8 @@ type ContainerBackend interface {
 
 	Info(ctx context.Context) (map[string]any, error)
 
+	Register(ctx context.Context, function Function) error
+
 	Function(ctx context.Context, name string) (Function, error)
 	Functions(ctx context.Context) ([]Function, error)
 

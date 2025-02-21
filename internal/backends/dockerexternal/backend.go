@@ -7,6 +7,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -18,6 +19,46 @@ type Backend struct {
 	docker *client.Client
 
 	logger logrus.FieldLogger
+}
+
+func (b Backend) Register(ctx context.Context, function core.Function) error {
+	err := b.docker.ContainerRemove(ctx, function.Name(), container.RemoveOptions{
+		Force: true,
+	})
+
+	logger := b.logger.WithField("function", function.Name())
+
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			logger.Infof("Creating function template container")
+		} else {
+			return fmt.Errorf("failed to remove function template container for '%s': %w", function.Name(), err)
+		}
+	} else {
+		logger.Info("Recreating function template container")
+	}
+
+	containerConfig := &container.Config{
+		Image: core.ImageNameRuntimeAPI,
+		Env: []string{
+			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
+			fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue),
+		},
+		Labels: map[string]string{
+			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,
+		},
+	}
+	hostConfig := &container.HostConfig{}
+	networkingConfig := &network.NetworkingConfig{}
+
+	_, err = b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, function.Name())
+	if err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+
+	logger.Infof("Function template container created")
+
+	return nil
 }
 
 func New(docker *client.Client, injector *do.Injector) (*Backend, error) {

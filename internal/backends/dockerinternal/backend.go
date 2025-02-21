@@ -21,6 +21,10 @@ type Backend struct {
 	logger logrus.FieldLogger
 }
 
+func (b Backend) Register(ctx context.Context, function core.Function) error {
+	panic("implement me")
+}
+
 func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
 	panic("implement me")
 }
