@@ -39,13 +39,19 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 		logger.Info("Recreating function template container")
 	}
 
+	vars := []string{}
+	for k, v := range function.Env() {
+		vars = append(vars, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	vars = append(vars,
+		fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
+		fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue),
+	)
+
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
-		Env: []string{
-			// TODO: add function vars
-			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
-			fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue),
-		},
+		Env:   vars,
 		Labels: map[string]string{
 			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,
 		},
