@@ -29,7 +29,7 @@ func (b Backend) AddInstance(ctx context.Context, function core.Function) (strin
 	panic("implement me")
 }
 
-func (b Backend) KillInstance(ctx context.Context, function core.Function, instanceID string) error {
+func (b Backend) KillInstance(ctx context.Context, instanceID string) error {
 	panic("implement me")
 }
 

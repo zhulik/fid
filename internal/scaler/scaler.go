@@ -234,7 +234,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 
 func (s Scaler) killInstances(ctx context.Context, req core.ScalingRequest) error {
 	for _, instanceID := range req.InstanceIDs {
-		err := s.backend.KillInstance(ctx, s.function, instanceID)
+		err := s.backend.KillInstance(ctx, instanceID)
 		if err != nil {
 			return fmt.Errorf("failed to kill instance: %w", err)
 		}

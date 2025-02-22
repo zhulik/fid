@@ -191,7 +191,7 @@ func (b Backend) AddInstance(ctx context.Context, function core.Function) (strin
 	return pod.UUID, nil
 }
 
-func (b Backend) KillInstance(ctx context.Context, function core.Function, instanceID string) error {
+func (b Backend) KillInstance(ctx context.Context, instanceID string) error {
 	b.logger.Infof("Killing function instance %s", instanceID)
 
 	return FunctionPod{UUID: instanceID, docker: b.docker}.Delete(ctx)
