@@ -28,6 +28,7 @@ const (
 	DefaultMaxScale = 10
 
 	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
+	ImageNameScaler     = "ghcr.io/zhulik/fid-scaler"
 
 	EnvNameAWSLambdaRuntimeAPI = "AWS_LAMBDA_RUNTIME_API"
 	EnvNameFunctionName        = "FUNCTION_NAME"

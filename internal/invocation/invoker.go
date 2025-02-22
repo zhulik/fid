@@ -97,15 +97,10 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 	return data, nil
 }
 
-func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, config core.Config, function core.Function) error {
+func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, function core.Function) error {
 	err := i.pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to create or update function stream: %w", err)
-	}
-
-	err = i.kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
-	if err != nil {
-		return fmt.Errorf("failed to create or update function elections bucket: %w", err)
 	}
 
 	return nil

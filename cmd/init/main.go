@@ -16,10 +16,25 @@ const (
 	RegistrationTimeout = 10 * time.Second
 )
 
-func main() {
-	injector := di.New()
-	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "main")
+var (
+	logger   logrus.FieldLogger    //nolint:gochecknoglobals
+	config   core.Config           //nolint:gochecknoglobals
+	backend  core.ContainerBackend //nolint:gochecknoglobals
+	pubSuber core.PubSuber         //nolint:gochecknoglobals
+	kv       core.KV               //nolint:gochecknoglobals
+)
 
+func init() { //nolint:gochecknoinits
+	injector := di.New()
+	logger = do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "main")
+
+	config = do.MustInvoke[core.Config](injector)
+	backend = do.MustInvoke[core.ContainerBackend](injector)
+	pubSuber = do.MustInvoke[core.PubSuber](injector)
+	kv = do.MustInvoke[core.KV](injector)
+}
+
+func main() {
 	fileName := DefaultFileName
 	if len(os.Args) > 1 {
 		fileName = os.Args[1]
@@ -33,21 +48,37 @@ func main() {
 		logger.Fatalf("error: %v", err)
 	}
 
-	backend, err := do.Invoke[core.ContainerBackend](injector)
-	if err != nil {
-		logger.Fatalf("error instantiating backend: %v", err)
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), RegistrationTimeout)
 	defer cancel()
 
 	for _, function := range functions {
+		logger := logger.WithField("function", function.Name())
+
+		err := pubSuber.CreateOrUpdateFunctionStream(ctx, function)
+		if err != nil {
+			logger.Fatalf("error creating or updating function stream %s: %v", function.Name(), err)
+		}
+
+		// TODO: better place for this and for bucket naming?
+		err = kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
+		if err != nil {
+			logger.Fatalf("failed to create or update function elections bucket: %v", err)
+		}
+
+		logger.Info("Elections bucket created")
+
 		err = backend.Register(ctx, function)
 		if err != nil {
 			logger.Fatalf("error registering function %s: %v", function.Name(), err)
 		}
 	}
-	// Create or update all necessary JetStream resources
+
+	// TODO: delete functions that are not in the list
+
+	if len(functions) == 0 {
+		// TODO: stop gateway
+		return
+	}
 	// Start gateway
 	// Start scaler per function
 	// Wait until they are healhy

@@ -1,7 +1,6 @@
 package gateway
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -53,26 +52,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return c.Param("functionName")
 	}))
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	server.Logger.Debug("Creating or updating function streams.")
-
-	functions, err := backend.Functions(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get functions: %w", err)
-	}
-
-	logger.Infof("Creating or updating %d function streams.", len(functions))
-
-	for _, function := range functions {
-		err := invoker.CreateOrUpdateFunctionStream(ctx, config, function)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create or update function stream: %w", err)
-		}
-	}
-
-	// TODO: delete streams for deleted functions.
 
 	srv := &Server{
 		Server:  server,

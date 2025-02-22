@@ -21,6 +21,7 @@ type Backend struct {
 	logger logrus.FieldLogger
 }
 
+// Register creates a new function template container, scaler, forwarder(TODO) and garbage collector(TODO).
 func (b Backend) Register(ctx context.Context, function core.Function) error {
 	err := b.docker.ContainerRemove(ctx, function.Name(), container.RemoveOptions{
 		Force: true,
@@ -41,6 +42,7 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
 		Env: []string{
+			// TODO: add function vars
 			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
 			fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue),
 		},
@@ -71,20 +73,10 @@ func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
 
 	defer logger.Info("ContainerBackend created.")
 
-	// TODO: validate function configs
-
-	backend := Backend{
+	return &Backend{
 		docker: docker,
-
 		logger: logger,
-	}
-
-	_, err = backend.Functions(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch functions: %w", err)
-	}
-
-	return &backend, nil
+	}, nil
 }
 
 func (b Backend) Info(ctx context.Context) (map[string]any, error) {
