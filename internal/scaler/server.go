@@ -19,26 +19,13 @@ type Server struct {
 
 // NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
-	config, err := do.Invoke[core.Config](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger = logger.WithField("component", "scaler.Server")
+	config := do.MustInvoke[core.Config](injector)
+	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "scaler.Server")
+	backend := do.MustInvoke[core.ContainerBackend](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
-	}
-
-	backend, err := do.Invoke[core.ContainerBackend](injector)
-	if err != nil {
-		return nil, err
 	}
 
 	// TODO: figure out how to get context from the outside

@@ -13,13 +13,8 @@ import (
 )
 
 func NewKV(injector *do.Injector) (*KV, error) {
-	nats, err := do.Invoke[*pubsubNats.Client](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	return &KV{
-		Nats: nats,
+		Nats: do.MustInvoke[*pubsubNats.Client](injector),
 	}, nil
 }
 

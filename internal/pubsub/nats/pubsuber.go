@@ -29,21 +29,9 @@ type PubSuber struct {
 }
 
 func NewPubSuber(injector *do.Injector) (*PubSuber, error) {
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger = logger.WithField("component", "pubsub.Nats.PubSuber")
-
-	natsClient, err := do.Invoke[*Client](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	pubSuber := &PubSuber{
-		nats:   natsClient,
-		logger: logger,
+		nats:   do.MustInvoke[*Client](injector),
+		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "pubsub.Nats.PubSuber"),
 	}
 
 	return pubSuber, nil

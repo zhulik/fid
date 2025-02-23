@@ -11,10 +11,7 @@ import (
 )
 
 func NewClient(injector *do.Injector) (*Client, error) {
-	config, err := do.Invoke[core.Config](injector)
-	if err != nil {
-		return nil, err
-	}
+	config := do.MustInvoke[core.Config](injector)
 
 	natsClient, err := libNats.Connect(config.NatsURL())
 	if err != nil {

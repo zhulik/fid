@@ -7,17 +7,15 @@ import (
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/internal/di"
+	_ "github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/runtimeapi"
 )
 
 func main() {
-	injector := di.New()
-	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "main")
+	logger := do.MustInvoke[logrus.FieldLogger](nil).WithField("component", "main")
+	server := do.MustInvoke[*runtimeapi.Server](nil)
 
 	logger.Info("Starting...")
-
-	server := do.MustInvoke[*runtimeapi.Server](injector)
 
 	go func() {
 		err := server.Run()
@@ -31,7 +29,7 @@ func main() {
 
 	logger.Info("Running...")
 
-	err := injector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
+	err := do.DefaultInjector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to shutdown")
 	}

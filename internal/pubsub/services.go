@@ -6,9 +6,9 @@ import (
 	"github.com/zhulik/fid/internal/pubsub/nats"
 )
 
-func Register(injector *do.Injector) {
-	do.Provide(injector, nats.NewClient)
-	do.Provide(injector, func(injector *do.Injector) (core.PubSuber, error) {
+func Register() {
+	do.Provide(nil, nats.NewClient)
+	do.Provide[core.PubSuber](nil, func(injector *do.Injector) (core.PubSuber, error) {
 		return nats.NewPubSuber(injector)
 	})
 }

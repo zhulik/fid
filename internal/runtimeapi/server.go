@@ -22,38 +22,22 @@ type Server struct {
 
 // NewServer creates a new Server instance.
 func NewServer(injector *do.Injector) (*Server, error) {
-	config, err := do.Invoke[core.Config](injector)
-	if err != nil {
-		return nil, err
-	}
+	config := do.MustInvoke[core.Config](injector)
 
 	if config.FunctionName() == "" {
 		return nil, core.ErrFunctionNameNotGiven
 	}
 
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger = logger.WithFields(map[string]interface{}{
+	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
 		"component":    "runtimeapi.Server",
 		"functionName": config.FunctionName(),
 	})
+	backend := do.MustInvoke[core.ContainerBackend](injector)
+	pubSuber := do.MustInvoke[core.PubSuber](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
-	}
-
-	backend, err := do.Invoke[core.ContainerBackend](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	pubSuber, err := do.Invoke[core.PubSuber](injector)
-	if err != nil {
-		return nil, err
 	}
 
 	server.Router.Use(middlewares.FunctionMiddleware(backend, func(c *gin.Context) string {

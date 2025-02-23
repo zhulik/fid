@@ -15,27 +15,10 @@ import (
 // TODO: move to pubusub?
 
 func NewInvoker(injector *do.Injector) (*Invoker, error) {
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger = logger.WithField("component", "invocation.Invoker")
-
-	pubSuber, err := do.Invoke[core.PubSuber](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	kv, err := do.Invoke[core.KV](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Invoker{
-		pubSuber: pubSuber,
-		logger:   logger,
-		kv:       kv,
+		pubSuber: do.MustInvoke[core.PubSuber](injector),
+		logger:   do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "invocation.Invoker"),
+		kv:       do.MustInvoke[core.KV](injector),
 	}, nil
 }
 

@@ -17,15 +17,9 @@ import (
 	"github.com/zhulik/fid/internal/scaler"
 )
 
-func New() *do.Injector {
-	injector := do.New()
-
-	do.Provide[logrus.FieldLogger](injector, func(_ *do.Injector) (logrus.FieldLogger, error) {
-		cfg, err := do.Invoke[core.Config](injector)
-		if err != nil {
-			return nil, err
-		}
-
+func init() { //nolint:gochecknoinits
+	do.Provide[logrus.FieldLogger](nil, func(_ *do.Injector) (logrus.FieldLogger, error) {
+		cfg := do.MustInvoke[core.Config](nil)
 		logger := logrus.New()
 
 		logLevel, err := logrus.ParseLevel(cfg.LogLevel())
@@ -38,16 +32,14 @@ func New() *do.Injector {
 		return logger, nil
 	})
 
-	config.Register(injector)
+	config.Register()
 
-	runtimeapi.Register(injector)
-	backends.Register(injector)
-	gateway.Register(injector)
-	pubsub.Register(injector)
-	kv.Register(injector)
-	invocation.Register(injector)
-	infoserver.Register(injector)
-	scaler.Register(injector)
-
-	return injector
+	runtimeapi.Register()
+	backends.Register()
+	gateway.Register()
+	pubsub.Register()
+	kv.Register()
+	invocation.Register()
+	infoserver.Register()
+	scaler.Register()
 }

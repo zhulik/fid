@@ -8,7 +8,7 @@ import (
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/internal/di"
+	_ "github.com/zhulik/fid/internal/di"
 )
 
 const (
@@ -25,13 +25,11 @@ var (
 )
 
 func init() { //nolint:gochecknoinits
-	injector := di.New()
-	logger = do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "main")
-
-	config = do.MustInvoke[core.Config](injector)
-	backend = do.MustInvoke[core.ContainerBackend](injector)
-	pubSuber = do.MustInvoke[core.PubSuber](injector)
-	kv = do.MustInvoke[core.KV](injector)
+	config = do.MustInvoke[core.Config](nil)
+	logger = do.MustInvoke[logrus.FieldLogger](nil).WithField("component", "main")
+	backend = do.MustInvoke[core.ContainerBackend](nil)
+	pubSuber = do.MustInvoke[core.PubSuber](nil)
+	kv = do.MustInvoke[core.KV](nil)
 }
 
 func main() {

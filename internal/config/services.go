@@ -8,8 +8,8 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
-func Register(injector *do.Injector) {
-	do.Provide(injector, func(_ *do.Injector) (core.Config, error) {
+func Register() {
+	do.Provide(nil, func(_ *do.Injector) (core.Config, error) {
 		var cfg Config
 
 		if err := env.Parse(&cfg); err != nil {

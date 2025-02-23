@@ -27,38 +27,17 @@ type Scaler struct {
 }
 
 func NewScaler(function core.Function, injector *do.Injector) (*Scaler, error) {
-	config, err := do.Invoke[core.Config](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
 	electID := uuid.NewString()
 
-	logger = logger.WithFields(map[string]interface{}{
+	config := do.MustInvoke[core.Config](injector)
+	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
 		"component": "scaler.Scaler",
 		"function":  function.Name(),
 		"electID":   electID,
 	})
-
-	backend, err := do.Invoke[core.ContainerBackend](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	pubSuber, err := do.Invoke[core.PubSuber](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	kv, err := do.Invoke[core.KV](injector)
-	if err != nil {
-		return nil, err
-	}
+	backend := do.MustInvoke[core.ContainerBackend](injector)
+	pubSuber := do.MustInvoke[core.PubSuber](injector)
+	kv := do.MustInvoke[core.KV](injector)
 
 	kvWrap := kvWrapper{
 		kv:     kv,

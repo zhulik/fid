@@ -6,8 +6,8 @@ import (
 	"github.com/zhulik/fid/internal/kv/nats"
 )
 
-func Register(injector *do.Injector) {
-	do.Provide(injector, func(injector *do.Injector) (core.KV, error) {
+func Register() {
+	do.Provide(nil, func(injector *do.Injector) (core.KV, error) {
 		return nats.NewKV(injector)
 	})
 }

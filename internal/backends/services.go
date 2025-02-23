@@ -9,9 +9,9 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
-func Register(injector *do.Injector) {
+func Register() {
 	// Currently it tries to detect your backend. In the future it should use external config.
-	do.Provide(injector, func(_ *do.Injector) (core.ContainerBackend, error) {
+	do.Provide(nil, func(injector *do.Injector) (core.ContainerBackend, error) {
 		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
 			return nil, fmt.Errorf("failed to build docker client: %w", err)

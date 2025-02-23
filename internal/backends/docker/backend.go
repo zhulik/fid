@@ -132,18 +132,9 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 }
 
 func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
-	logger, err := do.Invoke[logrus.FieldLogger](injector)
-	if err != nil {
-		return nil, err
-	}
-
-	logger = logger.WithField("component", "backends.dockerexternal.Backend")
-
-	defer logger.Info("ContainerBackend created.")
-
 	return &Backend{
 		docker: docker,
-		logger: logger,
+		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
 	}, nil
 }
 
@@ -154,7 +145,7 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}
 
 	return map[string]any{
-		"backend":      "Docker external backend",
+		"backend":      "Docker backend",
 		"dockerEngine": info,
 	}, nil
 }
