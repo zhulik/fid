@@ -1,4 +1,4 @@
-package dockerexternal
+package docker
 
 import (
 	"context"
@@ -102,6 +102,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 			fmt.Sprintf("%s=%s", core.EnvNameInstanceID, p.UUID),
 			// TODO: get this value from somewhere else, remove hardcoded value
 			fmt.Sprintf("%s=%s", core.EnvNameNatsURL, "nats://nats:4222"),
+			fmt.Sprintf("%s=%s", core.EnvNameFunctionContainerName, p.functionContainerName()),
 		},
 		Labels: map[string]string{
 			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,

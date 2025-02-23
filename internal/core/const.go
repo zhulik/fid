@@ -32,8 +32,9 @@ const (
 	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
 	ImageNameScaler     = "ghcr.io/zhulik/fid-scaler"
 
-	EnvNameAWSLambdaRuntimeAPI = "AWS_LAMBDA_RUNTIME_API"
-	EnvNameFunctionName        = "FUNCTION_NAME"
-	EnvNameInstanceID          = "FUNCTION_INSTANCE_ID"
-	EnvNameNatsURL             = "NATS_URL"
+	EnvNameAWSLambdaRuntimeAPI   = "AWS_LAMBDA_RUNTIME_API"
+	EnvNameFunctionName          = "FUNCTION_NAME"
+	EnvNameFunctionContainerName = "FUNCTION_CONTAINER_NAME"
+	EnvNameInstanceID            = "FUNCTION_INSTANCE_ID"
+	EnvNameNatsURL               = "NATS_URL"
 )

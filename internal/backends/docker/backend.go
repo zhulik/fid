@@ -1,4 +1,4 @@
-package dockerexternal
+package docker
 
 import (
 	"context"
