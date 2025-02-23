@@ -24,12 +24,12 @@ tasks:
 
   build:
     cmds:
-      - task: build_components
-
-  build_components:
-    cmds:
       - |
         for component in init gateway runtimeapi infoserver scaler demo-function; do
           docker buildx build --build-arg COMPONENT=$component -t ghcr.io/zhulik/fid-$component . &
         done
         wait
+
+  env:
+    cmds:
+      - docker compose up -d nats
