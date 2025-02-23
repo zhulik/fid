@@ -17,14 +17,11 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
 
-      - name: Setup task
-        run: go install github.com/go-task/task/v3/cmd/task@v3.41.0
-
       - name: Download dependencies
         run: go mod download
 
       - name: Run linter
-        run: task lint
+        run: go tool github.com/go-task/task/v3/cmd/task lint
 
   test:
     runs-on: ubuntu-latest
@@ -36,9 +33,6 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
 
-      - name: Setup task
-        run: go install github.com/go-task/task/v3/cmd/task@v3.41.0
-
       - name: Start NATS
         run: docker compose up -d nats
 
@@ -46,6 +40,6 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: task test
+        run: go tool github.com/go-task/task/v3/cmd/task test
 
 # TODO: build and push Docker images
