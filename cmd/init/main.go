@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -49,37 +50,40 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), RegistrationTimeout)
 	defer cancel()
 
+	err = registerFunctions(ctx, functions)
+	if err != nil {
+		logger.Fatalf("error: %v", err)
+	}
+
+	// Start gateway
+	// Start info server
+	// Wait until they are healhy
+	// Exit
+	return //nolint:gosimple
+}
+
+func registerFunctions(ctx context.Context, functions map[string]*Function) error {
 	for _, function := range functions {
 		logger := logger.WithField("function", function.Name())
 
 		err := pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 		if err != nil {
-			logger.Fatalf("error creating or updating function stream %s: %v", function.Name(), err)
+			return fmt.Errorf("error creating or updating function stream %s: %w", function.Name(), err)
 		}
 
 		// TODO: better place for this and for bucket naming?
 		err = kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
 		if err != nil {
-			logger.Fatalf("failed to create or update function elections bucket: %v", err)
+			return fmt.Errorf("failed to create or update function elections bucket: %w", err)
 		}
 
 		logger.Info("Elections bucket created")
 
 		err = backend.Register(ctx, function)
 		if err != nil {
-			logger.Fatalf("error registering function %s: %v", function.Name(), err)
+			return fmt.Errorf("error registering function %s: %w", function.Name(), err)
 		}
 	}
-
 	// TODO: delete functions that are not in the list
-
-	if len(functions) == 0 {
-		// TODO: stop gateway
-		return
-	}
-	// Start gateway
-	// Start scaler per function
-	// Wait until they are healhy
-	// Exit
-	return //nolint:gosimple
+	return nil
 }
