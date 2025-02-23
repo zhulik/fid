@@ -2,18 +2,21 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/pkg/iter"
+	"github.com/zhulik/fid/pkg/json"
+)
+
+const (
+	BucketNameFunctions = "functions"
 )
 
 type Backend struct {
@@ -102,39 +105,31 @@ func (b Backend) createScaler(ctx context.Context, function core.Function) error
 }
 
 func (b Backend) createFunctionTemplate(ctx context.Context, function core.Function) error {
-	// Using a stopped container as a template is not really a good idea, but we can change it to KV later.
-	err := b.docker.ContainerRemove(ctx, function.Name(), container.RemoveOptions{
-		Force: true,
-	})
+	backendFunction := Function{
+		Name_:    function.Name(),
+		Image_:   function.Image(),
+		Timeout_: function.Timeout(),
+		MinScale: function.ScalingConfig().Min,
+		MaxScale: function.ScalingConfig().Max,
+		Env_:     function.Env(),
+	}
 
-	logger := b.logger.WithField("function", function.Name())
-
+	bytes, err := json.Marshal(backendFunction)
 	if err != nil {
-		if client.IsErrNotFound(err) {
-			logger.Infof("Creating function template container")
-		} else {
-			return fmt.Errorf("failed to remove function template container for '%s': %w", function.Name(), err)
-		}
-	} else {
-		logger.Info("Recreating function template container")
+		return fmt.Errorf("failed to marshal function: %w", err)
 	}
 
-	containerConfig := &container.Config{
-		Image: core.ImageNameRuntimeAPI,
-		Env:   core.MapToEnvList(function.Env()),
-		Labels: map[string]string{
-			core.LabelNameComponent: core.FunctionTemplateComponentLabelValue,
-		},
-	}
-	hostConfig := &container.HostConfig{}
-	networkingConfig := &network.NetworkingConfig{}
-
-	_, err = b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, function.Name())
+	err = b.kv.CreateBucket(ctx, BucketNameFunctions, 0)
 	if err != nil {
-		return fmt.Errorf("failed to create function template container: %w", err)
+		return fmt.Errorf("failed to create functions bucket: %w", err)
 	}
 
-	logger.Infof("Function template container created")
+	err = b.kv.Put(ctx, BucketNameFunctions, function.Name(), bytes)
+	if err != nil {
+		return fmt.Errorf("failed to store function template: %w", err)
+	}
+
+	b.logger.WithField("function", function.Name()).Info("Function template stored")
 
 	return nil
 }
@@ -154,27 +149,18 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
 	b.logger.WithField("function", name).Debug("Fetching function info")
 
-	fnFilters := filters.NewArgs()
-	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue))
-	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameFunctionName, name))
-
-	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters, All: true})
+	bytes, err := b.kv.Get(ctx, BucketNameFunctions, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
+		if errors.Is(err, core.ErrKeyNotFound) {
+			return nil, core.ErrFunctionNotFound
+		}
+
+		return nil, fmt.Errorf("failed to get function template: %w", err)
 	}
 
-	if len(containers) == 0 {
-		return nil, core.ErrFunctionNotFound
-	}
-
-	inspect, err := b.docker.ContainerInspect(ctx, containers[0].ID)
+	function, err := json.Unmarshal[Function](bytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to inspect container: %w", err)
-	}
-
-	function, err := NewFunction(inspect)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create function from container: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal function template: %w", err)
 	}
 
 	return function, nil
@@ -183,25 +169,20 @@ func (b Backend) Function(ctx context.Context, name string) (core.Function, erro
 func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
 	b.logger.Debug("Fetching function list")
 
-	fnFilters := filters.NewArgs()
-	fnFilters.Add("label", fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue))
-
-	containers, err := b.docker.ContainerList(ctx, container.ListOptions{Filters: fnFilters, All: true})
+	fns, err := b.kv.All(ctx, BucketNameFunctions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
+		return nil, fmt.Errorf("failed to get function list: %w", err)
 	}
 
-	// TODO: map in parallel
-	functions, err := iter.MapErr(containers, func(t types.Container) (core.Function, error) {
-		inspect, err := b.docker.ContainerInspect(ctx, t.ID)
+	functions := make([]core.Function, len(fns))
+
+	for i, fn := range fns {
+		function, err := json.Unmarshal[Function](fn.Value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to inspect container: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal function: %w", err)
 		}
 
-		return NewFunction(inspect)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to map containers to functions: %w", err)
+		functions[i] = function
 	}
 
 	return functions, nil

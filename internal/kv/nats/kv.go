@@ -69,6 +69,35 @@ func (k KV) Get(ctx context.Context, bucket, key string) ([]byte, error) {
 	return entry.Value(), nil
 }
 
+// All reads the entire bucket, make sure to use it only for small buckets.
+func (k KV) All(ctx context.Context, bucket string) ([]core.KVEntry, error) {
+	kv, err := k.getBucket(ctx, bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	lister, err := kv.ListKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list keys: %w", err)
+	}
+
+	var entries []core.KVEntry //nolint:prealloc
+
+	for key := range lister.Keys() {
+		entry, err := kv.Get(ctx, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get value: %w", err)
+		}
+
+		entries = append(entries, core.KVEntry{
+			Key:   key,
+			Value: entry.Value(),
+		})
+	}
+
+	return entries, nil
+}
+
 func (k KV) Put(ctx context.Context, bucket, key string, value []byte) error {
 	kv, err := k.getBucket(ctx, bucket)
 	if err != nil {

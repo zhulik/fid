@@ -94,6 +94,7 @@ type KV interface {
 
 	CreateBucket(ctx context.Context, name string, ttl time.Duration) error
 	Get(ctx context.Context, bucket, key string) ([]byte, error)
+	All(ctx context.Context, bucket string) ([]KVEntry, error)
 
 	Create(ctx context.Context, bucket, key string, value []byte) (uint64, error)
 	Put(ctx context.Context, bucket, key string, value []byte) error

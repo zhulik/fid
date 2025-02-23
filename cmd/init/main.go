@@ -57,7 +57,7 @@ func main() {
 
 	// Start gateway
 	// Start info server
-	// Wait until they are healhy
+	// Wait until they are healthy
 	// Exit
 	return //nolint:gosimple
 }

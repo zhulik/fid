@@ -86,6 +86,19 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 	})
 
+	Describe("All", func() {
+		Context("when key exists", func() {
+			It("returns all values in the bucket", func(ctx SpecContext) {
+				list, err := kv.All(ctx, "test")
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(list).To(HaveLen(1))
+				Expect(list[0].Key).To(Equal("key"))
+				Expect(list[0].Value).To(Equal([]byte("some - value")))
+			})
+		})
+	})
+
 	Describe("Put", func() {
 		Context("when key exists", func() {
 			It("updates the value", func(ctx SpecContext) {
