@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -53,13 +54,8 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 func (b Backend) createScaler(ctx context.Context, function core.Function) error {
 	logger := b.logger.WithField("function", function.Name())
 
-	core.MapToEnvList(map[string]string{
-		core.EnvNameFunctionName: function.Name(),
-		core.EnvNameNatsURL:      b.config.NatsURL(),
-	})
-
 	containerConfig := &container.Config{
-		Image: core.ImageNameRuntimeAPI,
+		Image: core.ImageNameScaler,
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameFunctionName: function.Name(),
 			core.EnvNameNatsURL:      b.config.NatsURL(),
@@ -228,4 +224,68 @@ func (b Backend) KillInstance(ctx context.Context, instanceID string) error {
 	b.logger.Infof("Killing function instance %s", instanceID)
 
 	return FunctionPod{UUID: instanceID, docker: b.docker}.Delete(ctx)
+}
+
+func (b Backend) StartGateway(ctx context.Context) (string, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
+	containerConfig := &container.Config{
+		Image: core.ImageNameInfoServer,
+		Env: core.MapToEnvList(map[string]string{
+			core.EnvNameNatsURL: b.config.NatsURL(),
+		}),
+		Labels: map[string]string{
+			core.LabelNameComponent: core.InfoServerComponentLabelValue,
+		},
+		ExposedPorts: nat.PortSet{
+			"80/tcp": struct{}{},
+		},
+	}
+
+	hostConfig := &container.HostConfig{
+		Binds: []string{
+			"/var/run/docker.sock:/var/run/docker.sock", // TODO: configurable
+		},
+		AutoRemove: true,
+		PortBindings: nat.PortMap{
+			// TODO: configurable
+			"80/tcp": {
+				{
+					HostPort: "8080",
+					HostIP:   "0.0.0.0",
+				},
+			},
+		},
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			"nats": {}, // TODO: get from config
+		},
+	}
+
+	resp, err := b.docker.ContainerCreate(
+		ctx, containerConfig, hostConfig,
+		networkingConfig, nil, core.ContainerNameInfoServer,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "Conflict. The container name") {
+			b.logger.Infof("Info server container already exists")
+
+			return "", core.ErrContainerAlreadyExists
+		}
+
+		return "", fmt.Errorf("failed to create info server container: %w", err)
+	}
+
+	err = b.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to start info server container: %w", err)
+	}
+
+	b.logger.Info("Info server container created and started")
+
+	return resp.ID, nil
 }

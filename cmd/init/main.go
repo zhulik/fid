@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -50,14 +51,24 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), RegistrationTimeout)
 	defer cancel()
 
-	err = registerFunctions(ctx, functions)
+	_, err = startGateway(ctx)
 	if err != nil {
-		logger.Fatalf("error: %v", err)
+		logger.Fatalf("failed to start gateway: %v", err)
 	}
 
-	// Start gateway
-	// Start info server
-	// Wait until they are healthy
+	_, err = startInfoServer(ctx)
+	if err != nil {
+		if !errors.Is(err, core.ErrContainerAlreadyExists) {
+			logger.Fatalf("failed to start info server: %v", err)
+		}
+	}
+
+	err = registerFunctions(ctx, functions)
+	if err != nil {
+		logger.Fatalf("failed to register function: %v", err)
+	}
+
+	// Wait until everything is healthy
 	// Exit
 	return //nolint:gosimple
 }
@@ -86,4 +97,17 @@ func registerFunctions(ctx context.Context, functions map[string]*Function) erro
 	}
 	// TODO: delete functions that are not in the list
 	return nil
+}
+
+func startGateway(ctx context.Context) (string, error) {
+	return "", nil
+}
+
+func startInfoServer(ctx context.Context) (string, error) {
+	id, err := backend.StartInfoServer(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to start info server: %w", err)
+	}
+
+	return id, nil
 }

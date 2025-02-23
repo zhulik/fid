@@ -10,17 +10,13 @@ const (
 	RequestIDHeaderName       = "Lambda-Runtime-Aws-Request-Id"
 	RequestDeadlineHeaderName = "Lambda-Runtime-Deadline-Ms"
 
-	LabelNameComponent    = "wtf.zhulik.fid.component"
-	LabelNameMaxScale     = "wtf.zhulik.fid.scale.max"
-	LabelNameMinScale     = "wtf.zhulik.fid.scale.min"
-	LabelNameTimeout      = "wtf.zhulik.fid.timeout"
-	LabelNameFunctionName = "wtf.zhulik.fid.name"
+	LabelNameComponent = "wtf.zhulik.fid.component"
 
 	// TODO: unify naming with LabelName*.
-	RuntimeAPIComponentLabelValue       = "runtimeapi"
-	FunctionComponentLabelValue         = "function"
-	FunctionTemplateComponentLabelValue = "function-template"
-	ScalerComponentLabelValue           = "scaler"
+	RuntimeAPIComponentLabelValue = "runtimeapi"
+	FunctionComponentLabelValue   = "function"
+	ScalerComponentLabelValue     = "scaler"
+	InfoServerComponentLabelValue = "info-server"
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
@@ -31,10 +27,13 @@ const (
 
 	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
 	ImageNameScaler     = "ghcr.io/zhulik/fid-scaler"
+	ImageNameInfoServer = "ghcr.io/zhulik/fid-infoserver"
 
 	EnvNameAWSLambdaRuntimeAPI   = "AWS_LAMBDA_RUNTIME_API"
 	EnvNameFunctionName          = "FUNCTION_NAME"
 	EnvNameFunctionContainerName = "FUNCTION_CONTAINER_NAME"
 	EnvNameInstanceID            = "FUNCTION_INSTANCE_ID"
 	EnvNameNatsURL               = "NATS_URL"
+
+	ContainerNameInfoServer = "info-server"
 )

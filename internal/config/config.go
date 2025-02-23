@@ -2,8 +2,6 @@ package config
 
 import (
 	"time"
-
-	"github.com/nats-io/nats.go"
 )
 
 type Config struct {
@@ -22,10 +20,6 @@ func (c Config) ElectionsBucketTTL() time.Duration {
 }
 
 func (c Config) NatsURL() string {
-	if c.NATSURL == "" {
-		return nats.DefaultURL
-	}
-
 	return c.NATSURL
 }
 

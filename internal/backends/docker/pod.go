@@ -154,7 +154,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 		StopTimeout: &stopTimeout,
 	}
 	hostConfig := &container.HostConfig{
-		// AutoRemove: true,
+		AutoRemove: true,
 	}
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{

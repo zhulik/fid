@@ -1,4 +1,4 @@
-demo_function:
+demo-function:
   image: ghcr.io/zhulik/fid-demo-function
 
   env:
