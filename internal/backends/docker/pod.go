@@ -97,13 +97,13 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
-		Env: []string{
-			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
-			fmt.Sprintf("%s=%s", core.EnvNameInstanceID, p.UUID),
+		Env: core.MapToEnvList(map[string]string{
+			core.EnvNameFunctionName: function.Name(),
+			core.EnvNameInstanceID:   p.UUID,
 			// TODO: get this value from somewhere else, remove hardcoded value
-			fmt.Sprintf("%s=%s", core.EnvNameNatsURL, "nats://nats:4222"),
-			fmt.Sprintf("%s=%s", core.EnvNameFunctionContainerName, p.functionContainerName()),
-		},
+			core.EnvNameNatsURL:               "nats://nats:4222",
+			core.EnvNameFunctionContainerName: p.functionContainerName(),
+		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,
 		},
@@ -143,10 +143,10 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 
 	containerConfig := &container.Config{
 		Image: function.Image(),
-		Env: []string{
-			// TODO: merge with env from containerJSON
-			fmt.Sprintf("%s=%s", core.EnvNameAWSLambdaRuntimeAPI, APIDNSName),
-		},
+		Env: core.MapToEnvList(
+			function.Env(),
+			map[string]string{core.EnvNameAWSLambdaRuntimeAPI: APIDNSName},
+		),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.FunctionComponentLabelValue,
 		},

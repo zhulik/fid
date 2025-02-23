@@ -40,13 +40,19 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 func (b Backend) createScaler(ctx context.Context, function core.Function) error {
 	logger := b.logger.WithField("function", function.Name())
 
+	core.MapToEnvList(map[string]string{
+		core.EnvNameFunctionName: function.Name(),
+		// TODO: get this value from somewhere else, remove hardcoded value
+		core.EnvNameNatsURL: "nats://nats:4222",
+	})
+
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
-		Env: []string{
-			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
+		Env: core.MapToEnvList(map[string]string{
+			core.EnvNameFunctionName: function.Name(),
 			// TODO: get this value from somewhere else, remove hardcoded value
-			fmt.Sprintf("%s=%s", core.EnvNameNatsURL, "nats://nats:4222"),
-		},
+			core.EnvNameNatsURL: "nats://nats:4222",
+		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ScalerComponentLabelValue,
 		},
@@ -105,14 +111,9 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 		logger.Info("Recreating function template container")
 	}
 
-	vars := []string{}
-	for k, v := range function.Env() {
-		vars = append(vars, fmt.Sprintf("%s=%s", k, v))
-	}
-
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
-		Env:   vars,
+		Env:   core.MapToEnvList(function.Env()),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.FunctionTemplateComponentLabelValue,
 		},
