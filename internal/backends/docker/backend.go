@@ -20,6 +20,7 @@ type Backend struct {
 	docker *client.Client
 	config core.Config
 	logger logrus.FieldLogger
+	kv     core.KV
 }
 
 func New(injector *do.Injector) (*Backend, error) {
@@ -27,6 +28,7 @@ func New(injector *do.Injector) (*Backend, error) {
 		docker: do.MustInvoke[*client.Client](injector),
 		config: do.MustInvoke[core.Config](injector),
 		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
+		kv:     do.MustInvoke[core.KV](injector),
 	}, nil
 }
 
