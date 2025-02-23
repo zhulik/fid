@@ -3,6 +3,7 @@ package dockerexternal
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -11,6 +12,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
+
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/iter"
 )
@@ -23,6 +25,69 @@ type Backend struct {
 
 // Register creates a new function template container, scaler, forwarder(TODO) and garbage collector(TODO).
 func (b Backend) Register(ctx context.Context, function core.Function) error {
+	err := b.createFunctionTemplate(ctx, function)
+	if err != nil {
+		return err
+	}
+
+	err = b.createScaler(ctx, function)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b Backend) createScaler(ctx context.Context, function core.Function) error {
+	logger := b.logger.WithField("function", function.Name())
+
+	containerConfig := &container.Config{
+		Image: core.ImageNameRuntimeAPI,
+		Env: []string{
+			fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
+			// TODO: get this value from somewhere else, remove hardcoded value
+			fmt.Sprintf("%s=%s", core.EnvNameNatsURL, "nats://nats:4222"),
+		},
+		Labels: map[string]string{
+			core.LabelNameComponent: core.ScalerComponentLabelValue,
+		},
+	}
+
+	hostConfig := &container.HostConfig{
+		Binds: []string{
+			"/var/run/docker.sock:/var/run/docker.sock", // TODO: configurable
+		},
+		AutoRemove: true,
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			"nats": {}, // TODO: get from config
+		},
+	}
+
+	containerName := function.Name() + "-scaler"
+
+	_, err := b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
+	if err != nil {
+		if strings.Contains(err.Error(), "Conflict. The container name") {
+			logger.Infof("Scaler container already exists")
+			return nil
+		}
+		return fmt.Errorf("failed to create scaler container: %w", err)
+	}
+
+	err = b.docker.ContainerStart(ctx, containerName, container.StartOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to start scaler container: %w", err)
+	}
+
+	logger.Infof("Scaler container created and started")
+
+	return nil
+}
+
+func (b Backend) createFunctionTemplate(ctx context.Context, function core.Function) error {
+	// Using a stopped container as a template is not really a good idea, but we can change it to KV later.
 	err := b.docker.ContainerRemove(ctx, function.Name(), container.RemoveOptions{
 		Force: true,
 	})
@@ -44,16 +109,11 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 		vars = append(vars, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	vars = append(vars,
-		fmt.Sprintf("%s=%s", core.EnvNameFunctionName, function.Name()),
-		fmt.Sprintf("%s=%s", core.LabelNameComponent, core.FunctionTemplateComponentLabelValue),
-	)
-
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
 		Env:   vars,
 		Labels: map[string]string{
-			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,
+			core.LabelNameComponent: core.FunctionTemplateComponentLabelValue,
 		},
 	}
 	hostConfig := &container.HostConfig{}
@@ -61,7 +121,7 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 
 	_, err = b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, function.Name())
 	if err != nil {
-		return fmt.Errorf("failed to create container: %w", err)
+		return fmt.Errorf("failed to create function template container: %w", err)
 	}
 
 	logger.Infof("Function template container created")

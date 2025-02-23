@@ -109,7 +109,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 	}
 	hostConfig := &container.HostConfig{
 		Binds: []string{
-			"/var/run/docker.sock:/var/run/docker.sock", // Replace with your paths
+			"/var/run/docker.sock:/var/run/docker.sock", // TODO: configurable
 		},
 		AutoRemove: true,
 	}

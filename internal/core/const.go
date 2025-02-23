@@ -16,9 +16,11 @@ const (
 	LabelNameTimeout      = "wtf.zhulik.fid.timeout"
 	LabelNameFunctionName = "wtf.zhulik.fid.name"
 
+	// TODO: unify naming with LabelName*.
 	RuntimeAPIComponentLabelValue       = "runtimeapi"
 	FunctionComponentLabelValue         = "function"
 	FunctionTemplateComponentLabelValue = "function-template"
+	ScalerComponentLabelValue           = "scaler"
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
