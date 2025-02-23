@@ -20,6 +20,7 @@ tasks:
 
   test:
     cmds:
+      - task: env
       - go run github.com/onsi/ginkgo/v2/ginkgo run -r -race
 
   build:
