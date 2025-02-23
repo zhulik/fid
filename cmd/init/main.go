@@ -83,4 +83,5 @@ func main() {
 	// Start scaler per function
 	// Wait until they are healhy
 	// Exit
+	return //nolint:gosimple
 }

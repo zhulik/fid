@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
-
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/iter"
 )
@@ -71,8 +70,10 @@ func (b Backend) createScaler(ctx context.Context, function core.Function) error
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
 			logger.Infof("Scaler container already exists")
+
 			return nil
 		}
+
 		return fmt.Errorf("failed to create scaler container: %w", err)
 	}
 
