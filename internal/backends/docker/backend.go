@@ -18,8 +18,16 @@ import (
 
 type Backend struct {
 	docker *client.Client
-
+	config core.Config
 	logger logrus.FieldLogger
+}
+
+func New(injector *do.Injector) (*Backend, error) {
+	return &Backend{
+		docker: do.MustInvoke[*client.Client](injector),
+		config: do.MustInvoke[core.Config](injector),
+		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
+	}, nil
 }
 
 // Register creates a new function template container, scaler, forwarder(TODO) and garbage collector(TODO).
@@ -42,16 +50,14 @@ func (b Backend) createScaler(ctx context.Context, function core.Function) error
 
 	core.MapToEnvList(map[string]string{
 		core.EnvNameFunctionName: function.Name(),
-		// TODO: get this value from somewhere else, remove hardcoded value
-		core.EnvNameNatsURL: "nats://nats:4222",
+		core.EnvNameNatsURL:      b.config.NatsURL(),
 	})
 
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameFunctionName: function.Name(),
-			// TODO: get this value from somewhere else, remove hardcoded value
-			core.EnvNameNatsURL: "nats://nats:4222",
+			core.EnvNameNatsURL:      b.config.NatsURL(),
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ScalerComponentLabelValue,
@@ -129,13 +135,6 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 	logger.Infof("Function template container created")
 
 	return nil
-}
-
-func New(docker *client.Client, injector *do.Injector) (*Backend, error) {
-	return &Backend{
-		docker: docker,
-		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
-	}, nil
 }
 
 func (b Backend) Info(ctx context.Context) (map[string]any, error) {
@@ -232,7 +231,7 @@ func (b Backend) Shutdown() error {
 func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
 	b.logger.Infof("Creating new function pod for function %s", function.Name())
 
-	pod, err := CreateFunctionPod(ctx, b.docker, function)
+	pod, err := CreateFunctionPod(ctx, function)
 	if err != nil {
 		return "", err
 	}

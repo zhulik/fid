@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
+	"github.com/samber/do"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -23,12 +24,12 @@ type FunctionPod struct {
 	docker *client.Client
 }
 
-func CreateFunctionPod(ctx context.Context, docker *client.Client, function core.Function) (*FunctionPod, error) {
+func CreateFunctionPod(ctx context.Context, function core.Function) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
 	pod := &FunctionPod{
 		UUID:   podID,
-		docker: docker,
+		docker: do.MustInvoke[*client.Client](nil),
 	}
 
 	err := pod.createNetwork(ctx)
