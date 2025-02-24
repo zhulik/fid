@@ -53,7 +53,9 @@ func main() {
 
 	_, err = startGateway(ctx)
 	if err != nil {
-		logger.Fatalf("failed to start gateway: %v", err)
+		if !errors.Is(err, core.ErrContainerAlreadyExists) {
+			logger.Fatalf("failed to start info server: %v", err)
+		}
 	}
 
 	_, err = startInfoServer(ctx)
@@ -70,6 +72,8 @@ func main() {
 }
 
 func registerFunctions(ctx context.Context, functions map[string]*Function) error {
+	logger.Infof("Registering %d functions...", len(functions))
+
 	for _, function := range functions {
 		logger := logger.WithField("function", function.Name())
 
@@ -91,7 +95,24 @@ func registerFunctions(ctx context.Context, functions map[string]*Function) erro
 			return fmt.Errorf("error registering function %s: %w", function.Name(), err)
 		}
 	}
-	// TODO: delete functions that are not in the list
+
+	templates, err := backend.Functions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list functions: %w", err)
+	}
+
+	for _, template := range templates {
+		_, exists := functions[template.Name()]
+		if exists {
+			continue
+		}
+
+		err := backend.Deregister(ctx, template.Name())
+		if err != nil {
+			return fmt.Errorf("failed to deregister function %s: %w", template.Name(), err)
+		}
+	}
+
 	return nil
 }
 

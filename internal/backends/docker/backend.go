@@ -36,7 +36,7 @@ func New(injector *do.Injector) (*Backend, error) {
 	}, nil
 }
 
-// Register creates a new function template container, scaler, forwarder(TODO) and garbage collector(TODO).
+// Register creates a new function's template, scaler, forwarder(TODO) and garbage collector(TODO).
 func (b Backend) Register(ctx context.Context, function core.Function) error {
 	err := b.createFunctionTemplate(ctx, function)
 	if err != nil {
@@ -47,6 +47,26 @@ func (b Backend) Register(ctx context.Context, function core.Function) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Deregister deletes function's template, scaler, forwarder(TODO) and garbage collector(TODO).
+func (b Backend) Deregister(ctx context.Context, name string) error {
+	// TODO: how to cleanup running instances?
+	logger := b.logger.WithField("function", name)
+
+	err := b.kv.Delete(ctx, BucketNameFunctions, name)
+	if err != nil {
+		return fmt.Errorf("failed to delete function template: %w", err)
+	}
+
+	err = b.docker.ContainerStop(ctx, b.scalerContainerName(name), container.StopOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to stop scaler: %w", err)
+	}
+
+	logger.Infof("Function deregistered")
 
 	return nil
 }
@@ -77,7 +97,7 @@ func (b Backend) createScaler(ctx context.Context, function core.Function) error
 		},
 	}
 
-	containerName := function.Name() + "-scaler"
+	containerName := b.scalerContainerName(function.Name())
 
 	_, err := b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
@@ -98,6 +118,10 @@ func (b Backend) createScaler(ctx context.Context, function core.Function) error
 	logger.Infof("Scaler container created and started")
 
 	return nil
+}
+
+func (b Backend) scalerContainerName(functionName string) string {
+	return functionName + "-scaler"
 }
 
 func (b Backend) createFunctionTemplate(ctx context.Context, function core.Function) error {

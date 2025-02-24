@@ -28,6 +28,7 @@ type ContainerBackend interface {
 
 	Info(ctx context.Context) (map[string]any, error)
 	Register(ctx context.Context, function Function) error
+	Deregister(ctx context.Context, name string) error
 
 	StartGateway(ctx context.Context) (string, error)
 	StartInfoServer(ctx context.Context) (string, error)

@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/goccy/go-yaml"
 	"github.com/zhulik/fid/internal/core"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -22,14 +22,14 @@ func ParseFile(path string) (map[string]*Function, error) {
 		return nil, fmt.Errorf("failed to read functions file: %w", err)
 	}
 
-	functions := map[string]*Function{}
+	functionsConfig := Config{}
 
-	err = yaml.Unmarshal(data, &functions)
+	err = yaml.Unmarshal(data, &functionsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse file %s: %w", path, err)
 	}
 
-	for name, function := range functions {
+	for name, function := range functionsConfig.Functions {
 		function.Name_ = name
 
 		err := validate.Struct(function)
@@ -38,7 +38,7 @@ func ParseFile(path string) (map[string]*Function, error) {
 		}
 	}
 
-	return functions, nil
+	return functionsConfig.Functions, nil
 }
 
 type Function struct {
