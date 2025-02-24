@@ -103,4 +103,7 @@ type KV interface {
 	Update(ctx context.Context, bucket, key string, value []byte, seq uint64) (uint64, error)
 
 	Delete(ctx context.Context, bucket, key string) error
+
+	Incr(ctx context.Context, bucket, key string, n int64) (int64, error)
+	Decr(ctx context.Context, bucket, key string, n int64) (int64, error)
 }

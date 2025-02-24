@@ -28,6 +28,8 @@ linters-settings:
       - wg *sync.WaitGroup
       - js jetstream.JetStream
       - i int
+      - n int64
+      - wg sync.WaitGroup
 
   errcheck:
     exclude-functions:

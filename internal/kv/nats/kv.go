@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -146,6 +147,62 @@ func (k KV) Update(ctx context.Context, bucket, key string, value []byte, seq ui
 	}
 
 	return seq, nil
+}
+
+func (k KV) Incr(ctx context.Context, bucket, key string, n int64) (int64, error) { //nolint:cyclop
+	kv, err := k.getBucket(ctx, bucket)
+	if err != nil {
+		return 0, err
+	}
+
+	for {
+		// Try to get the value
+		entry, err := kv.Get(ctx, key)
+		if err != nil { //nolint:nestif
+			if errors.Is(err, jetstream.ErrKeyNotFound) {
+				// It does not exist, create it.
+				_, err := kv.Create(ctx, key, []byte(strconv.FormatInt(n, 10)))
+				if err != nil {
+					// Value was created concurrently, try again.
+					if errors.Is(err, jetstream.ErrKeyExists) {
+						continue
+					}
+
+					return 0, fmt.Errorf("failed to create value: %w", err)
+				}
+
+				return n, nil
+			}
+
+			return 0, fmt.Errorf("failed to get value: %w", err)
+		}
+
+		value, err := strconv.ParseInt(string(entry.Value()), 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse counter value: %w", err)
+		}
+
+		value += n
+
+		// Try updating the value
+		_, err = kv.Update(ctx, key, []byte(strconv.FormatInt(value, 10)), entry.Revision())
+		if err == nil {
+			return value, nil
+		}
+
+		if errors.Is(err, jetstream.ErrKeyExists) ||
+			errors.Is(err, jetstream.ErrKeyDeleted) ||
+			errors.Is(err, jetstream.ErrKeyNotFound) {
+			// It was updated or delete concurrently, try again.
+			continue
+		}
+
+		return 0, fmt.Errorf("failed to update value: %w", err)
+	}
+}
+
+func (k KV) Decr(ctx context.Context, bucket, key string, n int64) (int64, error) {
+	return k.Incr(ctx, bucket, key, -n)
 }
 
 func (k KV) WaitCreated(ctx context.Context, bucket, key string) ([]byte, error) {

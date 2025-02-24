@@ -2,6 +2,9 @@ package nats_test
 
 import (
 	"context"
+	"math/rand/v2"
+	"strconv"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -12,6 +15,12 @@ import (
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/kv/nats"
 	natsPubSub "github.com/zhulik/fid/internal/pubsub/nats"
+	"go.uber.org/atomic"
+)
+
+const (
+	concurrentUpdates = 100
+	updateIterations  = 100
 )
 
 var _ = Describe("Nats KV", Ordered, func() {
@@ -202,6 +211,62 @@ var _ = Describe("Nats KV", Ordered, func() {
 				_, err := kv.WaitCreated(waitCtx, "test", "key3")
 
 				Expect(err).To(MatchError(context.DeadlineExceeded))
+			})
+		})
+	})
+
+	Describe("Incr", func() {
+		Context("when counter does not exist", func() {
+			It("creates the counter", func(ctx SpecContext) {
+				value, err := kv.Incr(ctx, "test", "counter", 5)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(value).To(Equal(int64(5)))
+			})
+		})
+
+		Context("when counter exists", func() {
+			Context("when no concurrent updates", func() {
+				It("increments the counter", func(ctx SpecContext) {
+					lo.Must(kv.Incr(ctx, "test", "counter", 5))
+
+					value, err := kv.Incr(ctx, "test", "counter", 3)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(value).To(Equal(int64(8)))
+				})
+			})
+
+			Context("when concurrent updates", func() {
+				It("increments the counter", func(ctx SpecContext) {
+					sum := atomic.NewInt64(0)
+
+					wg := sync.WaitGroup{}
+					wg.Add(concurrentUpdates)
+
+					for range concurrentUpdates {
+						go func() {
+							defer wg.Done()
+
+							for range updateIterations {
+								n := rand.Int64() //nolint:gosec
+								_, err := kv.Incr(ctx, "test", "counter", n)
+								Expect(err).ToNot(HaveOccurred())
+								sum.Add(n)
+							}
+						}()
+					}
+
+					wg.Wait()
+
+					bytes, err := kv.Get(ctx, "test", "counter")
+					Expect(err).ToNot(HaveOccurred())
+
+					value, err := strconv.ParseInt(string(bytes), 10, 64)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(value).To(Equal(sum.Load()))
+				})
 			})
 		})
 	})
