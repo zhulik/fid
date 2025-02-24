@@ -28,6 +28,8 @@ services:
     depends_on:
       - nats
 
+    restart: no
+
 volumes:
   nats_data:
 

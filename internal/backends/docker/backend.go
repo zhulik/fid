@@ -227,8 +227,59 @@ func (b Backend) KillInstance(ctx context.Context, instanceID string) error {
 }
 
 func (b Backend) StartGateway(ctx context.Context) (string, error) {
-	// TODO implement me
-	panic("implement me")
+	containerConfig := &container.Config{
+		Image: core.ImageNameGateway,
+		Env: core.MapToEnvList(map[string]string{
+			core.EnvNameNatsURL: b.config.NatsURL(),
+		}),
+		Labels: map[string]string{
+			core.LabelNameComponent: core.GatewayComponentLabelValue,
+		},
+		ExposedPorts: nat.PortSet{
+			"80/tcp": struct{}{},
+		},
+	}
+
+	hostConfig := &container.HostConfig{
+		AutoRemove: true,
+		PortBindings: nat.PortMap{
+			// TODO: configurable
+			"80/tcp": {
+				{
+					HostPort: "8081",
+					HostIP:   "0.0.0.0",
+				},
+			},
+		},
+	}
+	networkingConfig := &network.NetworkingConfig{
+		EndpointsConfig: map[string]*network.EndpointSettings{
+			"nats": {}, // TODO: get from config
+		},
+	}
+
+	resp, err := b.docker.ContainerCreate(
+		ctx, containerConfig, hostConfig,
+		networkingConfig, nil, core.ContainerNameGateway,
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "Conflict. The container name") {
+			b.logger.Infof("Gateway container already exists")
+
+			return "", core.ErrContainerAlreadyExists
+		}
+
+		return "", fmt.Errorf("failed to create gateway container: %w", err)
+	}
+
+	err = b.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to start gateway container: %w", err)
+	}
+
+	b.logger.Info("Gateway container created and started")
+
+	return resp.ID, nil
 }
 
 func (b Backend) StartInfoServer(ctx context.Context) (string, error) {

@@ -17,6 +17,7 @@ const (
 	FunctionComponentLabelValue   = "function"
 	ScalerComponentLabelValue     = "scaler"
 	InfoServerComponentLabelValue = "info-server"
+	GatewayComponentLabelValue    = "gateway"
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
@@ -28,6 +29,7 @@ const (
 	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
 	ImageNameScaler     = "ghcr.io/zhulik/fid-scaler"
 	ImageNameInfoServer = "ghcr.io/zhulik/fid-infoserver"
+	ImageNameGateway    = "ghcr.io/zhulik/fid-gateway"
 
 	EnvNameAWSLambdaRuntimeAPI   = "AWS_LAMBDA_RUNTIME_API"
 	EnvNameFunctionName          = "FUNCTION_NAME"
@@ -36,4 +38,5 @@ const (
 	EnvNameNatsURL               = "NATS_URL"
 
 	ContainerNameInfoServer = "info-server"
+	ContainerNameGateway    = "gateway"
 )
