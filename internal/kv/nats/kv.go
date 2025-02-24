@@ -82,21 +82,21 @@ func (k KV) All(ctx context.Context, bucket string) ([]core.KVEntry, error) {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
 	}
 
-	var entries []core.KVEntry //nolint:prealloc
+	return k.listKeys(ctx, lister, kv)
+}
 
-	for key := range lister.Keys() {
-		entry, err := kv.Get(ctx, key)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get value: %w", err)
-		}
-
-		entries = append(entries, core.KVEntry{
-			Key:   key,
-			Value: entry.Value(),
-		})
+func (k KV) AllFiltered(ctx context.Context, bucket string, filters ...string) ([]core.KVEntry, error) {
+	kv, err := k.getBucket(ctx, bucket)
+	if err != nil {
+		return nil, err
 	}
 
-	return entries, nil
+	lister, err := kv.ListKeysFiltered(ctx, filters...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list keys: %w", err)
+	}
+
+	return k.listKeys(ctx, lister, kv)
 }
 
 func (k KV) Put(ctx context.Context, bucket, key string, value []byte) error {
@@ -273,4 +273,22 @@ func (k KV) getBucket(ctx context.Context, bucket string) (jetstream.KeyValue, e
 	}
 
 	return kv, nil
+}
+
+func (k KV) listKeys(ctx context.Context, lister jetstream.KeyLister, kv jetstream.KeyValue) ([]core.KVEntry, error) {
+	var entries []core.KVEntry //nolint:prealloc
+
+	for key := range lister.Keys() {
+		entry, err := kv.Get(ctx, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get value: %w", err)
+		}
+
+		entries = append(entries, core.KVEntry{
+			Key:   key,
+			Value: entry.Value(),
+		})
+	}
+
+	return entries, nil
 }

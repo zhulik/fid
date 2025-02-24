@@ -108,6 +108,73 @@ var _ = Describe("Nats KV", Ordered, func() {
 		})
 	})
 
+	Describe("AllFiltered", func() {
+		Context("when a full key specified", func() {
+			It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
+				list, err := kv.AllFiltered(ctx, "test", "key")
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(list).To(HaveLen(1))
+				Expect(list[0].Key).To(Equal("key"))
+				Expect(list[0].Value).To(Equal([]byte("some - value")))
+			})
+		})
+
+		Context("when a wildcards are used", func() {
+			oneLevelKey := "namespace.key"
+			twoLevelKey := "namespace.key.subkey"
+			anotherKey := "another.key"
+
+			BeforeEach(func(ctx SpecContext) {
+				lo.Must(kv.Create(ctx, "test", oneLevelKey, []byte("some - value")))
+				lo.Must(kv.Create(ctx, "test", twoLevelKey, []byte("some - value")))
+				lo.Must(kv.Create(ctx, "test", anotherKey, []byte("some - value")))
+			})
+
+			Context("when * is used", func() {
+				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
+					list, err := kv.AllFiltered(ctx, "test", "namespace.*")
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(list).To(HaveLen(1))
+					Expect(list[0].Key).To(Equal(oneLevelKey))
+					Expect(list[0].Value).To(Equal([]byte("some - value")))
+				})
+			})
+
+			Context("when > is used", func() {
+				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
+					list, err := kv.AllFiltered(ctx, "test", "namespace.>")
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(list).To(HaveLen(2))
+					Expect(list[0].Key).To(Equal(oneLevelKey))
+					Expect(list[0].Value).To(Equal([]byte("some - value")))
+
+					Expect(list[1].Key).To(Equal(twoLevelKey))
+					Expect(list[1].Value).To(Equal([]byte("some - value")))
+				})
+			})
+
+			Context("when multiple filters are used", func() {
+				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
+					list, err := kv.AllFiltered(ctx, "test", "namespace.>", "another.*")
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(list).To(HaveLen(3))
+					Expect(list[0].Key).To(Equal(oneLevelKey))
+					Expect(list[0].Value).To(Equal([]byte("some - value")))
+
+					Expect(list[1].Key).To(Equal(twoLevelKey))
+					Expect(list[1].Value).To(Equal([]byte("some - value")))
+
+					Expect(list[2].Key).To(Equal(anotherKey))
+					Expect(list[2].Value).To(Equal([]byte("some - value")))
+				})
+			})
+		})
+	})
+
 	Describe("Put", func() {
 		Context("when key exists", func() {
 			It("updates the value", func(ctx SpecContext) {
