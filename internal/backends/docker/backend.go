@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/samber/do"
-	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
@@ -20,27 +18,17 @@ type Backend struct {
 	docker        *client.Client
 	config        core.Config
 	logger        logrus.FieldLogger
-	functionsRepo *FunctionsRepo
+	functionsRepo core.FunctionsRepo
 }
 
 func New(injector *do.Injector) (*Backend, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	logger := do.MustInvoke[logrus.FieldLogger](injector)
-	kv := do.MustInvoke[core.KV](injector)
-
-	functionsRepo := &FunctionsRepo{
-		logger: logger,
-		bucket: lo.Must(kv.Bucket(ctx, core.BucketNameFunctions)),
-	}
-
 	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
-		docker:        do.MustInvoke[*client.Client](injector),
-		config:        do.MustInvoke[core.Config](injector),
-		logger:        logger.WithField("component", "backends.dockerexternal.Backend"),
-		functionsRepo: functionsRepo,
+		docker: do.MustInvoke[*client.Client](injector),
+		config: do.MustInvoke[core.Config](injector),
+		logger: do.MustInvoke[logrus.FieldLogger](injector).
+			WithField("component", "backends.docker.Backend"),
+		functionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
 	}, nil
 }
 
@@ -66,7 +54,7 @@ func (b Backend) Deregister(ctx context.Context, name string) error {
 
 	err := b.functionsRepo.Delete(ctx, name)
 	if err != nil {
-		return err
+		return err //nolint:wrapcheck
 	}
 
 	err = b.docker.ContainerStop(ctx, b.scalerContainerName(name), container.StopOptions{})
@@ -156,11 +144,11 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 }
 
 func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
-	return b.functionsRepo.Get(ctx, name)
+	return b.functionsRepo.Get(ctx, name) //nolint:wrapcheck
 }
 
 func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
-	return b.functionsRepo.List(ctx)
+	return b.functionsRepo.List(ctx) //nolint:wrapcheck
 }
 
 func (b Backend) HealthCheck() error {

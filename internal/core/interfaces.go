@@ -40,6 +40,15 @@ type ContainerBackend interface {
 	KillInstance(ctx context.Context, instanceID string) error
 }
 
+type FunctionsRepo interface {
+	ServiceDependency
+
+	Upsert(ctx context.Context, function Function) error
+	Get(ctx context.Context, name string) (Function, error)
+	List(ctx context.Context) ([]Function, error)
+	Delete(ctx context.Context, name string) error
+}
+
 type Function interface {
 	Name() string
 

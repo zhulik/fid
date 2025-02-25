@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/samber/do"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
@@ -13,6 +16,28 @@ import (
 type FunctionsRepo struct {
 	logger logrus.FieldLogger
 	bucket core.KVBucket
+}
+
+func NewFunctionsRepo(injector *do.Injector) (*FunctionsRepo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	kv := do.MustInvoke[core.KV](injector)
+	bucket := lo.Must(kv.Bucket(ctx, core.BucketNameFunctions))
+
+	return &FunctionsRepo{
+		logger: do.MustInvoke[logrus.FieldLogger](injector).
+			WithField("component", "backends.docker.FunctionsRepo"),
+		bucket: bucket,
+	}, nil
+}
+
+func (r FunctionsRepo) HealthCheck() error {
+	return nil
+}
+
+func (r FunctionsRepo) Shutdown() error {
+	return nil
 }
 
 func (r FunctionsRepo) Upsert(ctx context.Context, function core.Function) error {
