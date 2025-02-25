@@ -1,45 +1,10 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"os"
 	"time"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/goccy/go-yaml"
 	"github.com/zhulik/fid/internal/core"
 )
-
-var (
-	ErrValidationFailed = errors.New("functions file validation failed")
-	validate            = validator.New() //nolint:gochecknoglobals
-)
-
-func ParseFile(path string) (map[string]*Function, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read functions file: %w", err)
-	}
-
-	functionsConfig := Config{}
-
-	err = yaml.Unmarshal(data, &functionsConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse file %s: %w", path, err)
-	}
-
-	for name, function := range functionsConfig.Functions {
-		function.Name_ = name
-
-		err := validate.Struct(function)
-		if err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
-		}
-	}
-
-	return functionsConfig.Functions, nil
-}
 
 type Function struct {
 	Name_    string            `validate:"required"           yaml:"-"`

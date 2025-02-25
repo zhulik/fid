@@ -1,3 +1,15 @@
+version: 1
+
+backend: docker # or swarm(unsupported yet)
+
+gateway: # if missing - does not any expose ports
+  port: 8080
+  instances: 1 # only in swarm
+
+infoserver: # if missing - does not start
+  port: 8081
+  instances: 1 # only in swarm
+
 functions:
   demo-function:
     image: ghcr.io/zhulik/fid-demo-function
