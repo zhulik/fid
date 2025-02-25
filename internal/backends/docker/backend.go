@@ -133,7 +133,7 @@ func (b Backend) scalerContainerName(functionName string) string {
 }
 
 func (b Backend) createFunctionTemplate(ctx context.Context, function core.Function) error {
-	err := b.functionsRepo.Create(ctx, function)
+	err := b.functionsRepo.Upsert(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to store function template: %w", err)
 	}

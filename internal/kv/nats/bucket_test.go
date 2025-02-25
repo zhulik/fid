@@ -165,7 +165,7 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 		})
 	})
 
-	Describe("Create", func() {
+	Describe("Upsert", func() {
 		Context("when key exists", func() {
 			It("returns an error", func(ctx SpecContext) {
 				_, err := bucket.Create(ctx, "key", []byte("new - value"))

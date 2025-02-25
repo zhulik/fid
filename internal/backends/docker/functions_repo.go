@@ -15,7 +15,7 @@ type FunctionsRepo struct {
 	bucket core.KVBucket
 }
 
-func (r FunctionsRepo) Create(ctx context.Context, function core.Function) error {
+func (r FunctionsRepo) Upsert(ctx context.Context, function core.Function) error {
 	backendFunction := Function{
 		Name_:    function.Name(),
 		Image_:   function.Image(),
