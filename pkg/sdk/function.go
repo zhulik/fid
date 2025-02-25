@@ -100,7 +100,7 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 
 	var reqErr error
 
-	requestID := resp.Header.Get(core.RequestIDHeaderName)
+	requestID := resp.Header.Get(core.HeaderNameRequestID)
 
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()

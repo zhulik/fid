@@ -79,7 +79,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	msg.Ack()
 
-	logger.Infof("Event received: %s", msg.Headers()[core.RequestIDHeaderName][0])
+	logger.Infof("Event received: %s", msg.Headers()[core.HeaderNameRequestID][0])
 
 	for key, values := range msg.Headers() {
 		for _, value := range values {

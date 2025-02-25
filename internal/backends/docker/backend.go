@@ -89,7 +89,7 @@ func (b Backend) createScaler(ctx context.Context, function core.Function) error
 			core.EnvNameNatsURL:      b.config.NatsURL(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.ScalerComponentLabelValue,
+			core.LabelNameComponent: core.ComponentLabelValueScaler,
 		},
 	}
 
@@ -212,7 +212,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 			core.EnvNameNatsURL: b.config.NatsURL(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.GatewayComponentLabelValue,
+			core.LabelNameComponent: core.ComponentLabelValueGateway,
 		},
 		ExposedPorts: nat.PortSet{
 			"80/tcp": struct{}{},
@@ -268,7 +268,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 			core.EnvNameNatsURL: b.config.NatsURL(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.InfoServerComponentLabelValue,
+			core.LabelNameComponent: core.ComponentLabelValueInfoServer,
 		},
 		ExposedPorts: nat.PortSet{
 			"80/tcp": struct{}{},

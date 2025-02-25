@@ -228,7 +228,7 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 }
 
 func (p PubSuber) FunctionStreamName(function core.Function) string {
-	return fmt.Sprintf("%s:%s", core.InvocationStreamName, function.Name())
+	return fmt.Sprintf("%s:%s", core.StreamNameInvocation, function.Name())
 }
 
 func (p PubSuber) ScaleSubjectName(function core.Function) string {

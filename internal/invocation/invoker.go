@@ -45,8 +45,8 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 		Subject: subject,
 		Data:    payload,
 		Header: map[string][]string{
-			core.RequestIDHeaderName:       {requestID},
-			core.RequestDeadlineHeaderName: {strconv.FormatInt(deadline, 10)},
+			core.HeaderNameRequestID:       {requestID},
+			core.HeaderNameRequestDeadline: {strconv.FormatInt(deadline, 10)},
 		},
 	}
 

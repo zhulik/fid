@@ -106,7 +106,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 			core.EnvNameFunctionContainerName: p.functionContainerName(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.RuntimeAPIComponentLabelValue,
+			core.LabelNameComponent: core.ComponentLabelValueRuntimeAPI,
 		},
 	}
 	hostConfig := &container.HostConfig{
@@ -149,7 +149,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.Function)
 			map[string]string{core.EnvNameAWSLambdaRuntimeAPI: APIDNSName},
 		),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.FunctionComponentLabelValue,
+			core.LabelNameComponent: core.ComponentLabelValueFunction,
 		},
 		StopTimeout: &stopTimeout,
 	}

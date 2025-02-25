@@ -5,26 +5,22 @@ import (
 )
 
 const (
-	InvocationStreamName = "INVOCATION" // used as INVOCATION:<function_name>
+	StreamNameInvocation = "INVOCATION" // used as INVOCATION:<function_name>
 
-	RequestIDHeaderName       = "Lambda-Runtime-Aws-Request-Id"
-	RequestDeadlineHeaderName = "Lambda-Runtime-Deadline-Ms"
+	HeaderNameRequestID       = "Lambda-Runtime-Aws-Request-Id"
+	HeaderNameRequestDeadline = "Lambda-Runtime-Deadline-Ms"
 
 	LabelNameComponent = "wtf.zhulik.fid.component"
 
-	// TODO: unify naming with LabelName*.
-	RuntimeAPIComponentLabelValue = "runtimeapi"
-	FunctionComponentLabelValue   = "function"
-	ScalerComponentLabelValue     = "scaler"
-	InfoServerComponentLabelValue = "info-server"
-	GatewayComponentLabelValue    = "gateway"
+	ComponentLabelValueRuntimeAPI = "runtimeapi"
+	ComponentLabelValueFunction   = "function"
+	ComponentLabelValueScaler     = "scaler"
+	ComponentLabelValueInfoServer = "info-server"
+	ComponentLabelValueGateway    = "gateway"
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
-	MaxTimeout      = 15 * time.Minute
-	DefaultTimeout  = 10 * time.Second
-	DefaultMinScale = 1
-	DefaultMaxScale = 10
+	MaxTimeout = 15 * time.Minute
 
 	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
 	ImageNameScaler     = "ghcr.io/zhulik/fid-scaler"
