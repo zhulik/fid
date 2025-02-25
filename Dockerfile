@@ -29,4 +29,5 @@ ENV GIN_MODE=release
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=1s CMD curl --fail http://127.0.0.1/health || exit 1
 
+// TODO: non-root user with access to docker socket file.
 CMD ["/app"]
