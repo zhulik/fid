@@ -27,14 +27,14 @@ type ContainerBackend interface {
 	ServiceDependency
 
 	Info(ctx context.Context) (map[string]any, error)
+
 	Register(ctx context.Context, function Function) error
 	Deregister(ctx context.Context, name string) error
+	Function(ctx context.Context, name string) (Function, error)
+	Functions(ctx context.Context) ([]Function, error)
 
 	StartGateway(ctx context.Context) (string, error)
 	StartInfoServer(ctx context.Context) (string, error)
-
-	Function(ctx context.Context, name string) (Function, error)
-	Functions(ctx context.Context) ([]Function, error)
 
 	AddInstance(ctx context.Context, function Function) (string, error)
 	KillInstance(ctx context.Context, instanceID string) error
