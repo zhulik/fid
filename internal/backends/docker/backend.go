@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/samber/do"
+	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
@@ -25,14 +27,22 @@ type Backend struct {
 	config core.Config
 	logger logrus.FieldLogger
 	kv     core.KV
+	bucket core.KVBucket
 }
 
 func New(injector *do.Injector) (*Backend, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	kv := do.MustInvoke[core.KV](injector)
+
+	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
 		docker: do.MustInvoke[*client.Client](injector),
 		config: do.MustInvoke[core.Config](injector),
 		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
-		kv:     do.MustInvoke[core.KV](injector),
+		kv:     kv,
+		bucket: lo.Must(kv.Bucket(ctx, BucketNameFunctions)),
 	}, nil
 }
 
@@ -56,7 +66,7 @@ func (b Backend) Deregister(ctx context.Context, name string) error {
 	// TODO: how to cleanup running instances?
 	logger := b.logger.WithField("function", name)
 
-	err := b.kv.Delete(ctx, BucketNameFunctions, name)
+	err := b.bucket.Delete(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to delete function template: %w", err)
 	}
@@ -144,7 +154,7 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 		return fmt.Errorf("failed to create functions bucket: %w", err)
 	}
 
-	err = b.kv.Put(ctx, BucketNameFunctions, function.Name(), bytes)
+	err = b.bucket.Put(ctx, function.Name(), bytes)
 	if err != nil {
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
@@ -169,7 +179,7 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
 	b.logger.WithField("function", name).Debug("Fetching function info")
 
-	bytes, err := b.kv.Get(ctx, BucketNameFunctions, name)
+	bytes, err := b.bucket.Get(ctx, name)
 	if err != nil {
 		if errors.Is(err, core.ErrKeyNotFound) {
 			return nil, core.ErrFunctionNotFound
@@ -189,7 +199,7 @@ func (b Backend) Function(ctx context.Context, name string) (core.Function, erro
 func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
 	b.logger.Debug("Fetching function list")
 
-	fns, err := b.kv.All(ctx, BucketNameFunctions)
+	fns, err := b.bucket.All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get function list: %w", err)
 	}

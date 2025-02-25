@@ -39,9 +39,16 @@ func NewScaler(function core.Function, injector *do.Injector) (*Scaler, error) {
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 	kv := do.MustInvoke[core.KV](injector)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	bucket, err := kv.Bucket(ctx, function.Name()+"-elections")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get bucket: %w", err)
+	}
+
 	kvWrap := kvWrapper{
-		kv:     kv,
-		bucket: function.Name() + "-elections",
+		bucket: bucket,
 		ttl:    config.ElectionsBucketTTL(),
 	}
 

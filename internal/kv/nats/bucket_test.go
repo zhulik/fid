@@ -90,9 +90,9 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 			anotherKey := "another.key"
 
 			BeforeEach(func(ctx SpecContext) {
-				lo.Must(kv.Create(ctx, "test", oneLevelKey, []byte("some - value")))
-				lo.Must(kv.Create(ctx, "test", twoLevelKey, []byte("some - value")))
-				lo.Must(kv.Create(ctx, "test", anotherKey, []byte("some - value")))
+				lo.Must(bucket.Create(ctx, oneLevelKey, []byte("some - value")))
+				lo.Must(bucket.Create(ctx, twoLevelKey, []byte("some - value")))
+				lo.Must(bucket.Create(ctx, anotherKey, []byte("some - value")))
 			})
 
 			Context("when * is used", func() {

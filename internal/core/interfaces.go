@@ -108,22 +108,10 @@ type KVBucket interface {
 	Decr(ctx context.Context, key string, n int64) (int64, error)
 }
 
-type KV interface { //nolint:interfacebloat
+type KV interface {
 	ServiceDependency
 
 	CreateBucket(ctx context.Context, name string, ttl time.Duration) (KVBucket, error)
 	Bucket(ctx context.Context, name string) (KVBucket, error)
 	DeleteBucket(ctx context.Context, name string) error
-
-	All(ctx context.Context, bucket string) ([]KVEntry, error)
-	AllFiltered(ctx context.Context, bucket string, filters ...string) ([]KVEntry, error)
-
-	Get(ctx context.Context, bucket, key string) ([]byte, error)
-	Create(ctx context.Context, bucket, key string, value []byte) (uint64, error)
-	Put(ctx context.Context, bucket, key string, value []byte) error
-	Update(ctx context.Context, bucket, key string, value []byte, seq uint64) (uint64, error)
-	Delete(ctx context.Context, bucket, key string) error
-
-	Incr(ctx context.Context, bucket, key string, n int64) (int64, error)
-	Decr(ctx context.Context, bucket, key string, n int64) (int64, error)
 }

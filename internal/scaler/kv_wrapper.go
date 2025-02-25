@@ -11,9 +11,7 @@ import (
 )
 
 type kvWrapper struct {
-	kv core.KV
-
-	bucket string
+	bucket core.KVBucket
 
 	ttl time.Duration
 }
@@ -23,7 +21,7 @@ func (j kvWrapper) TTL() time.Duration {
 }
 
 func (j kvWrapper) Get(ctx context.Context, key string) ([]byte, error) {
-	entry, err := j.kv.Get(ctx, j.bucket, key)
+	entry, err := j.bucket.Get(ctx, key)
 	if err != nil {
 		if errors.Is(err, core.ErrKeyNotFound) {
 			return nil, elect.ErrKeyNotFound
@@ -36,7 +34,7 @@ func (j kvWrapper) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 func (j kvWrapper) Create(ctx context.Context, key string, value []byte) (uint64, error) {
-	seq, err := j.kv.Create(ctx, j.bucket, key, value)
+	seq, err := j.bucket.Create(ctx, key, value)
 	if err != nil {
 		if errors.Is(err, core.ErrKeyExists) {
 			return 0, elect.ErrKeyExists
@@ -49,7 +47,7 @@ func (j kvWrapper) Create(ctx context.Context, key string, value []byte) (uint64
 }
 
 func (j kvWrapper) Update(ctx context.Context, key string, value []byte, seq uint64) (uint64, error) {
-	seq, err := j.kv.Update(ctx, j.bucket, key, value, seq)
+	seq, err := j.bucket.Update(ctx, key, value, seq)
 	if err != nil {
 		if errors.Is(err, core.ErrKeyExists) {
 			return 0, elect.ErrKeyExists

@@ -21,8 +21,6 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		lo.Must(kv.CreateBucket(ctx, "test", 0))
-
-		lo.Must(kv.Create(ctx, "test", "key", []byte("some - value")))
 	})
 
 	AfterEach(func(ctx SpecContext) {
