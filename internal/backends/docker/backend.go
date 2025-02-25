@@ -215,7 +215,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 			core.LabelNameComponent: core.ComponentLabelValueGateway,
 		},
 		ExposedPorts: nat.PortSet{
-			"80/tcp": struct{}{},
+			core.PortTCP80: struct{}{},
 		},
 	}
 
@@ -223,7 +223,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 		AutoRemove: true,
 		PortBindings: nat.PortMap{
 			// TODO: configurable
-			"80/tcp": {
+			core.PortTCP80: {
 				{
 					HostPort: "8081",
 					HostIP:   "0.0.0.0",
@@ -271,7 +271,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 			core.LabelNameComponent: core.ComponentLabelValueInfoServer,
 		},
 		ExposedPorts: nat.PortSet{
-			"80/tcp": struct{}{},
+			core.PortTCP80: struct{}{},
 		},
 	}
 
@@ -282,7 +282,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 		AutoRemove: true,
 		PortBindings: nat.PortMap{
 			// TODO: configurable
-			"80/tcp": {
+			core.PortTCP80: {
 				{
 					HostPort: "8080",
 					HostIP:   "0.0.0.0",

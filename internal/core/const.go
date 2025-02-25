@@ -38,4 +38,6 @@ const (
 
 	BucketNameFunctions = "functions"
 	BucketNameElections = "elections"
+
+	PortTCP80 = "80/tcp"
 )
