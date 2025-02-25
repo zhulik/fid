@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,28 +14,33 @@ import (
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/pkg/json"
 )
 
 type Backend struct {
-	docker *client.Client
-	config core.Config
-	logger logrus.FieldLogger
-	bucket core.KVBucket
+	docker        *client.Client
+	config        core.Config
+	logger        logrus.FieldLogger
+	functionsRepo *FunctionsRepo
 }
 
 func New(injector *do.Injector) (*Backend, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
+	logger := do.MustInvoke[logrus.FieldLogger](injector)
 	kv := do.MustInvoke[core.KV](injector)
+
+	functionsRepo := &FunctionsRepo{
+		logger: logger,
+		bucket: lo.Must(kv.Bucket(ctx, core.BucketNameFunctions)),
+	}
 
 	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
-		docker: do.MustInvoke[*client.Client](injector),
-		config: do.MustInvoke[core.Config](injector),
-		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
-		bucket: lo.Must(kv.Bucket(ctx, core.BucketNameFunctions)),
+		docker:        do.MustInvoke[*client.Client](injector),
+		config:        do.MustInvoke[core.Config](injector),
+		logger:        logger.WithField("component", "backends.dockerexternal.Backend"),
+		functionsRepo: functionsRepo,
 	}, nil
 }
 
@@ -60,9 +64,9 @@ func (b Backend) Deregister(ctx context.Context, name string) error {
 	// TODO: how to cleanup running instances?
 	logger := b.logger.WithField("function", name)
 
-	err := b.bucket.Delete(ctx, name)
+	err := b.functionsRepo.Delete(ctx, name)
 	if err != nil {
-		return fmt.Errorf("failed to delete function template: %w", err)
+		return err
 	}
 
 	err = b.docker.ContainerStop(ctx, b.scalerContainerName(name), container.StopOptions{})
@@ -129,21 +133,7 @@ func (b Backend) scalerContainerName(functionName string) string {
 }
 
 func (b Backend) createFunctionTemplate(ctx context.Context, function core.Function) error {
-	backendFunction := Function{
-		Name_:    function.Name(),
-		Image_:   function.Image(),
-		Timeout_: function.Timeout(),
-		MinScale: function.ScalingConfig().Min,
-		MaxScale: function.ScalingConfig().Max,
-		Env_:     function.Env(),
-	}
-
-	bytes, err := json.Marshal(backendFunction)
-	if err != nil {
-		return fmt.Errorf("failed to marshal function: %w", err)
-	}
-
-	err = b.bucket.Put(ctx, function.Name(), bytes)
+	err := b.functionsRepo.Create(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
@@ -166,45 +156,11 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 }
 
 func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
-	b.logger.WithField("function", name).Debug("Fetching function info")
-
-	bytes, err := b.bucket.Get(ctx, name)
-	if err != nil {
-		if errors.Is(err, core.ErrKeyNotFound) {
-			return nil, core.ErrFunctionNotFound
-		}
-
-		return nil, fmt.Errorf("failed to get function template: %w", err)
-	}
-
-	function, err := json.Unmarshal[Function](bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal function template: %w", err)
-	}
-
-	return function, nil
+	return b.functionsRepo.Get(ctx, name)
 }
 
 func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
-	b.logger.Debug("Fetching function list")
-
-	fns, err := b.bucket.All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get function list: %w", err)
-	}
-
-	functions := make([]core.Function, len(fns))
-
-	for i, fn := range fns {
-		function, err := json.Unmarshal[Function](fn.Value)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal function: %w", err)
-		}
-
-		functions[i] = function
-	}
-
-	return functions, nil
+	return b.functionsRepo.List(ctx)
 }
 
 func (b Backend) HealthCheck() error {
