@@ -42,7 +42,7 @@ func NewScaler(function core.Function, injector *do.Injector) (*Scaler, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	bucket, err := kv.Bucket(ctx, function.Name()+"-elections")
+	bucket, err := kv.Bucket(ctx, core.BucketNameElections)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get bucket: %w", err)
 	}
@@ -52,7 +52,7 @@ func NewScaler(function core.Function, injector *do.Injector) (*Scaler, error) {
 		ttl:    config.ElectionsBucketTTL(),
 	}
 
-	elector, err := elect.New(kvWrap, "scaler-leader", electID)
+	elector, err := elect.New(kvWrap, function.Name()+"-scaler-leader", electID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create elector: %w", err)
 	}

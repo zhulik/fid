@@ -53,6 +53,11 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), RegistrationTimeout)
 	defer cancel()
 
+	err = createBuckets(ctx)
+	if err != nil {
+		logger.Fatalf("failed to create buckets: %v", err)
+	}
+
 	_, err = startGateway(ctx)
 	if err != nil {
 		if !errors.Is(err, core.ErrContainerAlreadyExists) {
@@ -67,18 +72,32 @@ func main() {
 		}
 	}
 
-	// TODO: better place for this and for bucket naming?
-	_, err = kv.CreateBucket(ctx, InstancesBucket, 0)
-	if err != nil {
-		logger.Fatalf("failed to create or update instances bucket: %v", err)
-	}
-
-	logger.Info("Instances bucket created or updated")
-
 	err = registerFunctions(ctx, functions)
 	if err != nil {
 		logger.Fatalf("failed to register function: %v", err)
 	}
+}
+
+func createBuckets(ctx context.Context) error {
+	// TODO: better place for this and for bucket naming?
+	_, err := kv.CreateBucket(ctx, InstancesBucket, 0)
+	if err != nil {
+		return fmt.Errorf("failed to create or update instances bucket: %w", err)
+	}
+
+	_, err = kv.CreateBucket(ctx, core.BucketNameElections, config.ElectionsBucketTTL())
+	if err != nil {
+		return fmt.Errorf("failed to create or update elections bucket: %w", err)
+	}
+
+	_, err = kv.CreateBucket(ctx, core.BucketNameFunctions, 0)
+	if err != nil {
+		return fmt.Errorf("failed to create or update functions bucket: %w", err)
+	}
+
+	logger.Info("Buckets created or updated")
+
+	return nil
 }
 
 func registerFunctions(ctx context.Context, functions map[string]*Function) error {
@@ -90,12 +109,6 @@ func registerFunctions(ctx context.Context, functions map[string]*Function) erro
 		err := pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 		if err != nil {
 			return fmt.Errorf("error creating or updating function stream %s: %w", function.Name(), err)
-		}
-
-		// TODO: better place for this and for bucket naming? Use a single elections bucket for all functions?
-		_, err = kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
-		if err != nil {
-			return fmt.Errorf("failed to create or update function elections bucket: %w", err)
 		}
 
 		logger.Info("Elections bucket created")

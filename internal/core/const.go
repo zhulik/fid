@@ -39,4 +39,7 @@ const (
 
 	ContainerNameInfoServer = "info-server"
 	ContainerNameGateway    = "gateway"
+
+	BucketNameFunctions = "functions"
+	BucketNameElections = "elections"
 )

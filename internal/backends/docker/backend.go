@@ -18,15 +18,10 @@ import (
 	"github.com/zhulik/fid/pkg/json"
 )
 
-const (
-	BucketNameFunctions = "functions"
-)
-
 type Backend struct {
 	docker *client.Client
 	config core.Config
 	logger logrus.FieldLogger
-	kv     core.KV
 	bucket core.KVBucket
 }
 
@@ -41,8 +36,7 @@ func New(injector *do.Injector) (*Backend, error) {
 		docker: do.MustInvoke[*client.Client](injector),
 		config: do.MustInvoke[core.Config](injector),
 		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "backends.dockerexternal.Backend"),
-		kv:     kv,
-		bucket: lo.Must(kv.Bucket(ctx, BucketNameFunctions)),
+		bucket: lo.Must(kv.Bucket(ctx, core.BucketNameFunctions)),
 	}, nil
 }
 
@@ -147,11 +141,6 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 	bytes, err := json.Marshal(backendFunction)
 	if err != nil {
 		return fmt.Errorf("failed to marshal function: %w", err)
-	}
-
-	_, err = b.kv.CreateBucket(ctx, BucketNameFunctions, 0)
-	if err != nil {
-		return fmt.Errorf("failed to create functions bucket: %w", err)
 	}
 
 	err = b.bucket.Put(ctx, function.Name(), bytes)
