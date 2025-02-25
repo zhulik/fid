@@ -19,8 +19,8 @@ const (
 
 // FunctionPod is a struct that represents a group of a function instance and it's forwader living in the same network.
 type FunctionPod struct {
-	UUID string // Of the "pod"
-
+	UUID   string // Of the "pod"
+	config core.Config
 	docker *client.Client
 }
 
@@ -29,6 +29,7 @@ func CreateFunctionPod(ctx context.Context, function core.Function) (*FunctionPo
 
 	pod := &FunctionPod{
 		UUID:   podID,
+		config: do.MustInvoke[core.Config](nil),
 		docker: do.MustInvoke[*client.Client](nil),
 	}
 
@@ -99,10 +100,9 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 	containerConfig := &container.Config{
 		Image: core.ImageNameRuntimeAPI,
 		Env: core.MapToEnvList(map[string]string{
-			core.EnvNameFunctionName: function.Name(),
-			core.EnvNameInstanceID:   p.UUID,
-			// TODO: get this value from somewhere else, remove hardcoded value
-			core.EnvNameNatsURL:               "nats://nats:4222",
+			core.EnvNameFunctionName:          function.Name(),
+			core.EnvNameInstanceID:            p.UUID,
+			core.EnvNameNatsURL:               p.config.NatsURL(),
 			core.EnvNameFunctionContainerName: p.functionContainerName(),
 		}),
 		Labels: map[string]string{

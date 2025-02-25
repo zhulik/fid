@@ -137,13 +137,17 @@ func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 	sub, err := s.pubSuber.Subscribe(ctx,
 		s.pubSuber.FunctionStreamName(s.function),
 		[]string{s.pubSuber.ScaleSubjectName(s.function)},
-		s.function.Name()+"-scaler",
+		s.subscriberName(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to subscribe: %w", err)
 	}
 
 	return sub, nil
+}
+
+func (s Scaler) subscriberName() string {
+	return s.function.Name() + "-scaler"
 }
 
 func (s Scaler) Shutdown() error {

@@ -79,7 +79,6 @@ func main() {
 }
 
 func createBuckets(ctx context.Context) error {
-	// TODO: better place for this and for bucket naming?
 	_, err := kv.CreateBucket(ctx, InstancesBucket, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create or update instances bucket: %w", err)
