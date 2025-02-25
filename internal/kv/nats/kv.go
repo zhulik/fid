@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
@@ -23,20 +22,33 @@ type KV struct {
 	Nats *pubsubNats.Client
 }
 
-func (k KV) CreateBucket(ctx context.Context, name string, ttl time.Duration) error {
-	_, err := k.Nats.JetStream.CreateKeyValue(ctx, jetstream.KeyValueConfig{
+func (k KV) CreateBucket(ctx context.Context, name string, ttl time.Duration) (core.KVBucket, error) {
+	bucket, err := k.Nats.JetStream.CreateKeyValue(ctx, jetstream.KeyValueConfig{
 		Bucket: name,
 		TTL:    ttl,
 	})
 	if err != nil {
 		if errors.Is(err, jetstream.ErrBucketExists) {
-			return fmt.Errorf("%w: %w", core.ErrBucketExists, err)
+			return nil, fmt.Errorf("%w: %w", core.ErrBucketExists, err)
 		}
 
-		return fmt.Errorf("failed to create bucket: %w", err)
+		return nil, fmt.Errorf("failed to create bucket: %w", err)
 	}
 
-	return nil
+	return Bucket{bucket: bucket}, nil
+}
+
+func (k KV) Bucket(ctx context.Context, name string) (core.KVBucket, error) {
+	bucket, err := k.Nats.JetStream.KeyValue(ctx, name)
+	if err != nil {
+		if errors.Is(err, jetstream.ErrBucketNotFound) {
+			return nil, fmt.Errorf("%w: %w", core.ErrBucketNotFound, err)
+		}
+
+		return nil, fmt.Errorf("failed to get bucket: %w", err)
+	}
+
+	return Bucket{bucket: bucket}, nil
 }
 
 func (k KV) DeleteBucket(ctx context.Context, name string) error {
@@ -52,206 +64,81 @@ func (k KV) DeleteBucket(ctx context.Context, name string) error {
 	return nil
 }
 
-func (k KV) Get(ctx context.Context, bucket, key string) ([]byte, error) {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) Get(ctx context.Context, bucketName, key string) ([]byte, error) {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
-	entry, err := kv.Get(ctx, key)
-	if err != nil {
-		if errors.Is(err, jetstream.ErrKeyNotFound) {
-			return nil, fmt.Errorf("%w: %w", core.ErrKeyNotFound, err)
-		}
-
-		return nil, fmt.Errorf("failed to get value: %w", err)
-	}
-
-	return entry.Value(), nil
+	return bucket.Get(ctx, key) //nolint:wrapcheck
 }
 
 // All reads the entire bucket, make sure to use it only for small buckets.
-func (k KV) All(ctx context.Context, bucket string) ([]core.KVEntry, error) {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) All(ctx context.Context, bucketName string) ([]core.KVEntry, error) {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
-	lister, err := kv.ListKeys(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list keys: %w", err)
-	}
-
-	return k.listKeys(ctx, lister, kv)
+	return bucket.All(ctx) //nolint:wrapcheck
 }
 
-func (k KV) AllFiltered(ctx context.Context, bucket string, filters ...string) ([]core.KVEntry, error) {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) AllFiltered(ctx context.Context, bucketName string, filters ...string) ([]core.KVEntry, error) {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return nil, err
 	}
 
-	lister, err := kv.ListKeysFiltered(ctx, filters...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list keys: %w", err)
-	}
-
-	return k.listKeys(ctx, lister, kv)
+	return bucket.AllFiltered(ctx, filters...) //nolint:wrapcheck
 }
 
-func (k KV) Put(ctx context.Context, bucket, key string, value []byte) error {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) Put(ctx context.Context, bucketName, key string, value []byte) error {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return err
 	}
 
-	_, err = kv.Put(ctx, key, value)
-	if err != nil {
-		return fmt.Errorf("failed to put value: %w", err)
-	}
-
-	return nil
+	return bucket.Put(ctx, key, value) //nolint:wrapcheck
 }
 
-func (k KV) Create(ctx context.Context, bucket, key string, value []byte) (uint64, error) {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) Create(ctx context.Context, bucketName, key string, value []byte) (uint64, error) {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return 0, err
 	}
 
-	seq, err := kv.Create(ctx, key, value)
-	if err != nil {
-		if errors.Is(err, jetstream.ErrKeyExists) {
-			return 0, fmt.Errorf("%w: %w", core.ErrKeyExists, err)
-		}
-
-		return 0, fmt.Errorf("failed to put value: %w", err)
-	}
-
-	return seq, nil
+	return bucket.Create(ctx, key, value) //nolint:wrapcheck
 }
 
-func (k KV) Update(ctx context.Context, bucket, key string, value []byte, seq uint64) (uint64, error) {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) Update(ctx context.Context, bucketName, key string, value []byte, seq uint64) (uint64, error) {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return 0, err
 	}
 
-	seq, err = kv.Update(ctx, key, value, seq)
-	if err != nil {
-		if errors.Is(err, jetstream.ErrKeyNotFound) {
-			return 0, fmt.Errorf("%w: %w", core.ErrKeyNotFound, err)
-		}
-
-		return 0, fmt.Errorf("failed to put value: %w", err)
-	}
-
-	return seq, nil
+	return bucket.Update(ctx, key, value, seq) //nolint:wrapcheck
 }
 
-func (k KV) Incr(ctx context.Context, bucket, key string, n int64) (int64, error) { //nolint:cyclop
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) Incr(ctx context.Context, bucketName, key string, n int64) (int64, error) {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
 		return 0, err
 	}
 
-	for {
-		// Try to get the value
-		entry, err := kv.Get(ctx, key)
-		if err != nil { //nolint:nestif
-			if errors.Is(err, jetstream.ErrKeyNotFound) {
-				// It does not exist, create it.
-				_, err := kv.Create(ctx, key, []byte(strconv.FormatInt(n, 10)))
-				if err != nil {
-					// Value was created concurrently, try again.
-					if errors.Is(err, jetstream.ErrKeyExists) {
-						continue
-					}
-
-					return 0, fmt.Errorf("failed to create value: %w", err)
-				}
-
-				return n, nil
-			}
-
-			return 0, fmt.Errorf("failed to get value: %w", err)
-		}
-
-		value, err := strconv.ParseInt(string(entry.Value()), 10, 64)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse counter value: %w", err)
-		}
-
-		value += n
-
-		// Try updating the value
-		_, err = kv.Update(ctx, key, []byte(strconv.FormatInt(value, 10)), entry.Revision())
-		if err == nil {
-			return value, nil
-		}
-
-		if errors.Is(err, jetstream.ErrKeyExists) ||
-			errors.Is(err, jetstream.ErrKeyDeleted) ||
-			errors.Is(err, jetstream.ErrKeyNotFound) {
-			// It was updated or delete concurrently, try again.
-			continue
-		}
-
-		return 0, fmt.Errorf("failed to update value: %w", err)
-	}
+	return bucket.Incr(ctx, key, n) //nolint:wrapcheck
 }
 
 func (k KV) Decr(ctx context.Context, bucket, key string, n int64) (int64, error) {
 	return k.Incr(ctx, bucket, key, -n)
 }
 
-func (k KV) WaitCreated(ctx context.Context, bucket, key string) ([]byte, error) {
-	kv, err := k.getBucket(ctx, bucket)
+func (k KV) Delete(ctx context.Context, bucketName, key string) error {
+	bucket, err := k.Bucket(ctx, bucketName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	value, err := k.Get(ctx, bucket, key)
-	if err == nil {
-		return value, nil
-	}
-
-	if !errors.Is(err, core.ErrKeyNotFound) {
-		return nil, err
-	}
-
-	watch, err := kv.Watch(ctx, key, jetstream.UpdatesOnly(), jetstream.IgnoreDeletes())
-	if err != nil {
-		return nil, fmt.Errorf("failed to watch value: %w", err)
-	}
-
-	defer watch.Stop() //nolint:errcheck
-
-	updates := watch.Updates()
-
-	for {
-		select {
-		case entry := <-updates:
-			return entry.Value(), nil
-
-		case <-ctx.Done():
-			return nil, fmt.Errorf("context done: %w", ctx.Err())
-		}
-	}
-}
-
-func (k KV) Delete(ctx context.Context, bucket, key string) error {
-	kv, err := k.Nats.JetStream.KeyValue(ctx, bucket)
-	if err != nil {
-		return fmt.Errorf("failed to get bucket: %w", err)
-	}
-
-	err = kv.Purge(ctx, key)
-	if err != nil {
-		return fmt.Errorf("failed to delete value: %w", err)
-	}
-
-	return nil
+	return bucket.Delete(ctx, key) //nolint:wrapcheck
 }
 
 func (k KV) HealthCheck() error {
@@ -260,35 +147,4 @@ func (k KV) HealthCheck() error {
 
 func (k KV) Shutdown() error {
 	return nil
-}
-
-func (k KV) getBucket(ctx context.Context, bucket string) (jetstream.KeyValue, error) {
-	kv, err := k.Nats.JetStream.KeyValue(ctx, bucket)
-	if err != nil {
-		if errors.Is(err, jetstream.ErrBucketNotFound) {
-			return nil, fmt.Errorf("%w: %w", core.ErrBucketNotFound, err)
-		}
-
-		return nil, fmt.Errorf("failed to get bucket: %w", err)
-	}
-
-	return kv, nil
-}
-
-func (k KV) listKeys(ctx context.Context, lister jetstream.KeyLister, kv jetstream.KeyValue) ([]core.KVEntry, error) {
-	var entries []core.KVEntry //nolint:prealloc
-
-	for key := range lister.Keys() {
-		entry, err := kv.Get(ctx, key)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get value: %w", err)
-		}
-
-		entries = append(entries, core.KVEntry{
-			Key:   key,
-			Value: entry.Value(),
-		})
-	}
-
-	return entries, nil
 }

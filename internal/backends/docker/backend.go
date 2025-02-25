@@ -139,7 +139,7 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 		return fmt.Errorf("failed to marshal function: %w", err)
 	}
 
-	err = b.kv.CreateBucket(ctx, BucketNameFunctions, 0)
+	_, err = b.kv.CreateBucket(ctx, BucketNameFunctions, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create functions bucket: %w", err)
 	}

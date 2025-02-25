@@ -92,11 +92,28 @@ type Message interface {
 	Nak() error
 }
 
-// TODO: separate interface for bucket.
+type KVBucket interface {
+	Name() string
+
+	All(ctx context.Context) ([]KVEntry, error)
+	AllFiltered(ctx context.Context, filters ...string) ([]KVEntry, error)
+
+	Get(ctx context.Context, key string) ([]byte, error)
+	Create(ctx context.Context, key string, value []byte) (uint64, error)
+	Put(ctx context.Context, key string, value []byte) error
+	Update(ctx context.Context, key string, value []byte, seq uint64) (uint64, error)
+	Delete(ctx context.Context, key string) error
+
+	Incr(ctx context.Context, key string, n int64) (int64, error)
+	Decr(ctx context.Context, key string, n int64) (int64, error)
+}
+
 type KV interface { //nolint:interfacebloat
 	ServiceDependency
 
-	CreateBucket(ctx context.Context, name string, ttl time.Duration) error
+	CreateBucket(ctx context.Context, name string, ttl time.Duration) (KVBucket, error)
+	Bucket(ctx context.Context, name string) (KVBucket, error)
+	DeleteBucket(ctx context.Context, name string) error
 
 	All(ctx context.Context, bucket string) ([]KVEntry, error)
 	AllFiltered(ctx context.Context, bucket string, filters ...string) ([]KVEntry, error)

@@ -1,11 +1,9 @@
 package nats_test
 
 import (
-	"context"
 	"math/rand/v2"
 	"strconv"
 	"sync"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -32,7 +30,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 	kv := lo.Must(nats.NewKV(injector))
 
 	BeforeEach(func(ctx SpecContext) {
-		lo.Must0(kv.CreateBucket(ctx, "test", 0))
+		lo.Must(kv.CreateBucket(ctx, "test", 0))
 
 		lo.Must(kv.Create(ctx, "test", "key", []byte("some - value")))
 	})
@@ -44,7 +42,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 	Describe("CreateBucket", func() {
 		Context("when bucket exists", func() {
 			It("does not return an error", func(ctx SpecContext) {
-				err := kv.CreateBucket(ctx, "test", 0)
+				_, err := kv.CreateBucket(ctx, "test", 0)
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -52,7 +50,7 @@ var _ = Describe("Nats KV", Ordered, func() {
 
 		Context("when bucket does not exists", func() {
 			It("creates the bucket", func(ctx SpecContext) {
-				err := kv.CreateBucket(ctx, "test2", 0)
+				_, err := kv.CreateBucket(ctx, "test2", 0)
 				Expect(err).NotTo(HaveOccurred())
 
 				lo.Must0(kv.DeleteBucket(ctx, "test2"))
@@ -240,44 +238,6 @@ var _ = Describe("Nats KV", Ordered, func() {
 				err := kv.Delete(ctx, "test", "key2")
 
 				Expect(err).ToNot(HaveOccurred())
-			})
-		})
-	})
-
-	Describe("WaitCreated", func() {
-		Context("when key exists", func() {
-			It("returns the value", func(ctx SpecContext) {
-				value, err := kv.WaitCreated(ctx, "test", "key")
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(value).To(Equal([]byte("some - value")))
-			})
-		})
-
-		Context("when key does not exists", func() {
-			It("waits for the key to be created", func(ctx SpecContext) {
-				done := lo.Async0(func() {
-					value, err := kv.WaitCreated(ctx, "test", "key3")
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(value).To(Equal([]byte("new - value")))
-				})
-				time.Sleep(10 * time.Millisecond)
-
-				lo.Must(kv.Create(ctx, "test", "key3", []byte("new - value")))
-
-				Eventually(done).Should(Receive())
-			})
-		})
-
-		Context("when context timeout reaches", func() {
-			It("waits for the key to be created", func(ctx SpecContext) {
-				waitCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
-				defer cancel()
-
-				_, err := kv.WaitCreated(waitCtx, "test", "key3")
-
-				Expect(err).To(MatchError(context.DeadlineExceeded))
 			})
 		})
 	})

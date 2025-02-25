@@ -68,7 +68,7 @@ func main() {
 	}
 
 	// TODO: better place for this and for bucket naming?
-	err = kv.CreateBucket(ctx, InstancesBucket, 0)
+	_, err = kv.CreateBucket(ctx, InstancesBucket, 0)
 	if err != nil {
 		logger.Fatalf("failed to create or update instances bucket: %v", err)
 	}
@@ -93,7 +93,7 @@ func registerFunctions(ctx context.Context, functions map[string]*Function) erro
 		}
 
 		// TODO: better place for this and for bucket naming? Use a single elections bucket for all functions?
-		err = kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
+		_, err = kv.CreateBucket(ctx, function.Name()+"-elections", config.ElectionsBucketTTL())
 		if err != nil {
 			return fmt.Errorf("failed to create or update function elections bucket: %w", err)
 		}
