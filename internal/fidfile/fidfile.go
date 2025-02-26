@@ -1,4 +1,4 @@
-package main
+package fidfile
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ type ServiceConfig struct {
 	Instances int `yaml:"instances"`
 }
 
-type Config struct {
+type Fidfile struct {
 	Version   int                  `validate:"required"                    yaml:"version"`
 	Backend   string               `validate:"required,oneof=docker swarm" yaml:"backend"`
 	Functions map[string]*Function `validate:"required,dive"               yaml:"functions"`
@@ -34,7 +34,7 @@ func ParseFile(path string) (map[string]*Function, error) {
 		return nil, fmt.Errorf("failed to read functions file: %w", err)
 	}
 
-	functionsConfig := Config{}
+	functionsConfig := Fidfile{}
 
 	err = yaml.Unmarshal(data, &functionsConfig)
 	if err != nil {

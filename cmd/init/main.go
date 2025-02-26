@@ -11,10 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	_ "github.com/zhulik/fid/internal/di"
+	"github.com/zhulik/fid/internal/fidfile"
 )
 
 const (
-	DefaultFileName     = "Fidfile.yaml"
 	RegistrationTimeout = 10 * time.Second
 )
 
@@ -34,7 +34,7 @@ func init() { //nolint:gochecknoinits
 }
 
 func main() {
-	fileName := DefaultFileName
+	fileName := core.FilenameFidfile
 	if len(os.Args) > 1 {
 		fileName = os.Args[1]
 	}
@@ -42,7 +42,7 @@ func main() {
 	logger.Info("Starting...")
 	logger.Infof("Loading %s...", fileName)
 
-	functions, err := ParseFile(fileName)
+	functions, err := fidfile.ParseFile(fileName)
 	if err != nil {
 		logger.Fatalf("error: %v", err)
 	}
@@ -98,7 +98,7 @@ func createBuckets(ctx context.Context) error {
 	return nil
 }
 
-func registerFunctions(ctx context.Context, functions map[string]*Function) error {
+func registerFunctions(ctx context.Context, functions map[string]*fidfile.Function) error {
 	logger.Infof("Registering %d functions...", len(functions))
 
 	for _, function := range functions {

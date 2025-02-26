@@ -40,5 +40,7 @@ const (
 	BucketNameElections = "fid-elections"
 	BucketNameInstances = "fid-instances"
 
+	FilenameFidfile = "Fidfile.yaml"
+
 	PortTCP80 = "80/tcp"
 )
