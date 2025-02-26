@@ -20,8 +20,9 @@ type ServiceConfig struct {
 }
 
 type Config struct {
-	Version   int                  `validate:"required"      yaml:"version"`
-	Functions map[string]*Function `validate:"required,dive" yaml:"functions"`
+	Version   int                  `validate:"required"                    yaml:"version"`
+	Backend   string               `validate:"required,oneof=docker swarm" yaml:"backend"`
+	Functions map[string]*Function `validate:"required,dive"               yaml:"functions"`
 
 	Gateway    ServiceConfig `yaml:"gateway"`
 	InfoServer ServiceConfig `yaml:"infoserver"`
