@@ -24,7 +24,7 @@ type FunctionPod struct {
 	docker *client.Client
 }
 
-func CreateFunctionPod(ctx context.Context, function core.Function) (*FunctionPod, error) {
+func CreateFunctionPod(ctx context.Context, function core.FunctionDefinition) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
 	pod := &FunctionPod{
@@ -94,7 +94,7 @@ func (p FunctionPod) deleteNetwork(ctx context.Context) error {
 	return nil
 }
 
-func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Function) error {
+func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.FunctionDefinition) error {
 	containerName := p.runtimeAPIContainerName()
 
 	containerConfig := &container.Config{
@@ -137,7 +137,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 	return nil
 }
 
-func (p FunctionPod) createFunction(ctx context.Context, function core.Function) error {
+func (p FunctionPod) createFunction(ctx context.Context, function core.FunctionDefinition) error {
 	containerName := p.functionContainerName()
 
 	stopTimeout := int((function.Timeout() + time.Second) / time.Second)

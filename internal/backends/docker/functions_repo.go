@@ -40,7 +40,7 @@ func (r FunctionsRepo) Shutdown() error {
 	return nil
 }
 
-func (r FunctionsRepo) Upsert(ctx context.Context, function core.Function) error {
+func (r FunctionsRepo) Upsert(ctx context.Context, function core.FunctionDefinition) error {
 	backendFunction := Function{
 		Name_:    function.Name(),
 		Image_:   function.Image(),
@@ -65,7 +65,7 @@ func (r FunctionsRepo) Upsert(ctx context.Context, function core.Function) error
 	return nil
 }
 
-func (r FunctionsRepo) Get(ctx context.Context, name string) (core.Function, error) {
+func (r FunctionsRepo) Get(ctx context.Context, name string) (core.FunctionDefinition, error) {
 	r.logger.WithField("function", name).Debug("Fetching function info")
 
 	bytes, err := r.bucket.Get(ctx, name)
@@ -85,7 +85,7 @@ func (r FunctionsRepo) Get(ctx context.Context, name string) (core.Function, err
 	return function, nil
 }
 
-func (r FunctionsRepo) List(ctx context.Context) ([]core.Function, error) {
+func (r FunctionsRepo) List(ctx context.Context) ([]core.FunctionDefinition, error) {
 	r.logger.Debug("Fetching function list")
 
 	fns, err := r.bucket.All(ctx)
@@ -93,7 +93,7 @@ func (r FunctionsRepo) List(ctx context.Context) ([]core.Function, error) {
 		return nil, fmt.Errorf("failed to get function list: %w", err)
 	}
 
-	functions := make([]core.Function, len(fns))
+	functions := make([]core.FunctionDefinition, len(fns))
 
 	for i, fn := range fns {
 		function, err := json.Unmarshal[Function](fn.Value)

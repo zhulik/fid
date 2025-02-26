@@ -17,7 +17,7 @@ import (
 var Stopped = errors.New("stopped") //nolint:errname,gochecknoglobals,stylecheck
 
 type Scaler struct {
-	function core.Function
+	function core.FunctionDefinition
 	logger   logrus.FieldLogger
 
 	backend  core.ContainerBackend
@@ -26,7 +26,7 @@ type Scaler struct {
 	elector *elect.Elect
 }
 
-func NewScaler(function core.Function, injector *do.Injector) (*Scaler, error) {
+func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler, error) {
 	electID := uuid.NewString()
 
 	config := do.MustInvoke[core.Config](injector)

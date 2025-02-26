@@ -61,7 +61,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
-	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
 	subject := s.pubSuber.ConsumeSubjectName(function)
 
 	logger := s.Logger.WithField("function", function.Name())
@@ -92,7 +92,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
 	subject := s.pubSuber.ResponseSubjectName(function, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
@@ -126,7 +126,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 func (s *Server) ErrorHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
 	subject := s.pubSuber.ErrorSubjectName(function, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{

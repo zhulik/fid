@@ -110,7 +110,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 
 // CreateOrUpdateFunctionStream creates or updates a stream for function invocation.
 // TODO: something more universal, for any kind of streams?
-func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function core.Function) error {
+func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function core.FunctionDefinition) error {
 	streamName := p.FunctionStreamName(function)
 	logger := p.logger.WithField("streamName", streamName)
 
@@ -227,26 +227,26 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 	return newSubscriptionWrapper(cons, logger)
 }
 
-func (p PubSuber) FunctionStreamName(function core.Function) string {
+func (p PubSuber) FunctionStreamName(function core.FunctionDefinition) string {
 	return fmt.Sprintf("%s:%s", core.StreamNameInvocation, function.Name())
 }
 
-func (p PubSuber) ScaleSubjectName(function core.Function) string {
+func (p PubSuber) ScaleSubjectName(function core.FunctionDefinition) string {
 	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, function.Name())
 }
 
-func (p PubSuber) InvokeSubjectName(function core.Function) string {
+func (p PubSuber) InvokeSubjectName(function core.FunctionDefinition) string {
 	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
 }
 
-func (p PubSuber) ConsumeSubjectName(function core.Function) string {
+func (p PubSuber) ConsumeSubjectName(function core.FunctionDefinition) string {
 	return fmt.Sprintf("%s.%s.consume", core.InvokeSubjectBase, function.Name())
 }
 
-func (p PubSuber) ResponseSubjectName(function core.Function, requestID string) string {
+func (p PubSuber) ResponseSubjectName(function core.FunctionDefinition, requestID string) string {
 	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, function.Name(), requestID)
 }
 
-func (p PubSuber) ErrorSubjectName(function core.Function, requestID string) string {
+func (p PubSuber) ErrorSubjectName(function core.FunctionDefinition, requestID string) string {
 	return fmt.Sprintf("%s.%s.%s.error", core.ResponseSubjectBase, function.Name(), requestID)
 }

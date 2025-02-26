@@ -57,7 +57,7 @@ func (s *Server) FunctionsHandler(c *gin.Context) {
 		c.Error(err)
 	}
 
-	fns := lo.Map(functions, func(fn core.Function, _ int) gin.H {
+	fns := lo.Map(functions, func(fn core.FunctionDefinition, _ int) gin.H {
 		return serializeFunction(fn)
 	})
 
@@ -77,7 +77,7 @@ func (s *Server) FunctionHandler(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, serializeFunction(function))
 }
 
-func serializeFunction(fn core.Function) gin.H {
+func serializeFunction(fn core.FunctionDefinition) gin.H {
 	return gin.H{
 		"name":     fn.Name(),
 		"timeout":  fn.Timeout().Seconds(),

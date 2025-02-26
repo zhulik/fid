@@ -33,7 +33,7 @@ func New(injector *do.Injector) (*Backend, error) {
 }
 
 // Register creates a new function's template, scaler, forwarder(TODO) and garbage collector(TODO).
-func (b Backend) Register(ctx context.Context, function core.Function) error {
+func (b Backend) Register(ctx context.Context, function core.FunctionDefinition) error {
 	err := b.createFunctionTemplate(ctx, function)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (b Backend) Deregister(ctx context.Context, name string) error {
 	return nil
 }
 
-func (b Backend) createScaler(ctx context.Context, function core.Function) error {
+func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinition) error {
 	logger := b.logger.WithField("function", function.Name())
 
 	containerConfig := &container.Config{
@@ -120,7 +120,7 @@ func (b Backend) scalerContainerName(functionName string) string {
 	return functionName + "-scaler"
 }
 
-func (b Backend) createFunctionTemplate(ctx context.Context, function core.Function) error {
+func (b Backend) createFunctionTemplate(ctx context.Context, function core.FunctionDefinition) error {
 	err := b.functionsRepo.Upsert(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to store function template: %w", err)
@@ -143,11 +143,11 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(ctx context.Context, name string) (core.Function, error) {
+func (b Backend) Function(ctx context.Context, name string) (core.FunctionDefinition, error) {
 	return b.functionsRepo.Get(ctx, name) //nolint:wrapcheck
 }
 
-func (b Backend) Functions(ctx context.Context) ([]core.Function, error) {
+func (b Backend) Functions(ctx context.Context) ([]core.FunctionDefinition, error) {
 	return b.functionsRepo.List(ctx) //nolint:wrapcheck
 }
 
@@ -174,7 +174,7 @@ func (b Backend) Shutdown() error {
 	return nil
 }
 
-func (b Backend) AddInstance(ctx context.Context, function core.Function) (string, error) {
+func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
 	b.logger.Infof("Creating new function pod for function %s", function.Name())
 
 	pod, err := CreateFunctionPod(ctx, function)

@@ -50,7 +50,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 func (s *Server) InvokeHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	function := c.MustGet("function").(core.Function) //nolint:forcetypeassert
+	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {

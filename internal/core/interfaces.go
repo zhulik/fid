@@ -28,28 +28,28 @@ type ContainerBackend interface {
 
 	Info(ctx context.Context) (map[string]any, error)
 
-	Register(ctx context.Context, function Function) error
+	Register(ctx context.Context, function FunctionDefinition) error
 	Deregister(ctx context.Context, name string) error
-	Function(ctx context.Context, name string) (Function, error)
-	Functions(ctx context.Context) ([]Function, error)
+	Function(ctx context.Context, name string) (FunctionDefinition, error)
+	Functions(ctx context.Context) ([]FunctionDefinition, error)
 
 	StartGateway(ctx context.Context) (string, error)
 	StartInfoServer(ctx context.Context) (string, error)
 
-	AddInstance(ctx context.Context, function Function) (string, error)
+	AddInstance(ctx context.Context, function FunctionDefinition) (string, error)
 	KillInstance(ctx context.Context, instanceID string) error
 }
 
 type FunctionsRepo interface {
 	ServiceDependency
 
-	Upsert(ctx context.Context, function Function) error
-	Get(ctx context.Context, name string) (Function, error)
-	List(ctx context.Context) ([]Function, error)
+	Upsert(ctx context.Context, function FunctionDefinition) error
+	Get(ctx context.Context, name string) (FunctionDefinition, error)
+	List(ctx context.Context) ([]FunctionDefinition, error)
 	Delete(ctx context.Context, name string) error
 }
 
-type Function interface {
+type FunctionDefinition interface {
 	Name() string
 
 	Image() string
@@ -74,22 +74,22 @@ type PubSuber interface { //nolint:interfacebloat
 
 	Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (Subscription, error)
 
-	CreateOrUpdateFunctionStream(ctx context.Context, function Function) error
+	CreateOrUpdateFunctionStream(ctx context.Context, function FunctionDefinition) error
 
-	FunctionStreamName(function Function) string
-	ScaleSubjectName(function Function) string
-	InvokeSubjectName(function Function) string
-	ConsumeSubjectName(function Function) string
-	ResponseSubjectName(function Function, requestID string) string
-	ErrorSubjectName(function Function, requestID string) string
+	FunctionStreamName(function FunctionDefinition) string
+	ScaleSubjectName(function FunctionDefinition) string
+	InvokeSubjectName(function FunctionDefinition) string
+	ConsumeSubjectName(function FunctionDefinition) string
+	ResponseSubjectName(function FunctionDefinition, requestID string) string
+	ErrorSubjectName(function FunctionDefinition, requestID string) string
 }
 
 type Invoker interface {
 	ServiceDependency
 
-	CreateOrUpdateFunctionStream(ctx context.Context, function Function) error
+	CreateOrUpdateFunctionStream(ctx context.Context, function FunctionDefinition) error
 
-	Invoke(ctx context.Context, function Function, payload []byte) ([]byte, error)
+	Invoke(ctx context.Context, function FunctionDefinition, payload []byte) ([]byte, error)
 }
 
 // Message is a message received from a pubsub system.

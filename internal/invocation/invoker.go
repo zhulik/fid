@@ -36,7 +36,7 @@ func (i Invoker) Shutdown() error {
 	return nil
 }
 
-func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []byte) ([]byte, error) {
+func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, payload []byte) ([]byte, error) {
 	requestID := uuid.NewString()
 	subject := i.pubSuber.InvokeSubjectName(function)
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
@@ -80,7 +80,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.Function, payload []b
 	return data, nil
 }
 
-func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, function core.Function) error {
+func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, function core.FunctionDefinition) error {
 	err := i.pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to create or update function stream: %w", err)
