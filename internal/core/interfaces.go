@@ -87,8 +87,6 @@ type PubSuber interface { //nolint:interfacebloat
 type Invoker interface {
 	ServiceDependency
 
-	CreateOrUpdateFunctionStream(ctx context.Context, function FunctionDefinition) error
-
 	Invoke(ctx context.Context, function FunctionDefinition, payload []byte) ([]byte, error)
 }
 

@@ -79,12 +79,3 @@ func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, p
 
 	return data, nil
 }
-
-func (i Invoker) CreateOrUpdateFunctionStream(ctx context.Context, function core.FunctionDefinition) error {
-	err := i.pubSuber.CreateOrUpdateFunctionStream(ctx, function)
-	if err != nil {
-		return fmt.Errorf("failed to create or update function stream: %w", err)
-	}
-
-	return nil
-}
