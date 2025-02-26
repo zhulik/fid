@@ -17,7 +17,7 @@ type Config interface {
 
 	FunctionName() string // For runtimeapi
 
-	NatsURL() string
+	NATSURL() string
 	LogLevel() string
 
 	ElectionsBucketTTL() time.Duration

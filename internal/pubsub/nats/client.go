@@ -13,7 +13,7 @@ import (
 func NewClient(injector *do.Injector) (*Client, error) {
 	config := do.MustInvoke[core.Config](injector)
 
-	natsClient, err := libNats.Connect(config.NatsURL())
+	natsClient, err := libNats.Connect(config.NATSURL())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to NATS client: %w", err)
 	}

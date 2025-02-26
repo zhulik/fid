@@ -5,32 +5,32 @@ import (
 )
 
 type Config struct {
-	HttpPort int `env:"HTTP_PORT" envDefault:"8180"` //nolint:stylecheck
+	HTTPPort_ int `env:"HTTP_PORT" envDefault:"8180"`
 
-	Functionname string `env:"FUNCTION_NAME"`
+	FunctionName_ string `env:"FUNCTION_NAME"`
 
-	NATSURL  string `env:"NATS_URL"`
-	Loglevel string `env:"LOG_LEVEL" envDefault:"info"`
+	NATSURL_  string `env:"NATS_URL"` //nolint:stylecheck
+	LogLevel_ string `env:"LOG_LEVEL" envDefault:"info"`
 
-	ElectionsBucketTtl time.Duration `env:"ELECTIONS_BUCKET_TTL" envDefault:"2s"` //nolint:stylecheck
+	ElectionsBucketTTL_ time.Duration `env:"ELECTIONS_BUCKET_TTL" envDefault:"2s"`
 }
 
 func (c Config) ElectionsBucketTTL() time.Duration {
-	return c.ElectionsBucketTtl
+	return c.ElectionsBucketTTL_
 }
 
-func (c Config) NatsURL() string {
-	return c.NATSURL
+func (c Config) NATSURL() string {
+	return c.NATSURL_
 }
 
 func (c Config) HTTPPort() int {
-	return c.HttpPort
+	return c.HTTPPort_
 }
 
 func (c Config) LogLevel() string {
-	return c.Loglevel
+	return c.LogLevel_
 }
 
 func (c Config) FunctionName() string {
-	return c.Functionname
+	return c.FunctionName_
 }
