@@ -36,8 +36,9 @@ const (
 	ContainerNameInfoServer = "info-server"
 	ContainerNameGateway    = "gateway"
 
-	BucketNameFunctions = "functions"
-	BucketNameElections = "elections"
+	BucketNameFunctions = "fid-functions"
+	BucketNameElections = "fid-elections"
+	BucketNameInstances = "fid-instances"
 
 	PortTCP80 = "80/tcp"
 )

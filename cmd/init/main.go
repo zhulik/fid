@@ -16,8 +16,6 @@ import (
 const (
 	DefaultFileName     = "functions.yaml"
 	RegistrationTimeout = 10 * time.Second
-
-	InstancesBucket = "fid-instances"
 )
 
 var (
@@ -79,7 +77,7 @@ func main() {
 }
 
 func createBuckets(ctx context.Context) error {
-	_, err := kv.CreateBucket(ctx, InstancesBucket, 0)
+	_, err := kv.CreateBucket(ctx, core.BucketNameInstances, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create or update instances bucket: %w", err)
 	}
