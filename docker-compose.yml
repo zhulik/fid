@@ -19,7 +19,7 @@ services:
     environment:
       - NATS_URL=nats://nats:4222
     volumes:
-      - ./functions.yaml:/functions.yaml
+      - ./Fidfile.yaml:/Fidfile.yaml
       - /var/run/docker.sock:/var/run/docker.sock
 
     networks:

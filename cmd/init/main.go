@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	DefaultFileName     = "functions.yaml"
+	DefaultFileName     = "Fidfile.yaml"
 	RegistrationTimeout = 10 * time.Second
 )
 
@@ -29,7 +29,6 @@ var (
 func init() { //nolint:gochecknoinits
 	config = do.MustInvoke[core.Config](nil)
 	logger = do.MustInvoke[logrus.FieldLogger](nil).WithField("component", "main")
-	backend = do.MustInvoke[core.ContainerBackend](nil)
 	pubSuber = do.MustInvoke[core.PubSuber](nil)
 	kv = do.MustInvoke[core.KV](nil)
 }
@@ -55,6 +54,8 @@ func main() {
 	if err != nil {
 		logger.Fatalf("failed to create buckets: %v", err)
 	}
+
+	backend = do.MustInvoke[core.ContainerBackend](nil)
 
 	_, err = startGateway(ctx)
 	if err != nil {
