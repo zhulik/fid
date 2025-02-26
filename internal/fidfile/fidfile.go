@@ -20,25 +20,36 @@ type ServiceConfig struct {
 }
 
 type Fidfile struct {
-	Version   int                  `validate:"required"                    yaml:"version"`
+	Version   int                  `validate:"required,eq=1"               yaml:"version"`
 	Backend   string               `validate:"required,oneof=docker swarm" yaml:"backend"`
 	Functions map[string]*Function `validate:"required,dive"               yaml:"functions"`
 
-	Gateway    ServiceConfig `yaml:"gateway"`
-	InfoServer ServiceConfig `yaml:"infoserver"`
+	Gateway    *ServiceConfig `yaml:"gateway"`
+	InfoServer *ServiceConfig `yaml:"infoserver"`
 }
 
-func ParseFile(path string) (map[string]*Function, error) {
+// TODO: add proper support for versioning
+
+func ParseFile(path string) (*Fidfile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read functions file: %w", err)
 	}
 
+	config, err := Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse fidfile %s: %w", path, err)
+	}
+
+	return config, nil
+}
+
+func Parse(data []byte) (*Fidfile, error) {
 	functionsConfig := Fidfile{}
 
-	err = yaml.Unmarshal(data, &functionsConfig)
+	err := yaml.Unmarshal(data, &functionsConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse file %s: %w", path, err)
+		return nil, fmt.Errorf("failed to unmarshal fidfile: %w", err)
 	}
 
 	for name, function := range functionsConfig.Functions {
@@ -50,5 +61,5 @@ func ParseFile(path string) (map[string]*Function, error) {
 		return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
 
-	return functionsConfig.Functions, nil
+	return &functionsConfig, nil
 }

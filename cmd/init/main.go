@@ -42,7 +42,7 @@ func main() {
 	logger.Info("Starting...")
 	logger.Infof("Loading %s...", fileName)
 
-	functions, err := fidfile.ParseFile(fileName)
+	config, err := fidfile.ParseFile(fileName)
 	if err != nil {
 		logger.Fatalf("error: %v", err)
 	}
@@ -64,14 +64,16 @@ func main() {
 		}
 	}
 
-	_, err = startInfoServer(ctx)
-	if err != nil {
-		if !errors.Is(err, core.ErrContainerAlreadyExists) {
-			logger.Fatalf("failed to start info server: %v", err)
+	if config.InfoServer != nil {
+		_, err = startInfoServer(ctx)
+		if err != nil {
+			if !errors.Is(err, core.ErrContainerAlreadyExists) {
+				logger.Fatalf("failed to start info server: %v", err)
+			}
 		}
 	}
 
-	err = registerFunctions(ctx, functions)
+	err = registerFunctions(ctx, config.Functions)
 	if err != nil {
 		logger.Fatalf("failed to register function: %v", err)
 	}
