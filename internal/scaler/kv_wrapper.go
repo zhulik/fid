@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/elect"
@@ -12,12 +11,6 @@ import (
 
 type kvWrapper struct {
 	bucket core.KVBucket
-
-	ttl time.Duration
-}
-
-func (j kvWrapper) TTL() time.Duration {
-	return j.ttl
 }
 
 func (j kvWrapper) Get(ctx context.Context, key string) ([]byte, error) {

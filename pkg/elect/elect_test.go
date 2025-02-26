@@ -35,9 +35,8 @@ type Nomenee struct {
 
 func newNomenee(kv jetstream.KeyValue) *Nomenee {
 	elector := lo.Must(elect.New(elect.JetStreamKV{
-		KV:  kv,
-		Ttl: bucketTTL,
-	}, leaderKey, uuid.NewString()))
+		KV: kv,
+	}, bucketTTL, leaderKey, uuid.NewString()))
 
 	return &Nomenee{
 		InstanceID: instanceID,
@@ -87,8 +86,7 @@ var _ = Describe("Elect", Ordered, func() {
 			}))
 
 			kv = elect.JetStreamKV{
-				KV:  jsKV,
-				Ttl: bucketTTL,
+				KV: jsKV,
 			}
 		})
 
@@ -97,7 +95,7 @@ var _ = Describe("Elect", Ordered, func() {
 		})
 
 		BeforeEach(func() {
-			elector = lo.Must(elect.New(kv, leaderKey, instanceID))
+			elector = lo.Must(elect.New(kv, bucketTTL, leaderKey, instanceID))
 		})
 
 		AfterEach(func(sctx SpecContext) {

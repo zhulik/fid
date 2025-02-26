@@ -49,10 +49,9 @@ func NewScaler(function core.Function, injector *do.Injector) (*Scaler, error) {
 
 	kvWrap := kvWrapper{
 		bucket: bucket,
-		ttl:    config.ElectionsBucketTTL(),
 	}
 
-	elector, err := elect.New(kvWrap, function.Name()+"-scaler-leader", electID)
+	elector, err := elect.New(kvWrap, config.ElectionsBucketTTL(), function.Name()+"-scaler-leader", electID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create elector: %w", err)
 	}

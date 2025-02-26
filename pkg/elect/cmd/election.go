@@ -18,11 +18,10 @@ func runElection(instanceID string, kv jetstream.KeyValue, ttl time.Duration, wg
 	defer wg.Done()
 
 	kvWrapper := elect.JetStreamKV{
-		KV:  kv,
-		Ttl: ttl,
+		KV: kv,
 	}
 
-	el := lo.Must(elect.New(kvWrapper, leaderKey, instanceID))
+	el := lo.Must(elect.New(kvWrapper, ttl, leaderKey, instanceID))
 
 	outcomeCh := el.Start()
 

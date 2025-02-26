@@ -4,19 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
 )
 
 type JetStreamKV struct {
 	KV jetstream.KeyValue
-
-	Ttl time.Duration //nolint:stylecheck
-}
-
-func (j JetStreamKV) TTL() time.Duration {
-	return j.Ttl
 }
 
 func (j JetStreamKV) Get(ctx context.Context, key string) ([]byte, error) {

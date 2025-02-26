@@ -24,8 +24,8 @@ type Elect struct {
 	stop chan struct{}
 }
 
-func New(kv KV, key string, id string, opts ...Option) (*Elect, error) {
-	if kv.TTL() == 0 {
+func New(kv KV, ttl time.Duration, key string, id string, opts ...Option) (*Elect, error) {
+	if ttl == 0 {
 		return nil, ErrInvalidTTL
 	}
 
@@ -33,8 +33,8 @@ func New(kv KV, key string, id string, opts ...Option) (*Elect, error) {
 		Key:            key,
 		ID:             []byte(id),
 		Timeout:        DefaultTimeout,
-		UpdateInterval: time.Duration(float64(kv.TTL()) * DefaultUpdateMultiplier),
-		PollInterval:   time.Duration(float64(kv.TTL()) * DefaultPollMultiplier),
+		UpdateInterval: time.Duration(float64(ttl) * DefaultUpdateMultiplier),
+		PollInterval:   time.Duration(float64(ttl) * DefaultPollMultiplier),
 	}
 
 	for _, opt := range opts {
