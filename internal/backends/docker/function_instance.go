@@ -7,29 +7,29 @@ import (
 )
 
 type FunctionInstance struct {
-	id           string
-	lastExecuted time.Time
-	function     core.FunctionDefinition
+	ID_           string
+	LastExecuted_ time.Time
+	Function_     core.FunctionDefinition
 }
 
 func NewFunctionInstance(entry core.KVEntry, definition core.FunctionDefinition) FunctionInstance {
 	_, id := parseKey(entry.Key)
 
 	return FunctionInstance{
-		id:           id,
-		lastExecuted: deserializeTime(entry.Value),
-		function:     definition,
+		ID_:           id,
+		LastExecuted_: deserializeTime(entry.Value),
+		Function_:     definition,
 	}
 }
 
 func (f FunctionInstance) ID() string {
-	return f.id
+	return f.ID_
 }
 
 func (f FunctionInstance) LastExecuted() time.Time {
-	return f.lastExecuted
+	return f.LastExecuted_
 }
 
 func (f FunctionInstance) Function() core.FunctionDefinition {
-	return f.function
+	return f.Function_
 }

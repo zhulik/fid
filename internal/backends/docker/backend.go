@@ -182,7 +182,7 @@ func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefiniti
 		return "", err
 	}
 
-	b.logger.Infof("Function pod function %s created id=%s", function.Name(), pod.UUID)
+	b.logger.Infof("Function pod function %s created ID_=%s", function.Name(), pod.UUID)
 
 	return pod.UUID, nil
 }

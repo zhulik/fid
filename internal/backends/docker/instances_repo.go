@@ -73,7 +73,7 @@ func (r InstancesRepo) Upsert(ctx context.Context, instance core.FunctionsInstan
 }
 
 func (r InstancesRepo) Get(ctx context.Context, id string) (core.FunctionsInstance, error) {
-	list, err := r.bucket.All(ctx, key("*", id))
+	list, err := r.bucket.All(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get instance: %w", err)
 	}
