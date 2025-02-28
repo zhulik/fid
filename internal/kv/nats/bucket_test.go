@@ -19,6 +19,10 @@ import (
 const (
 	concurrentUpdates = 100
 	updateIterations  = 100
+
+	oneLevelKey = "namespace.key"
+	twoLevelKey = "namespace.key.subkey"
+	anotherKey  = "another.key"
 )
 
 var _ = Describe("Nats KV Bucket", Ordered, func() {
@@ -34,6 +38,9 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 		bucket = lo.Must(kv.CreateBucket(ctx, "test", 0))
 
 		lo.Must(bucket.Create(ctx, "key", []byte("some - value")))
+		lo.Must(bucket.Create(ctx, oneLevelKey, []byte("some - value")))
+		lo.Must(bucket.Create(ctx, twoLevelKey, []byte("some - value")))
+		lo.Must(bucket.Create(ctx, anotherKey, []byte("some - value")))
 	})
 
 	AfterEach(func(ctx SpecContext) {
@@ -59,13 +66,59 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 		})
 	})
 
+	Describe("Keys", func() {
+		Context("when no filters passed", func() {
+			It("returns all keys in the bucket", func(ctx SpecContext) {
+				keys, err := bucket.Keys(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(keys).To(ConsistOf([]string{
+					"key",
+					oneLevelKey,
+					twoLevelKey,
+					anotherKey,
+				}))
+			})
+		})
+
+		Context("when a filter is passed", func() {
+			It("returns all keys in the bucket filtered by specified filters", func(ctx SpecContext) {
+				keys, err := bucket.Keys(ctx, "namespace.>")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(keys).To(ConsistOf([]string{
+					oneLevelKey,
+					twoLevelKey,
+				}))
+			})
+		})
+	})
+
+	Describe("Count", func() {
+		Context("when no filters passed", func() {
+			It("returns all keys in the bucket", func(ctx SpecContext) {
+				count, err := bucket.Count(ctx)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(count).To(Equal(int64(4)))
+			})
+		})
+
+		Context("when a filter is passed", func() {
+			It("returns all keys in the bucket filtered by specified filters", func(ctx SpecContext) {
+				count, err := bucket.Count(ctx, "namespace.>")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(count).To(Equal(int64(2)))
+			})
+		})
+	})
+
+	Describe("Count", func() {})
+
 	Describe("All", func() {
 		Context("when no filters passed", func() {
 			It("returns all values in the bucket", func(ctx SpecContext) {
 				list, err := bucket.All(ctx)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(list).To(HaveLen(1))
+				Expect(list).To(HaveLen(4))
 				Expect(list[0].Key).To(Equal("key"))
 				Expect(list[0].Value).To(Equal([]byte("some - value")))
 			})
@@ -83,16 +136,6 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 		})
 
 		Context("when a wildcards are used", func() {
-			oneLevelKey := "namespace.key"
-			twoLevelKey := "namespace.key.subkey"
-			anotherKey := "another.key"
-
-			BeforeEach(func(ctx SpecContext) {
-				lo.Must(bucket.Create(ctx, oneLevelKey, []byte("some - value")))
-				lo.Must(bucket.Create(ctx, twoLevelKey, []byte("some - value")))
-				lo.Must(bucket.Create(ctx, anotherKey, []byte("some - value")))
-			})
-
 			Context("when * is used", func() {
 				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
 					list, err := bucket.All(ctx, "namespace.*")
