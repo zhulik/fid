@@ -19,4 +19,8 @@ func Register() {
 	do.Provide(nil, func(injector *do.Injector) (core.FunctionsRepo, error) {
 		return docker.NewFunctionsRepo(injector)
 	})
+
+	do.Provide(nil, func(injector *do.Injector) (core.InstancesRepo, error) {
+		return docker.NewInstancesRepo(injector)
+	})
 }

@@ -49,6 +49,15 @@ type FunctionsRepo interface {
 	Delete(ctx context.Context, name string) error
 }
 
+type InstancesRepo interface {
+	ServiceDependency
+
+	Upsert(ctx context.Context, function FunctionsInstance) error
+	Get(ctx context.Context, id string) (FunctionsInstance, error)
+	List(ctx context.Context, functionName string) ([]FunctionsInstance, error)
+	Delete(ctx context.Context, id string) error
+}
+
 type FunctionDefinition interface {
 	Name() string
 
@@ -58,6 +67,10 @@ type FunctionDefinition interface {
 	ScalingConfig() ScalingConfig
 
 	Env() map[string]string
+}
+
+type FunctionsInstance interface {
+	Function() FunctionDefinition
 }
 
 type Subscription interface {
