@@ -70,6 +70,8 @@ type FunctionDefinition interface {
 }
 
 type FunctionsInstance interface {
+	ID() string
+	LastExecuted() time.Time
 	Function() FunctionDefinition
 }
 
