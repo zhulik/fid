@@ -10,6 +10,8 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
+// Key structure "<function-name>.<instance-uuid>"
+
 type InstancesRepo struct {
 	logger logrus.FieldLogger
 	bucket core.KVBucket

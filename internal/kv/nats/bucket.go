@@ -7,11 +7,30 @@ import (
 	"strconv"
 
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
 )
 
 type Bucket struct {
 	bucket jetstream.KeyValue
+}
+
+func (b Bucket) Keys(ctx context.Context) ([]string, error) {
+	lister, err := b.bucket.ListKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list keys: %w", err)
+	}
+
+	return lo.ChannelToSlice(lister.Keys()), nil
+}
+
+func (b Bucket) KeysFiltered(ctx context.Context, filters ...string) ([]string, error) {
+	lister, err := b.bucket.ListKeysFiltered(ctx, filters...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list keys: %w", err)
+	}
+
+	return lo.ChannelToSlice(lister.Keys()), nil
 }
 
 func (b Bucket) All(ctx context.Context) ([]core.KVEntry, error) {

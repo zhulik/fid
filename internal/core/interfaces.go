@@ -112,8 +112,11 @@ type Message interface {
 	Nak() error
 }
 
-type KVBucket interface {
+type KVBucket interface { //nolint:interfacebloat
 	Name() string
+
+	Keys(ctx context.Context) ([]string, error)
+	KeysFiltered(ctx context.Context, filters ...string) ([]string, error)
 
 	All(ctx context.Context) ([]KVEntry, error)
 	AllFiltered(ctx context.Context, filters ...string) ([]KVEntry, error)
