@@ -15,16 +15,22 @@ type Bucket struct {
 	bucket jetstream.KeyValue
 }
 
-func (b Bucket) Keys(ctx context.Context) ([]string, error) {
-	lister, err := b.bucket.ListKeys(ctx)
+func (b Bucket) Count(ctx context.Context, filters ...string) (int64, error) {
+	lister, err := b.bucket.ListKeysFiltered(ctx, filters...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list keys: %w", err)
+		return 0, fmt.Errorf("failed to list keys: %w", err)
 	}
 
-	return lo.ChannelToSlice(lister.Keys()), nil
+	var count int64
+
+	for range lister.Keys() {
+		count++
+	}
+
+	return count, nil
 }
 
-func (b Bucket) KeysFiltered(ctx context.Context, filters ...string) ([]string, error) {
+func (b Bucket) Keys(ctx context.Context, filters ...string) ([]string, error) {
 	lister, err := b.bucket.ListKeysFiltered(ctx, filters...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)
@@ -33,16 +39,7 @@ func (b Bucket) KeysFiltered(ctx context.Context, filters ...string) ([]string, 
 	return lo.ChannelToSlice(lister.Keys()), nil
 }
 
-func (b Bucket) All(ctx context.Context) ([]core.KVEntry, error) {
-	lister, err := b.bucket.ListKeys(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list keys: %w", err)
-	}
-
-	return b.listKeys(ctx, lister)
-}
-
-func (b Bucket) AllFiltered(ctx context.Context, filters ...string) ([]core.KVEntry, error) {
+func (b Bucket) All(ctx context.Context, filters ...string) ([]core.KVEntry, error) {
 	lister, err := b.bucket.ListKeysFiltered(ctx, filters...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list keys: %w", err)

@@ -60,7 +60,7 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 	})
 
 	Describe("All", func() {
-		Context("when key exists", func() {
+		Context("when no filters passed", func() {
 			It("returns all values in the bucket", func(ctx SpecContext) {
 				list, err := bucket.All(ctx)
 
@@ -70,12 +70,10 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 				Expect(list[0].Value).To(Equal([]byte("some - value")))
 			})
 		})
-	})
 
-	Describe("AllFiltered", func() {
 		Context("when a full key specified", func() {
 			It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
-				list, err := bucket.AllFiltered(ctx, "key")
+				list, err := bucket.All(ctx, "key")
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(list).To(HaveLen(1))
@@ -97,7 +95,7 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 
 			Context("when * is used", func() {
 				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
-					list, err := bucket.AllFiltered(ctx, "namespace.*")
+					list, err := bucket.All(ctx, "namespace.*")
 
 					Expect(err).ToNot(HaveOccurred())
 					Expect(list).To(HaveLen(1))
@@ -108,7 +106,7 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 
 			Context("when > is used", func() {
 				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
-					list, err := bucket.AllFiltered(ctx, "namespace.>")
+					list, err := bucket.All(ctx, "namespace.>")
 
 					Expect(err).ToNot(HaveOccurred())
 					Expect(list).To(HaveLen(2))
@@ -122,7 +120,7 @@ var _ = Describe("Nats KV Bucket", Ordered, func() {
 
 			Context("when multiple filters are used", func() {
 				It("returns all values in the bucket filtered by specified filters", func(ctx SpecContext) {
-					list, err := bucket.AllFiltered(ctx, "namespace.>", "another.*")
+					list, err := bucket.All(ctx, "namespace.>", "another.*")
 
 					Expect(err).ToNot(HaveOccurred())
 					Expect(list).To(HaveLen(3))

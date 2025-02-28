@@ -115,11 +115,17 @@ type Message interface {
 type KVBucket interface { //nolint:interfacebloat
 	Name() string
 
-	Keys(ctx context.Context) ([]string, error)
-	KeysFiltered(ctx context.Context, filters ...string) ([]string, error)
+	// Keys returns a list of keys in the bucket. Expensive if the bucket is big.
+	// When an empty filters list is passed - returns all keys.
+	Keys(ctx context.Context, filters ...string) ([]string, error)
 
-	All(ctx context.Context) ([]KVEntry, error)
-	AllFiltered(ctx context.Context, filters ...string) ([]KVEntry, error)
+	// Count returns a count of keys in the bucket. Expensive if the bucket is big.
+	// When an empty filters list is passed - counts all keys.
+	Count(ctx context.Context, filters ...string) (int64, error)
+
+	// All returns a list of values in the bucket. Expensive if the bucket is big.
+	// When an empty filters list is passed - returns all entries.
+	All(ctx context.Context, filters ...string) ([]KVEntry, error)
 
 	Get(ctx context.Context, key string) ([]byte, error)
 	Create(ctx context.Context, key string, value []byte) (uint64, error)
