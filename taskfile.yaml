@@ -11,16 +11,22 @@ tasks:
       - task: test
 
   lint_fix:
+    deps:
+      - mocks
     cmds:
       - go run github.com/golangci/golangci-lint/cmd/golangci-lint run --fix
 
   lint:
+    deps:
+      - mocks
     cmds:
       - go run github.com/golangci/golangci-lint/cmd/golangci-lint run
 
   test:
+    deps:
+      - env
+      - mocks
     cmds:
-      - task: env
       - go run github.com/onsi/ginkgo/v2/ginkgo run -r -race
 
   build:
@@ -42,3 +48,7 @@ tasks:
   env:
     cmds:
       - docker compose up -d nats
+
+  mocks:
+    cmds:
+      - go tool github.com/vektra/mockery/v2

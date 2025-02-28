@@ -1,3 +1,4 @@
 bin/
 coverprofile.out
 *.html
+testhelpers/mocks/*

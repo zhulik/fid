@@ -1,0 +1,12 @@
+with-expecter: True
+disable-version-string: True
+resolve-type-alias: False
+issue-845-fix: True
+
+packages:
+  github.com/zhulik/fid/internal/core:
+    interfaces:
+      FunctionsRepo:
+
+dir: testhelpers/mocks
+outpkg: mocks
