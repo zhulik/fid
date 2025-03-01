@@ -30,7 +30,7 @@ var (
 	}
 )
 
-var _ = Describe("InstancesRepo", Ordered, func() {
+var _ = Describe("InstancesRepo", Serial, func() {
 	var injector *do.Injector
 	var repo *docker.InstancesRepo
 	var functionsRepoMock *mocks.MockFunctionsRepo

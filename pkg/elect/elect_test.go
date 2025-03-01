@@ -73,13 +73,13 @@ func (n *Nomenee) Run() {
 	}
 }
 
-var _ = Describe("Elect", Ordered, func() {
+var _ = Describe("Elect", Serial, func() {
 	Describe(".Start", func() {
 		var jsKV jetstream.KeyValue
 		var kv elect.JetStreamKV //nolint:varnamelen
 		var elector *elect.Elect
 
-		BeforeAll(func(sctx SpecContext) {
+		BeforeEach(func(sctx SpecContext) {
 			jsKV = lo.Must(js.CreateKeyValue(sctx, jetstream.KeyValueConfig{
 				Bucket: bucketName,
 				TTL:    bucketTTL,
@@ -88,18 +88,12 @@ var _ = Describe("Elect", Ordered, func() {
 			kv = elect.JetStreamKV{
 				KV: jsKV,
 			}
-		})
 
-		AfterAll(func(sctx SpecContext) {
-			lo.Must0(js.DeleteKeyValue(sctx, bucketName))
-		})
-
-		BeforeEach(func() {
 			elector = lo.Must(elect.New(kv, bucketTTL, leaderKey, instanceID))
 		})
 
 		AfterEach(func(sctx SpecContext) {
-			lo.Must0(jsKV.Purge(sctx, leaderKey))
+			lo.Must0(js.DeleteKeyValue(sctx, bucketName))
 		})
 
 		Describe("Run", func() {

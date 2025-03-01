@@ -9,10 +9,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/samber/do"
 	"github.com/samber/lo"
-	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/kv/nats"
-	natsPubSub "github.com/zhulik/fid/internal/pubsub/nats"
+	"github.com/zhulik/fid/testhelpers"
 	"go.uber.org/atomic"
 )
 
@@ -25,26 +24,24 @@ const (
 	anotherKey  = "another.key"
 )
 
-var _ = Describe("Nats KV Bucket", Ordered, func() {
-	injector := do.New()
+var _ = Describe("Nats KV Bucket", Serial, func() {
+	var injector *do.Injector
+	var kv core.KV
 
-	do.ProvideValue[core.Config](injector, config.Config{})
-	do.Provide(injector, natsPubSub.NewClient)
-
-	kv := lo.Must(nats.NewKV(injector))
 	var bucket core.KVBucket
 
 	BeforeEach(func(ctx SpecContext) {
+		injector = testhelpers.NewInjector()
+
+		kv = lo.Must(nats.NewKV(injector))
+
 		bucket = lo.Must(kv.CreateBucket(ctx, "test", 0))
+		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, "test") }) //nolint:errcheck
 
 		lo.Must(bucket.Create(ctx, "key", []byte("some - value")))
 		lo.Must(bucket.Create(ctx, oneLevelKey, []byte("some - value")))
 		lo.Must(bucket.Create(ctx, twoLevelKey, []byte("some - value")))
 		lo.Must(bucket.Create(ctx, anotherKey, []byte("some - value")))
-	})
-
-	AfterEach(func(ctx SpecContext) {
-		kv.DeleteBucket(ctx, "test") //nolint:errcheck
 	})
 
 	Describe("Get", func() {

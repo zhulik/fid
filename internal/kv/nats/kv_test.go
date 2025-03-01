@@ -5,26 +5,22 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/samber/do"
 	"github.com/samber/lo"
-	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/kv/nats"
-	natsPubSub "github.com/zhulik/fid/internal/pubsub/nats"
+	"github.com/zhulik/fid/testhelpers"
 )
 
-var _ = Describe("Nats KV", Ordered, func() {
-	injector := do.New()
-
-	do.ProvideValue[core.Config](injector, config.Config{})
-	do.Provide(injector, natsPubSub.NewClient)
-
-	kv := lo.Must(nats.NewKV(injector))
+var _ = Describe("Nats KV", Serial, func() {
+	var injector *do.Injector
+	var kv core.KV
 
 	BeforeEach(func(ctx SpecContext) {
-		lo.Must(kv.CreateBucket(ctx, "test", 0))
-	})
+		injector = testhelpers.NewInjector()
 
-	AfterEach(func(ctx SpecContext) {
-		kv.DeleteBucket(ctx, "test") //nolint:errcheck
+		kv = lo.Must(nats.NewKV(injector))
+
+		lo.Must(kv.CreateBucket(ctx, "test", 0))
+		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, "test") }) //nolint:errcheck
 	})
 
 	Describe("CreateBucket", func() {
