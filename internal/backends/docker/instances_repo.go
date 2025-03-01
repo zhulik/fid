@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -73,8 +74,12 @@ func (r InstancesRepo) Upsert(ctx context.Context, instance core.FunctionsInstan
 }
 
 func (r InstancesRepo) Get(ctx context.Context, id string) (core.FunctionsInstance, error) {
-	list, err := r.bucket.All(ctx)
+	list, err := r.bucket.All(ctx, key("*", id))
 	if err != nil {
+		if errors.Is(err, core.ErrKeyNotFound) {
+			return nil, core.ErrInstanceNotFound
+		}
+
 		return nil, fmt.Errorf("failed to get instance: %w", err)
 	}
 
@@ -102,6 +107,10 @@ func (r InstancesRepo) Delete(ctx context.Context, id string) error {
 
 	err = r.bucket.Delete(ctx, key(instance.Function().Name(), id))
 	if err != nil {
+		if errors.Is(err, core.ErrKeyNotFound) {
+			return core.ErrInstanceNotFound
+		}
+
 		return fmt.Errorf("failed to delete instance: %w", err)
 	}
 
