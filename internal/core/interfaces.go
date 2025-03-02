@@ -31,9 +31,6 @@ type ContainerBackend interface {
 	Register(ctx context.Context, function FunctionDefinition) error
 	Deregister(ctx context.Context, function FunctionDefinition) error
 
-	Function(ctx context.Context, name string) (FunctionDefinition, error)
-	Functions(ctx context.Context) ([]FunctionDefinition, error)
-
 	StartGateway(ctx context.Context) (string, error)
 	StartInfoServer(ctx context.Context) (string, error)
 

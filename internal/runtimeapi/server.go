@@ -16,7 +16,6 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	backend  core.ContainerBackend
 	pubSuber core.PubSuber
 }
 
@@ -32,7 +31,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		"component":    "runtimeapi.Server",
 		"functionName": config.FunctionName(),
 	})
-	backend := do.MustInvoke[core.ContainerBackend](injector)
+	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
@@ -40,13 +39,12 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	server.Router.Use(middlewares.FunctionMiddleware(backend, func(c *gin.Context) string {
+	server.Router.Use(middlewares.FunctionMiddleware(functionsRepo, func(c *gin.Context) string {
 		return config.FunctionName()
 	}))
 
 	srv := &Server{
 		Server:   server,
-		backend:  backend,
 		pubSuber: pubSuber,
 	}
 

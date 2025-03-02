@@ -21,7 +21,7 @@ type Server struct {
 func NewServer(injector *do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "scaler.Server")
-	backend := do.MustInvoke[core.ContainerBackend](injector)
+	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
 	if err != nil {
@@ -32,7 +32,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	function, err := backend.Function(ctx, config.FunctionName())
+	function, err := functionsRepo.Get(ctx, config.FunctionName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get function: %w", err)
 	}

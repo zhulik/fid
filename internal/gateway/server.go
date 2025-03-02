@@ -23,7 +23,7 @@ type Server struct {
 func NewServer(injector *do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "gateway.Server")
-	backend := do.MustInvoke[core.ContainerBackend](injector)
+	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 	invoker := do.MustInvoke[core.Invoker](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
@@ -31,7 +31,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	server.Router.Use(middlewares.FunctionMiddleware(backend, func(c *gin.Context) string {
+	server.Router.Use(middlewares.FunctionMiddleware(functionsRepo, func(c *gin.Context) string {
 		return c.Param("functionName")
 	}))
 

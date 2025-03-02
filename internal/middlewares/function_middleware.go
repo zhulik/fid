@@ -8,7 +8,7 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
-func FunctionMiddleware(backend core.ContainerBackend, getName func(c *gin.Context) string) gin.HandlerFunc {
+func FunctionMiddleware(functionsRepo core.FunctionsRepo, getName func(c *gin.Context) string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 		functionName := getName(c)
@@ -20,7 +20,7 @@ func FunctionMiddleware(backend core.ContainerBackend, getName func(c *gin.Conte
 			return
 		}
 
-		function, err := backend.Function(ctx, functionName)
+		function, err := functionsRepo.Get(ctx, functionName)
 		if err != nil {
 			if errors.Is(err, core.ErrFunctionNotFound) {
 				c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})

@@ -112,8 +112,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 	Describe("List", func() {
 		Context("when no instances exist", func() {
 			It("returns an empty list", func(ctx SpecContext) {
-				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
 				instances, err := repo.List(ctx, function)
 
 				Expect(err).ToNot(HaveOccurred())
@@ -127,8 +125,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 			})
 
 			It("returns instances", func(ctx SpecContext) {
-				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
 				instances, err := repo.List(ctx, function)
 
 				Expect(err).ToNot(HaveOccurred())
@@ -143,8 +139,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 	Describe("Count", func() {
 		Context("when no instances exist", func() {
 			It("returns 0", func(ctx SpecContext) {
-				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
 				count, err := repo.Count(ctx, function)
 
 				Expect(err).ToNot(HaveOccurred())
@@ -158,8 +152,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 			})
 
 			It("returns instances", func(ctx SpecContext) {
-				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
 				count, err := repo.Count(ctx, function)
 
 				Expect(err).ToNot(HaveOccurred())

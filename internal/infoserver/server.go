@@ -16,7 +16,8 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	backend core.ContainerBackend
+	backend       core.ContainerBackend
+	functionsRepo core.FunctionsRepo
 }
 
 // NewServer creates a new Server instance.
@@ -24,6 +25,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "infoserver.Server")
 	backend := do.MustInvoke[core.ContainerBackend](injector)
+	functionsrepo := do.MustInvoke[core.FunctionsRepo](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
 	if err != nil {
@@ -31,8 +33,9 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	srv := &Server{
-		Server:  server,
-		backend: backend,
+		Server:        server,
+		backend:       backend,
+		functionsRepo: functionsrepo,
 	}
 
 	srv.Router.GET("/backend", srv.BackendHandler)
@@ -52,7 +55,7 @@ func (s *Server) BackendHandler(c *gin.Context) {
 }
 
 func (s *Server) FunctionsHandler(c *gin.Context) {
-	functions, err := s.backend.Functions(c.Request.Context())
+	functions, err := s.functionsRepo.List(c.Request.Context())
 	if err != nil {
 		c.Error(err)
 	}
@@ -65,7 +68,7 @@ func (s *Server) FunctionsHandler(c *gin.Context) {
 }
 
 func (s *Server) FunctionHandler(c *gin.Context) {
-	function, err := s.backend.Function(c.Request.Context(), c.Param("functionName"))
+	function, err := s.functionsRepo.Get(c.Request.Context(), c.Param("functionName"))
 	if err != nil {
 		if errors.Is(err, core.ErrFunctionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})

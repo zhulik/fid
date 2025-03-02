@@ -19,11 +19,12 @@ const (
 )
 
 var (
-	logger   logrus.FieldLogger    //nolint:gochecknoglobals
-	config   core.Config           //nolint:gochecknoglobals
-	backend  core.ContainerBackend //nolint:gochecknoglobals
-	pubSuber core.PubSuber         //nolint:gochecknoglobals
-	kv       core.KV               //nolint:gochecknoglobals
+	logger        logrus.FieldLogger    //nolint:gochecknoglobals
+	config        core.Config           //nolint:gochecknoglobals
+	backend       core.ContainerBackend //nolint:gochecknoglobals
+	pubSuber      core.PubSuber         //nolint:gochecknoglobals
+	kv            core.KV               //nolint:gochecknoglobals
+	functionsRepo core.FunctionsRepo    //nolint:gochecknoglobals
 )
 
 func init() { //nolint:gochecknoinits
@@ -31,6 +32,7 @@ func init() { //nolint:gochecknoinits
 	logger = do.MustInvoke[logrus.FieldLogger](nil).WithField("component", "main")
 	pubSuber = do.MustInvoke[core.PubSuber](nil)
 	kv = do.MustInvoke[core.KV](nil)
+	functionsRepo = do.MustInvoke[core.FunctionsRepo](nil)
 }
 
 func main() {
@@ -119,7 +121,7 @@ func registerFunctions(ctx context.Context, functions map[string]*fidfile.Functi
 		}
 	}
 
-	templates, err := backend.Functions(ctx)
+	templates, err := functionsRepo.List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list functions: %w", err)
 	}

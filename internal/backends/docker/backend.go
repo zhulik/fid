@@ -143,14 +143,6 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) Function(ctx context.Context, name string) (core.FunctionDefinition, error) {
-	return b.functionsRepo.Get(ctx, name) //nolint:wrapcheck
-}
-
-func (b Backend) Functions(ctx context.Context) ([]core.FunctionDefinition, error) {
-	return b.functionsRepo.List(ctx) //nolint:wrapcheck
-}
-
 func (b Backend) HealthCheck() error {
 	b.logger.Debug("ContainerBackend health check.")
 
