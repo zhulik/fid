@@ -20,8 +20,9 @@ type Scaler struct {
 	function core.FunctionDefinition
 	logger   logrus.FieldLogger
 
-	backend  core.ContainerBackend
-	pubSuber core.PubSuber
+	backend       core.ContainerBackend
+	pubSuber      core.PubSuber
+	instancesRepo core.InstancesRepo
 
 	elector *elect.Elect
 }
@@ -38,6 +39,7 @@ func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler
 	backend := do.MustInvoke[core.ContainerBackend](injector)
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 	kv := do.MustInvoke[core.KV](injector)
+	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -59,11 +61,12 @@ func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler
 	logger.Infof("Scaler created")
 
 	return &Scaler{
-		function: function,
-		logger:   logger,
-		backend:  backend,
-		pubSuber: pubSuber,
-		elector:  elector,
+		function:      function,
+		logger:        logger,
+		backend:       backend,
+		pubSuber:      pubSuber,
+		elector:       elector,
+		instancesRepo: instancesRepo,
 	}, nil
 }
 
