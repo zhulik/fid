@@ -27,7 +27,6 @@ const (
 var _ = Describe("Nats KV Bucket", Serial, func() {
 	var injector *do.Injector
 	var kv core.KV
-
 	var bucket core.KVBucket
 
 	BeforeEach(func(ctx SpecContext) {
@@ -67,6 +66,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 		Context("when no filters passed", func() {
 			It("returns all keys in the bucket", func(ctx SpecContext) {
 				keys, err := bucket.Keys(ctx)
+
 				Expect(err).ToNot(HaveOccurred())
 				Expect(keys).To(ConsistOf([]string{
 					"key",
@@ -80,6 +80,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 		Context("when a filter is passed", func() {
 			It("returns all keys in the bucket filtered by specified filters", func(ctx SpecContext) {
 				keys, err := bucket.Keys(ctx, "namespace.>")
+
 				Expect(err).ToNot(HaveOccurred())
 				Expect(keys).To(ConsistOf([]string{
 					oneLevelKey,
@@ -93,6 +94,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 		Context("when no filters passed", func() {
 			It("returns all keys in the bucket", func(ctx SpecContext) {
 				count, err := bucket.Count(ctx)
+
 				Expect(err).ToNot(HaveOccurred())
 				Expect(count).To(Equal(int64(4)))
 			})
@@ -101,6 +103,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 		Context("when a filter is passed", func() {
 			It("returns all keys in the bucket filtered by specified filters", func(ctx SpecContext) {
 				count, err := bucket.Count(ctx, "namespace.>")
+
 				Expect(err).ToNot(HaveOccurred())
 				Expect(count).To(Equal(int64(2)))
 			})
@@ -183,6 +186,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 				err := bucket.Put(ctx, "key", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
+
 				value, err := bucket.Get(ctx, "key")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -195,6 +199,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 				err := bucket.Put(ctx, "key2", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
+
 				value, err := bucket.Get(ctx, "key2")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -217,6 +222,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 				_, err := bucket.Create(ctx, "key2", []byte("new - value"))
 
 				Expect(err).ToNot(HaveOccurred())
+
 				value, err := bucket.Get(ctx, "key2")
 
 				Expect(err).ToNot(HaveOccurred())
@@ -229,10 +235,9 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 		Context("when key exists", func() {
 			It("deletes the key", func(ctx SpecContext) {
 				err := bucket.Delete(ctx, "key")
-
 				Expect(err).ToNot(HaveOccurred())
-				_, err = bucket.Get(ctx, "key")
 
+				_, err = bucket.Get(ctx, "key")
 				Expect(err).To(MatchError(core.ErrKeyNotFound))
 			})
 		})

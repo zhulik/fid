@@ -49,7 +49,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		do.Provide(injector, func(injector *do.Injector) (core.KV, error) {
 			return kv, nil
 		})
-
 		do.Provide(injector, func(injector *do.Injector) (core.FunctionsRepo, error) {
 			return functionsRepoMock, nil
 		})
@@ -60,11 +59,13 @@ var _ = Describe("InstancesRepo", Serial, func() {
 	Describe("Upsert", func() {
 		It("creates a new instance", func(ctx SpecContext) {
 			err := repo.Upsert(ctx, functionInstance)
+
 			Expect(err).ToNot(HaveOccurred())
 
 			functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
 			_, err = repo.Get(ctx, instanceID)
+
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
@@ -82,6 +83,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 					functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
 
 					_, err := repo.Get(ctx, instanceID)
+
 					Expect(err).To(MatchError(core.ErrFunctionNotFound))
 				})
 			})
@@ -91,8 +93,8 @@ var _ = Describe("InstancesRepo", Serial, func() {
 					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
 					instance, err := repo.Get(ctx, instanceID)
-					Expect(err).ToNot(HaveOccurred())
 
+					Expect(err).ToNot(HaveOccurred())
 					Expect(instance.ID()).To(Equal(instanceID))
 					Expect(instance.Function()).To(Equal(function))
 					Expect(instance.LastExecuted().UnixNano()).To(Equal(functionInstance.LastExecuted().UnixNano()))
@@ -103,6 +105,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		Context("when instance does not exist", func() {
 			It("returns an error", func(ctx SpecContext) {
 				_, err := repo.Get(ctx, instanceID)
+
 				Expect(err).To(MatchError(core.ErrInstanceNotFound))
 			})
 		})
@@ -114,6 +117,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 				functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
 
 				_, err := repo.List(ctx, functionName)
+
 				Expect(err).To(MatchError(core.ErrFunctionNotFound))
 			})
 		})
@@ -124,6 +128,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
 					instances, err := repo.List(ctx, functionName)
+
 					Expect(err).ToNot(HaveOccurred())
 					Expect(instances).To(BeEmpty())
 				})
@@ -138,8 +143,8 @@ var _ = Describe("InstancesRepo", Serial, func() {
 					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
 					instances, err := repo.List(ctx, functionName)
-					Expect(err).ToNot(HaveOccurred())
 
+					Expect(err).ToNot(HaveOccurred())
 					Expect(instances).To(HaveLen(1))
 					Expect(instances[0].ID()).To(Equal(instanceID))
 					Expect(instances[0].Function()).To(Equal(function))
@@ -153,6 +158,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		Context("when instance does not exist", func() {
 			It("returns an error", func(ctx SpecContext) {
 				err := repo.Delete(ctx, instanceID)
+
 				Expect(err).To(MatchError(core.ErrInstanceNotFound))
 			})
 		})
@@ -167,6 +173,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 					functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
 
 					err := repo.Delete(ctx, instanceID)
+
 					Expect(err).To(MatchError(core.ErrFunctionNotFound))
 				})
 			})
@@ -176,9 +183,11 @@ var _ = Describe("InstancesRepo", Serial, func() {
 					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
 					err := repo.Delete(ctx, instanceID)
+
 					Expect(err).ToNot(HaveOccurred())
 
 					_, err = repo.Get(ctx, instanceID)
+
 					Expect(err).To(MatchError(core.ErrInstanceNotFound))
 				})
 			})

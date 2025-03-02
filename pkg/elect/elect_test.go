@@ -99,7 +99,6 @@ var _ = Describe("Elect", Serial, func() {
 				Context("when the value does not exist", func() {
 					It("returns a channel with won status", func(sctx SpecContext) {
 						outcomeCh := elector.Start()
-
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Won))
@@ -113,7 +112,6 @@ var _ = Describe("Elect", Serial, func() {
 
 					It("keeps the record updated", func(sctx SpecContext) {
 						outcomeCh := elector.Start()
-
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Won))
@@ -124,6 +122,7 @@ var _ = Describe("Elect", Serial, func() {
 						time.Sleep(bucketTTL)
 
 						entry = lo.Must(jsKV.Get(sctx, leaderKey))
+
 						Expect(entry.Revision()).To(Equal(revision + 1))
 
 						elector.Stop()
@@ -135,7 +134,6 @@ var _ = Describe("Elect", Serial, func() {
 
 					It("becomes a looser if the value changes", func(sctx SpecContext) {
 						outcomeCh := elector.Start()
-
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Won))
@@ -161,7 +159,6 @@ var _ = Describe("Elect", Serial, func() {
 
 					It("returns a channel with lost status", func(sctx SpecContext) {
 						outcomeCh := elector.Start()
-
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Lost))
@@ -175,7 +172,6 @@ var _ = Describe("Elect", Serial, func() {
 
 					It("becomes a leader if the value is deleted", func(sctx SpecContext) {
 						outcomeCh := elector.Start()
-
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Lost))

@@ -2,3 +2,4 @@ bin/
 coverprofile.out
 *.html
 testhelpers/mocks/*
+*_test.go

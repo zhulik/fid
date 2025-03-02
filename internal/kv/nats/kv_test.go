@@ -46,6 +46,7 @@ var _ = Describe("Nats KV", Serial, func() {
 		Context("when bucket exists", func() {
 			It("deletes the bucket", func(ctx SpecContext) {
 				err := kv.DeleteBucket(ctx, "test")
+
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -53,6 +54,7 @@ var _ = Describe("Nats KV", Serial, func() {
 		Context("when bucket does not exists", func() {
 			It("returns an error", func(ctx SpecContext) {
 				err := kv.DeleteBucket(ctx, "test2")
+
 				Expect(err).To(MatchError(core.ErrBucketNotFound))
 			})
 		})
@@ -62,6 +64,7 @@ var _ = Describe("Nats KV", Serial, func() {
 		Context("when bucket exists", func() {
 			It("returns a bucket", func(ctx SpecContext) {
 				bucket, err := kv.Bucket(ctx, "test")
+
 				Expect(err).ToNot(HaveOccurred())
 				Expect(bucket).ToNot(BeNil())
 			})
@@ -70,6 +73,7 @@ var _ = Describe("Nats KV", Serial, func() {
 		Context("when bucket does not exists", func() {
 			It("returns an error", func(ctx SpecContext) {
 				_, err := kv.Bucket(ctx, "test2")
+
 				Expect(err).To(MatchError(core.ErrBucketNotFound))
 			})
 		})
