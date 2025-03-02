@@ -56,6 +56,7 @@ type InstancesRepo interface {
 	Get(ctx context.Context, id string) (FunctionsInstance, error)
 	List(ctx context.Context, functionName string) ([]FunctionsInstance, error)
 	Delete(ctx context.Context, id string) error
+	Count(ctx context.Context, functionName string) (int64, error)
 }
 
 type FunctionDefinition interface {

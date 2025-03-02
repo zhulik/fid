@@ -152,6 +152,46 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		})
 	})
 
+	Describe("Count", func() {
+		Context("when function does not exist", func() {
+			It("returns an error", func(ctx SpecContext) {
+				functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
+
+				_, err := repo.Count(ctx, functionName)
+
+				Expect(err).To(MatchError(core.ErrFunctionNotFound))
+			})
+		})
+
+		Context("when function exists", func() {
+			Context("when no instances exist", func() {
+				It("returns 0", func(ctx SpecContext) {
+					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
+
+					count, err := repo.Count(ctx, functionName)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(count).To(BeZero())
+				})
+			})
+
+			Context("when instances exist", func() {
+				BeforeEach(func(ctx SpecContext) {
+					lo.Must0(repo.Upsert(ctx, functionInstance))
+				})
+
+				It("returns instances", func(ctx SpecContext) {
+					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
+
+					count, err := repo.Count(ctx, functionName)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(count).To(Equal(int64(1)))
+				})
+			})
+		})
+	})
+
 	Describe("Delete", func() {
 		Context("when instance does not exist", func() {
 			It("returns an error", func(ctx SpecContext) {

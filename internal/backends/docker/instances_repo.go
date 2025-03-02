@@ -56,6 +56,20 @@ func (r InstancesRepo) List(ctx context.Context, functionName string) ([]core.Fu
 	}), nil
 }
 
+func (r InstancesRepo) Count(ctx context.Context, functionName string) (int64, error) {
+	_, err := r.functionsRepo.Get(ctx, functionName)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get function definition: %w", err)
+	}
+
+	count, err := r.bucket.Count(ctx, key(functionName, "*"))
+	if err != nil {
+		return 0, fmt.Errorf("failed to count functions instances: %w", err)
+	}
+
+	return count, nil
+}
+
 func (r InstancesRepo) HealthCheck() error {
 	return nil
 }
