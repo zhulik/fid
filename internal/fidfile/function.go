@@ -19,6 +19,10 @@ func (f Function) Name() string {
 	return f.Name_
 }
 
+func (f Function) String() string {
+	return f.Name_
+}
+
 func (f Function) Image() string {
 	return f.Image_
 }

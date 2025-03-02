@@ -64,7 +64,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, p
 
 	i.logger.WithFields(logrus.Fields{
 		"requestID":    requestID,
-		"functionName": function.Name(),
+		"functionName": function,
 	}).Info("Invoking...")
 
 	response, err := i.pubSuber.PublishWaitResponse(ctx, responseInput)

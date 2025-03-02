@@ -32,7 +32,6 @@ func init() { //nolint:gochecknoinits
 	logger = do.MustInvoke[logrus.FieldLogger](nil).WithField("component", "main")
 	pubSuber = do.MustInvoke[core.PubSuber](nil)
 	kv = do.MustInvoke[core.KV](nil)
-	functionsRepo = do.MustInvoke[core.FunctionsRepo](nil)
 }
 
 func main() {
@@ -57,6 +56,7 @@ func main() {
 		logger.Fatalf("failed to create buckets: %v", err)
 	}
 
+	functionsRepo = do.MustInvoke[core.FunctionsRepo](nil)
 	backend = do.MustInvoke[core.ContainerBackend](nil)
 
 	_, err = startGateway(ctx)
@@ -134,7 +134,7 @@ func registerFunctions(ctx context.Context, functions map[string]*fidfile.Functi
 
 		err := backend.Deregister(ctx, template)
 		if err != nil {
-			return fmt.Errorf("failed to deregister function %s: %w", template.Name(), err)
+			return fmt.Errorf("failed to deregister function %s: %w", template, err)
 		}
 	}
 

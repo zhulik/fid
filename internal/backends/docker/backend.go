@@ -50,14 +50,14 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 // Deregister deletes function's template, scaler, forwarder(TODO) and garbage collector(TODO).
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
 	// TODO: how to cleanup running instances?
-	logger := b.logger.WithField("function", function.Name())
+	logger := b.logger.WithField("function", function)
 
 	err := b.functionsRepo.Delete(ctx, function.Name())
 	if err != nil {
 		return err //nolint:wrapcheck
 	}
 
-	err = b.docker.ContainerStop(ctx, b.scalerContainerName(function.Name()), container.StopOptions{})
+	err = b.docker.ContainerStop(ctx, b.scalerContainerName(function), container.StopOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to stop scaler: %w", err)
 	}
@@ -68,7 +68,7 @@ func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinitio
 }
 
 func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.logger.WithField("function", function.Name())
+	logger := b.logger.WithField("function", function)
 
 	containerConfig := &container.Config{
 		Image: core.ImageNameScaler,
@@ -93,7 +93,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 		},
 	}
 
-	containerName := b.scalerContainerName(function.Name())
+	containerName := b.scalerContainerName(function)
 
 	_, err := b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
@@ -116,8 +116,8 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 	return nil
 }
 
-func (b Backend) scalerContainerName(functionName string) string {
-	return functionName + "-scaler"
+func (b Backend) scalerContainerName(function core.FunctionDefinition) string {
+	return fmt.Sprintf("%s-scaler", function)
 }
 
 func (b Backend) createFunctionTemplate(ctx context.Context, function core.FunctionDefinition) error {
@@ -126,7 +126,7 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	b.logger.WithField("function", function.Name()).Info("Function template stored")
+	b.logger.WithField("function", function).Info("Function template stored")
 
 	return nil
 }
@@ -167,14 +167,14 @@ func (b Backend) Shutdown() error {
 }
 
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
-	b.logger.Infof("Creating new function pod for function %s", function.Name())
+	b.logger.Infof("Creating new function pod for function %s", function)
 
 	pod, err := CreateFunctionPod(ctx, function)
 	if err != nil {
 		return "", err
 	}
 
-	b.logger.Infof("Function pod function %s created ID_=%s", function.Name(), pod.UUID)
+	b.logger.Infof("Function pod function %s created ID_=%s", function, pod.UUID)
 
 	return pod.UUID, nil
 }

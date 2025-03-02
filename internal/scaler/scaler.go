@@ -33,7 +33,7 @@ func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler
 	config := do.MustInvoke[core.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
 		"component": "scaler.Scaler",
-		"function":  function.Name(),
+		"function":  function,
 		"electID":   electID,
 	})
 	backend := do.MustInvoke[core.ContainerBackend](injector)
@@ -53,7 +53,9 @@ func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler
 		bucket: bucket,
 	}
 
-	elector, err := elect.New(kvWrap, config.ElectionsBucketTTL(), function.Name()+"-scaler-leader", electID)
+	keyName := function.Name() + "-scaler-leader"
+
+	elector, err := elect.New(kvWrap, config.ElectionsBucketTTL(), keyName, electID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create elector: %w", err)
 	}

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/samber/do"
@@ -58,6 +59,8 @@ type InstancesRepo interface {
 }
 
 type FunctionDefinition interface {
+	fmt.Stringer
+
 	Name() string
 
 	Image() string

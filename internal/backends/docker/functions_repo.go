@@ -60,7 +60,7 @@ func (r FunctionsRepo) Upsert(ctx context.Context, function core.FunctionDefinit
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	r.logger.WithField("function", function.Name()).Info("Function template stored")
+	r.logger.WithField("function", function).Info("Function template stored")
 
 	return nil
 }

@@ -228,25 +228,25 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 }
 
 func (p PubSuber) FunctionStreamName(function core.FunctionDefinition) string {
-	return fmt.Sprintf("%s:%s", core.StreamNameInvocation, function.Name())
+	return fmt.Sprintf("%s:%s", core.StreamNameInvocation, function)
 }
 
 func (p PubSuber) ScaleSubjectName(function core.FunctionDefinition) string {
-	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, function.Name())
+	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, function)
 }
 
 func (p PubSuber) InvokeSubjectName(function core.FunctionDefinition) string {
-	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function.Name())
+	return fmt.Sprintf("%s.%s", core.InvokeSubjectBase, function)
 }
 
 func (p PubSuber) ConsumeSubjectName(function core.FunctionDefinition) string {
-	return fmt.Sprintf("%s.%s.consume", core.InvokeSubjectBase, function.Name())
+	return fmt.Sprintf("%s.%s.consume", core.InvokeSubjectBase, function)
 }
 
 func (p PubSuber) ResponseSubjectName(function core.FunctionDefinition, requestID string) string {
-	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, function.Name(), requestID)
+	return fmt.Sprintf("%s.%s.%s.response", core.ResponseSubjectBase, function, requestID)
 }
 
 func (p PubSuber) ErrorSubjectName(function core.FunctionDefinition, requestID string) string {
-	return fmt.Sprintf("%s.%s.%s.error", core.ResponseSubjectBase, function.Name(), requestID)
+	return fmt.Sprintf("%s.%s.%s.error", core.ResponseSubjectBase, function, requestID)
 }

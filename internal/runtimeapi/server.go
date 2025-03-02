@@ -62,7 +62,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
 	subject := s.pubSuber.ConsumeSubjectName(function)
 
-	logger := s.Logger.WithField("function", function.Name())
+	logger := s.Logger.WithField("function", function)
 
 	logger.Info("Function connected, waiting for events...")
 
@@ -94,7 +94,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 	subject := s.pubSuber.ResponseSubjectName(function, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
-		"function":  function.Name(),
+		"function":  function,
 		"requestID": requestID,
 		"subject":   subject,
 	})
@@ -128,7 +128,7 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	subject := s.pubSuber.ErrorSubjectName(function, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
-		"function":  function.Name(),
+		"function":  function,
 		"requestID": requestID,
 		"subject":   subject,
 	})
