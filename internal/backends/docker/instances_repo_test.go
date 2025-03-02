@@ -44,6 +44,8 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 		lo.Must(kv.CreateBucket(ctx, core.BucketNameInstances, 0))
 
+		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, core.BucketNameInstances) }) //nolint:errcheck
+
 		do.Provide(injector, func(injector *do.Injector) (core.KV, error) {
 			return kv, nil
 		})
@@ -53,10 +55,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		})
 
 		repo = lo.Must(docker.NewInstancesRepo(injector))
-	})
-
-	AfterEach(func(ctx SpecContext) {
-		kv.DeleteBucket(ctx, core.BucketNameInstances) //nolint:errcheck
 	})
 
 	Describe("Upsert", func() {

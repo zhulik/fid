@@ -85,15 +85,13 @@ var _ = Describe("Elect", Serial, func() {
 				TTL:    bucketTTL,
 			}))
 
+			DeferCleanup(func(ctx SpecContext) { lo.Must0(js.DeleteKeyValue(ctx, bucketName)) })
+
 			kv = elect.JetStreamKV{
 				KV: jsKV,
 			}
 
 			elector = lo.Must(elect.New(kv, bucketTTL, leaderKey, instanceID))
-		})
-
-		AfterEach(func(sctx SpecContext) {
-			lo.Must0(js.DeleteKeyValue(sctx, bucketName))
 		})
 
 		Describe("Run", func() {
