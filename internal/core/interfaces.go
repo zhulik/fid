@@ -54,9 +54,9 @@ type InstancesRepo interface {
 
 	Upsert(ctx context.Context, function FunctionsInstance) error
 	Get(ctx context.Context, id string) (FunctionsInstance, error)
-	List(ctx context.Context, functionName string) ([]FunctionsInstance, error)
+	List(ctx context.Context, function FunctionDefinition) ([]FunctionsInstance, error)
 	Delete(ctx context.Context, id string) error
-	Count(ctx context.Context, functionName string) (int64, error)
+	Count(ctx context.Context, function FunctionDefinition) (int64, error)
 }
 
 type FunctionDefinition interface {

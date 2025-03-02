@@ -40,29 +40,19 @@ func NewInstancesRepo(injector *do.Injector) (*InstancesRepo, error) {
 	}, nil
 }
 
-func (r InstancesRepo) List(ctx context.Context, functionName string) ([]core.FunctionsInstance, error) {
-	definition, err := r.functionsRepo.Get(ctx, functionName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get function definition: %w", err)
-	}
-
-	instances, err := r.bucket.All(ctx, key(functionName, "*"))
+func (r InstancesRepo) List(ctx context.Context, function core.FunctionDefinition) ([]core.FunctionsInstance, error) {
+	instances, err := r.bucket.All(ctx, key(function.Name(), "*"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list functions: %w", err)
 	}
 
 	return lo.Map(instances, func(item core.KVEntry, _ int) core.FunctionsInstance {
-		return NewFunctionInstance(item, definition)
+		return NewFunctionInstance(item, function)
 	}), nil
 }
 
-func (r InstancesRepo) Count(ctx context.Context, functionName string) (int64, error) {
-	_, err := r.functionsRepo.Get(ctx, functionName)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get function definition: %w", err)
-	}
-
-	count, err := r.bucket.Count(ctx, key(functionName, "*"))
+func (r InstancesRepo) Count(ctx context.Context, function core.FunctionDefinition) (int64, error) {
+	count, err := r.bucket.Count(ctx, key(function.Name(), "*"))
 	if err != nil {
 		return 0, fmt.Errorf("failed to count functions instances: %w", err)
 	}

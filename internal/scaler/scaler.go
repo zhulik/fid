@@ -225,7 +225,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 }
 
 func (s Scaler) killInstances(ctx context.Context, req core.ScalingRequest) error {
-	count, err := s.instancesRepo.Count(ctx, s.function.Name())
+	count, err := s.instancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instance count: %w", err)
 	}

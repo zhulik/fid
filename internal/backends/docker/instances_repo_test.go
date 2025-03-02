@@ -110,84 +110,60 @@ var _ = Describe("InstancesRepo", Serial, func() {
 	})
 
 	Describe("List", func() {
-		Context("when function does not exist", func() {
-			It("returns an error", func(ctx SpecContext) {
-				functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
+		Context("when no instances exist", func() {
+			It("returns an empty list", func(ctx SpecContext) {
+				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
-				_, err := repo.List(ctx, functionName)
+				instances, err := repo.List(ctx, function)
 
-				Expect(err).To(MatchError(core.ErrFunctionNotFound))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(instances).To(BeEmpty())
 			})
 		})
 
-		Context("when function exists", func() {
-			Context("when no instances exist", func() {
-				It("returns an empty list", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
-					instances, err := repo.List(ctx, functionName)
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(instances).To(BeEmpty())
-				})
+		Context("when instances exist", func() {
+			BeforeEach(func(ctx SpecContext) {
+				lo.Must0(repo.Upsert(ctx, functionInstance))
 			})
 
-			Context("when instances exist", func() {
-				BeforeEach(func(ctx SpecContext) {
-					lo.Must0(repo.Upsert(ctx, functionInstance))
-				})
+			It("returns instances", func(ctx SpecContext) {
+				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
-				It("returns instances", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
+				instances, err := repo.List(ctx, function)
 
-					instances, err := repo.List(ctx, functionName)
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(instances).To(HaveLen(1))
-					Expect(instances[0].ID()).To(Equal(instanceID))
-					Expect(instances[0].Function()).To(Equal(function))
-					Expect(instances[0].LastExecuted().UnixNano()).To(Equal(functionInstance.LastExecuted().UnixNano()))
-				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(instances).To(HaveLen(1))
+				Expect(instances[0].ID()).To(Equal(instanceID))
+				Expect(instances[0].Function()).To(Equal(function))
+				Expect(instances[0].LastExecuted().UnixNano()).To(Equal(functionInstance.LastExecuted().UnixNano()))
 			})
 		})
 	})
 
 	Describe("Count", func() {
-		Context("when function does not exist", func() {
-			It("returns an error", func(ctx SpecContext) {
-				functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
+		Context("when no instances exist", func() {
+			It("returns 0", func(ctx SpecContext) {
+				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
-				_, err := repo.Count(ctx, functionName)
+				count, err := repo.Count(ctx, function)
 
-				Expect(err).To(MatchError(core.ErrFunctionNotFound))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(count).To(BeZero())
 			})
 		})
 
-		Context("when function exists", func() {
-			Context("when no instances exist", func() {
-				It("returns 0", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
-					count, err := repo.Count(ctx, functionName)
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(count).To(BeZero())
-				})
+		Context("when instances exist", func() {
+			BeforeEach(func(ctx SpecContext) {
+				lo.Must0(repo.Upsert(ctx, functionInstance))
 			})
 
-			Context("when instances exist", func() {
-				BeforeEach(func(ctx SpecContext) {
-					lo.Must0(repo.Upsert(ctx, functionInstance))
-				})
+			It("returns instances", func(ctx SpecContext) {
+				functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
 
-				It("returns instances", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
+				count, err := repo.Count(ctx, function)
 
-					count, err := repo.Count(ctx, functionName)
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(count).To(Equal(int64(1)))
-				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(count).To(Equal(int64(1)))
 			})
 		})
 	})
