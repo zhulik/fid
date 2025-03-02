@@ -110,8 +110,6 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 		})
 	})
 
-	Describe("Count", func() {})
-
 	Describe("All", func() {
 		Context("when no filters passed", func() {
 			It("returns all values in the bucket", func(ctx SpecContext) {

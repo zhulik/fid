@@ -71,8 +71,6 @@ var _ = Describe("InstancesRepo", Serial, func() {
 	})
 
 	Describe("Get", func() {
-		Context("when instance exists", func() {})
-
 		Context("when instance exists", func() {
 			BeforeEach(func(ctx SpecContext) {
 				lo.Must0(repo.Upsert(ctx, functionInstance))
