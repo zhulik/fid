@@ -130,7 +130,7 @@ func registerFunctions(ctx context.Context, functions map[string]*fidfile.Functi
 			continue
 		}
 
-		err := backend.Deregister(ctx, template.Name())
+		err := backend.Deregister(ctx, template)
 		if err != nil {
 			return fmt.Errorf("failed to deregister function %s: %w", template.Name(), err)
 		}

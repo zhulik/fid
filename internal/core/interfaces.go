@@ -29,7 +29,8 @@ type ContainerBackend interface {
 	Info(ctx context.Context) (map[string]any, error)
 
 	Register(ctx context.Context, function FunctionDefinition) error
-	Deregister(ctx context.Context, name string) error
+	Deregister(ctx context.Context, function FunctionDefinition) error
+
 	Function(ctx context.Context, name string) (FunctionDefinition, error)
 	Functions(ctx context.Context) ([]FunctionDefinition, error)
 

@@ -48,16 +48,16 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 }
 
 // Deregister deletes function's template, scaler, forwarder(TODO) and garbage collector(TODO).
-func (b Backend) Deregister(ctx context.Context, name string) error {
+func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
 	// TODO: how to cleanup running instances?
-	logger := b.logger.WithField("function", name)
+	logger := b.logger.WithField("function", function.Name())
 
-	err := b.functionsRepo.Delete(ctx, name)
+	err := b.functionsRepo.Delete(ctx, function.Name())
 	if err != nil {
 		return err //nolint:wrapcheck
 	}
 
-	err = b.docker.ContainerStop(ctx, b.scalerContainerName(name), container.StopOptions{})
+	err = b.docker.ContainerStop(ctx, b.scalerContainerName(function.Name()), container.StopOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to stop scaler: %w", err)
 	}
