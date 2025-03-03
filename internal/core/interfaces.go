@@ -52,14 +52,14 @@ type InstancesRepo interface {
 	ServiceDependency
 
 	Add(ctx context.Context, function FunctionDefinition, id string) error
-	UpdateLastExecuted(ctx context.Context, function FunctionDefinition, id string, timestamp time.Time) error
-	UpdateBusy(ctx context.Context, function FunctionDefinition, id string, busy bool) error
-	CountIdle(ctx context.Context, function FunctionDefinition) (int64, error)
+	SetLastExecuted(ctx context.Context, function FunctionDefinition, id string, timestamp time.Time) error
+	SetBusy(ctx context.Context, function FunctionDefinition, id string, busy bool) error
+	CountIdle(ctx context.Context, function FunctionDefinition) (int, error)
 
 	Get(ctx context.Context, function FunctionDefinition, id string) (FunctionInstance, error)
 	List(ctx context.Context, function FunctionDefinition) ([]FunctionInstance, error)
 	Delete(ctx context.Context, function FunctionDefinition, id string) error
-	Count(ctx context.Context, function FunctionDefinition) (int64, error)
+	Count(ctx context.Context, function FunctionDefinition) (int, error)
 }
 
 type FunctionDefinition interface {
@@ -130,7 +130,7 @@ type KVBucket interface { //nolint:interfacebloat
 
 	// Count returns a count of keys in the bucket. Expensive if the bucket is big.
 	// When an empty filters list is passed - counts all keys.
-	Count(ctx context.Context, filters ...string) (int64, error)
+	Count(ctx context.Context, filters ...string) (int, error)
 
 	// All returns a list of values in the bucket. Expensive if the bucket is big.
 	// When an empty filters list is passed - returns all entries.

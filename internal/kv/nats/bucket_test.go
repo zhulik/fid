@@ -96,7 +96,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 				count, err := bucket.Count(ctx)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(count).To(Equal(int64(4)))
+				Expect(count).To(Equal(4))
 			})
 		})
 
@@ -105,7 +105,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 				count, err := bucket.Count(ctx, "namespace.>")
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(count).To(Equal(int64(2)))
+				Expect(count).To(Equal(2))
 			})
 		})
 	})

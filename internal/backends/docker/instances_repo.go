@@ -56,7 +56,7 @@ func (r InstancesRepo) List(ctx context.Context, function core.FunctionDefinitio
 	return instances, nil
 }
 
-func (r InstancesRepo) Count(ctx context.Context, function core.FunctionDefinition) (int64, error) {
+func (r InstancesRepo) Count(ctx context.Context, function core.FunctionDefinition) (int, error) {
 	count, err := r.bucket.Count(ctx, presenceKey(function.Name(), "*"))
 	if err != nil {
 		return 0, fmt.Errorf("failed to count functions instances: %w", err)
@@ -127,10 +127,10 @@ func (r InstancesRepo) Add(ctx context.Context, function core.FunctionDefinition
 		return fmt.Errorf("failed to create instance: %w", err)
 	}
 
-	return r.UpdateBusy(ctx, function, id, false)
+	return r.SetBusy(ctx, function, id, false)
 }
 
-func (r InstancesRepo) UpdateLastExecuted(
+func (r InstancesRepo) SetLastExecuted(
 	ctx context.Context,
 	function core.FunctionDefinition,
 	id string,
@@ -144,7 +144,7 @@ func (r InstancesRepo) UpdateLastExecuted(
 	return nil
 }
 
-func (r InstancesRepo) UpdateBusy(ctx context.Context, function core.FunctionDefinition, id string, busy bool) error {
+func (r InstancesRepo) SetBusy(ctx context.Context, function core.FunctionDefinition, id string, busy bool) error {
 	var err error
 	if busy {
 		err = r.bucket.Delete(ctx, idleKey(function.Name(), id))
@@ -159,7 +159,7 @@ func (r InstancesRepo) UpdateBusy(ctx context.Context, function core.FunctionDef
 	return nil
 }
 
-func (r InstancesRepo) CountIdle(ctx context.Context, function core.FunctionDefinition) (int64, error) {
+func (r InstancesRepo) CountIdle(ctx context.Context, function core.FunctionDefinition) (int, error) {
 	count, err := r.bucket.Count(ctx, idleKey(function.Name(), "*"))
 	if err != nil {
 		return 0, fmt.Errorf("failed to count idle instances: %w", err)

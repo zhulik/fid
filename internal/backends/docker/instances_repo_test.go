@@ -67,8 +67,8 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		})
 	})
 
-	Describe("UpdateLastExecuted", func() {
-		Describe("UpdateLastExecuted", func() {
+	Describe("SetLastExecuted", func() {
+		Describe("SetLastExecuted", func() {
 			lastExecuted := time.Now()
 
 			BeforeEach(func(ctx SpecContext) {
@@ -76,7 +76,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 			})
 
 			It("updates the LastExecuted timestamp", func(ctx SpecContext) {
-				err := repo.UpdateLastExecuted(ctx, function, instanceID, lastExecuted)
+				err := repo.SetLastExecuted(ctx, function, instanceID, lastExecuted)
 				Expect(err).ToNot(HaveOccurred())
 
 				instance, err := repo.Get(ctx, function, instanceID)
@@ -85,13 +85,13 @@ var _ = Describe("InstancesRepo", Serial, func() {
 			})
 		})
 
-		Describe("UpdateBusy", func() {
+		Describe("SetBusy", func() {
 			BeforeEach(func(ctx SpecContext) {
 				lo.Must0(repo.Add(ctx, function, instanceID))
 			})
 
 			It("updates the busy status", func(ctx SpecContext) {
-				err := repo.UpdateBusy(ctx, function, instanceID, true)
+				err := repo.SetBusy(ctx, function, instanceID, true)
 				Expect(err).ToNot(HaveOccurred())
 
 				instance, err := repo.Get(ctx, function, instanceID)
@@ -117,8 +117,8 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 				Context("when all instances are busy", func() {
 					BeforeEach(func(ctx SpecContext) {
-						lo.Must0(repo.UpdateBusy(ctx, function, instanceID, true))
-						lo.Must0(repo.UpdateBusy(ctx, function, instanceID1, true))
+						lo.Must0(repo.SetBusy(ctx, function, instanceID, true))
+						lo.Must0(repo.SetBusy(ctx, function, instanceID1, true))
 					})
 
 					It("returns the number of idle instances", func(ctx SpecContext) {
@@ -130,19 +130,19 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 				Context("when some instances are busy", func() {
 					BeforeEach(func(ctx SpecContext) {
-						lo.Must0(repo.UpdateBusy(ctx, function, instanceID, true))
+						lo.Must0(repo.SetBusy(ctx, function, instanceID, true))
 					})
 
 					It("returns the number of idle instances", func(ctx SpecContext) {
 						idle, err := repo.CountIdle(ctx, function)
 						Expect(err).ToNot(HaveOccurred())
-						Expect(idle).To(Equal(int64(1)))
+						Expect(idle).To(Equal(1))
 					})
 				})
 			})
 
 			It("updates the busy status", func(ctx SpecContext) {
-				err := repo.UpdateBusy(ctx, function, instanceID, true)
+				err := repo.SetBusy(ctx, function, instanceID, true)
 				Expect(err).ToNot(HaveOccurred())
 
 				idle, err := repo.CountIdle(ctx, function)
@@ -194,8 +194,8 @@ var _ = Describe("InstancesRepo", Serial, func() {
 				lo.Must0(repo.Add(ctx, function, instanceID))
 				lo.Must0(repo.Add(ctx, function, instanceID1))
 
-				lo.Must0(repo.UpdateBusy(ctx, function, instanceID1, true))
-				lo.Must0(repo.UpdateLastExecuted(ctx, function, instanceID1, lastExecuted))
+				lo.Must0(repo.SetBusy(ctx, function, instanceID1, true))
+				lo.Must0(repo.SetLastExecuted(ctx, function, instanceID1, lastExecuted))
 			})
 
 			It("returns instances", func(ctx SpecContext) {
@@ -237,7 +237,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 				count, err := repo.Count(ctx, function)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(count).To(Equal(int64(1)))
+				Expect(count).To(Equal(1))
 			})
 		})
 	})

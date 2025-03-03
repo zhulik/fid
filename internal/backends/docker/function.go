@@ -10,8 +10,8 @@ type Function struct {
 	Name_    string            `json:"name"`
 	Image_   string            `json:"image"`
 	Timeout_ time.Duration     `json:"timeout"`
-	MinScale int64             `json:"minScale"`
-	MaxScale int64             `json:"maxScale"`
+	MinScale int               `json:"minScale"`
+	MaxScale int               `json:"maxScale"`
 	Env_     map[string]string `json:"env"`
 }
 

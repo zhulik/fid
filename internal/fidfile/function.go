@@ -10,8 +10,8 @@ type Function struct {
 	Name_    string            `validate:"required"           yaml:"-"`
 	Image_   string            `validate:"required"           yaml:"image"`
 	Env_     map[string]string `yaml:"env"`
-	Min      int64             `validate:"gte=0,ltefield=Max" yaml:"min"`
-	Max      int64             `validate:"gte=0,gtefield=Min" yaml:"max"`
+	Min      int               `validate:"gte=0,ltefield=Max" yaml:"min"`
+	Max      int               `validate:"gte=0,gtefield=Min" yaml:"max"`
 	Timeout_ time.Duration     `validate:"required,gte=1s"    yaml:"timeout"`
 }
 

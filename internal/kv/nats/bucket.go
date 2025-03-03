@@ -15,13 +15,13 @@ type Bucket struct {
 	bucket jetstream.KeyValue
 }
 
-func (b Bucket) Count(ctx context.Context, filters ...string) (int64, error) {
+func (b Bucket) Count(ctx context.Context, filters ...string) (int, error) {
 	lister, err := b.bucket.ListKeysFiltered(ctx, filters...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to list keys: %w", err)
 	}
 
-	var count int64
+	var count int
 
 	for range lister.Keys() {
 		count++
