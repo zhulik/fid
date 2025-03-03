@@ -51,10 +51,14 @@ type FunctionsRepo interface {
 type InstancesRepo interface {
 	ServiceDependency
 
-	Upsert(ctx context.Context, function FunctionsInstance) error
-	Get(ctx context.Context, id string) (FunctionsInstance, error)
-	List(ctx context.Context, function FunctionDefinition) ([]FunctionsInstance, error)
-	Delete(ctx context.Context, id string) error
+	Add(ctx context.Context, function FunctionDefinition, id string) error
+	UpdateLastExecuted(ctx context.Context, function FunctionDefinition, id string, timestamp time.Time) error
+	UpdateBusy(ctx context.Context, function FunctionDefinition, id string, busy bool) error
+	CountIdle(ctx context.Context, function FunctionDefinition) (int64, error)
+
+	Get(ctx context.Context, function FunctionDefinition, id string) (FunctionInstance, error)
+	List(ctx context.Context, function FunctionDefinition) ([]FunctionInstance, error)
+	Delete(ctx context.Context, function FunctionDefinition, id string) error
 	Count(ctx context.Context, function FunctionDefinition) (int64, error)
 }
 
@@ -71,9 +75,10 @@ type FunctionDefinition interface {
 	Env() map[string]string
 }
 
-type FunctionsInstance interface {
+type FunctionInstance interface {
 	ID() string
 	LastExecuted() time.Time
+	Busy() bool
 	Function() FunctionDefinition
 }
 

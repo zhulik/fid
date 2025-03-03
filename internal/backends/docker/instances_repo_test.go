@@ -11,34 +11,24 @@ import (
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/kv/nats"
 	"github.com/zhulik/fid/testhelpers"
-	"github.com/zhulik/fid/testhelpers/mocks"
 )
 
 const (
 	instanceID   = "some-ID"
+	instanceID1  = "some-ID1"
 	functionName = "some-function"
 )
 
-var (
-	function = docker.Function{
-		Name_: functionName,
-	}
-	functionInstance = docker.FunctionInstance{
-		ID_:           instanceID,
-		LastExecuted_: time.Now(),
-		Function_:     function,
-	}
-)
+var function = docker.Function{
+	Name_: functionName,
+}
 
 var _ = Describe("InstancesRepo", Serial, func() {
 	var injector *do.Injector
 	var repo *docker.InstancesRepo
-	var functionsRepoMock *mocks.MockFunctionsRepo
 	var kv core.KV
 
 	BeforeEach(func(ctx SpecContext) {
-		functionsRepoMock = mocks.NewMockFunctionsRepo(GinkgoT())
-
 		injector = testhelpers.NewInjector()
 		kv = lo.Must(nats.NewKV(injector))
 
@@ -49,60 +39,138 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		do.Provide(injector, func(injector *do.Injector) (core.KV, error) {
 			return kv, nil
 		})
-		do.Provide(injector, func(injector *do.Injector) (core.FunctionsRepo, error) {
-			return functionsRepoMock, nil
-		})
 
 		repo = lo.Must(docker.NewInstancesRepo(injector))
 	})
 
-	Describe("Upsert", func() {
-		It("creates a new instance", func(ctx SpecContext) {
-			err := repo.Upsert(ctx, functionInstance)
+	Describe("Add", func() {
+		Context("when instance does not exist", func() {
+			It("creates a new instance", func(ctx SpecContext) {
+				err := repo.Add(ctx, function, instanceID)
+				Expect(err).ToNot(HaveOccurred())
 
-			Expect(err).ToNot(HaveOccurred())
+				instance, err := repo.Get(ctx, function, instanceID)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(instance.ID()).To(Equal(instanceID))
+			})
 
-			functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
+			Context("when instance already exists", func() {
+				BeforeEach(func(ctx SpecContext) {
+					lo.Must0(repo.Add(ctx, function, instanceID))
+				})
 
-			_, err = repo.Get(ctx, instanceID)
+				It("returns an error", func(ctx SpecContext) {
+					err := repo.Add(ctx, function, instanceID)
+					Expect(err).To(MatchError(core.ErrInstanceAlreadyExists))
+				})
+			})
+		})
+	})
 
-			Expect(err).ToNot(HaveOccurred())
+	Describe("UpdateLastExecuted", func() {
+		Describe("UpdateLastExecuted", func() {
+			lastExecuted := time.Now()
+
+			BeforeEach(func(ctx SpecContext) {
+				lo.Must0(repo.Add(ctx, function, instanceID))
+			})
+
+			It("updates the LastExecuted timestamp", func(ctx SpecContext) {
+				err := repo.UpdateLastExecuted(ctx, function, instanceID, lastExecuted)
+				Expect(err).ToNot(HaveOccurred())
+
+				instance, err := repo.Get(ctx, function, instanceID)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(instance.LastExecuted()).To(BeTemporally("~", lastExecuted, time.Second))
+			})
+		})
+
+		Describe("UpdateBusy", func() {
+			BeforeEach(func(ctx SpecContext) {
+				lo.Must0(repo.Add(ctx, function, instanceID))
+			})
+
+			It("updates the busy status", func(ctx SpecContext) {
+				err := repo.UpdateBusy(ctx, function, instanceID, true)
+				Expect(err).ToNot(HaveOccurred())
+
+				instance, err := repo.Get(ctx, function, instanceID)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(instance.Busy()).To(BeTrue())
+			})
+		})
+
+		Describe("CountIdle", func() {
+			Context("when no instances exist", func() {
+				It("returns 0", func(ctx SpecContext) {
+					idle, err := repo.CountIdle(ctx, function)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(idle).To(BeZero())
+				})
+			})
+
+			Context("when instances exist", func() {
+				BeforeEach(func(ctx SpecContext) {
+					lo.Must0(repo.Add(ctx, function, instanceID))
+					lo.Must0(repo.Add(ctx, function, instanceID1))
+				})
+
+				Context("when all instances are busy", func() {
+					BeforeEach(func(ctx SpecContext) {
+						lo.Must0(repo.UpdateBusy(ctx, function, instanceID, true))
+						lo.Must0(repo.UpdateBusy(ctx, function, instanceID1, true))
+					})
+
+					It("returns the number of idle instances", func(ctx SpecContext) {
+						idle, err := repo.CountIdle(ctx, function)
+						Expect(err).ToNot(HaveOccurred())
+						Expect(idle).To(BeZero())
+					})
+				})
+
+				Context("when some instances are busy", func() {
+					BeforeEach(func(ctx SpecContext) {
+						lo.Must0(repo.UpdateBusy(ctx, function, instanceID, true))
+					})
+
+					It("returns the number of idle instances", func(ctx SpecContext) {
+						idle, err := repo.CountIdle(ctx, function)
+						Expect(err).ToNot(HaveOccurred())
+						Expect(idle).To(Equal(int64(1)))
+					})
+				})
+			})
+
+			It("updates the busy status", func(ctx SpecContext) {
+				err := repo.UpdateBusy(ctx, function, instanceID, true)
+				Expect(err).ToNot(HaveOccurred())
+
+				idle, err := repo.CountIdle(ctx, function)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(idle).To(BeZero())
+			})
 		})
 	})
 
 	Describe("Get", func() {
 		Context("when instance exists", func() {
 			BeforeEach(func(ctx SpecContext) {
-				lo.Must0(repo.Upsert(ctx, functionInstance))
+				lo.Must0(repo.Add(ctx, function, instanceID))
 			})
 
-			Context("when function does not exist", func() {
-				It("returns an error", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
+			It("returns the instance", func(ctx SpecContext) {
+				instance, err := repo.Get(ctx, function, instanceID)
 
-					_, err := repo.Get(ctx, instanceID)
-
-					Expect(err).To(MatchError(core.ErrFunctionNotFound))
-				})
-			})
-
-			Context("when function exists", func() {
-				It("returns the instance", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
-					instance, err := repo.Get(ctx, instanceID)
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(instance.ID()).To(Equal(instanceID))
-					Expect(instance.Function()).To(Equal(function))
-					Expect(instance.LastExecuted().UnixNano()).To(Equal(functionInstance.LastExecuted().UnixNano()))
-				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(instance.ID()).To(Equal(instanceID))
+				Expect(instance.Function()).To(Equal(function))
+				Expect(instance.LastExecuted()).To(Equal(time.Time{}))
 			})
 		})
 
 		Context("when instance does not exist", func() {
 			It("returns an error", func(ctx SpecContext) {
-				_, err := repo.Get(ctx, instanceID)
+				_, err := repo.Get(ctx, function, instanceID)
 
 				Expect(err).To(MatchError(core.ErrInstanceNotFound))
 			})
@@ -120,18 +188,32 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		})
 
 		Context("when instances exist", func() {
+			lastExecuted := time.Now()
+
 			BeforeEach(func(ctx SpecContext) {
-				lo.Must0(repo.Upsert(ctx, functionInstance))
+				lo.Must0(repo.Add(ctx, function, instanceID))
+				lo.Must0(repo.Add(ctx, function, instanceID1))
+
+				lo.Must0(repo.UpdateBusy(ctx, function, instanceID1, true))
+				lo.Must0(repo.UpdateLastExecuted(ctx, function, instanceID1, lastExecuted))
 			})
 
 			It("returns instances", func(ctx SpecContext) {
 				instances, err := repo.List(ctx, function)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(instances).To(HaveLen(1))
+				Expect(instances).To(HaveLen(2))
 				Expect(instances[0].ID()).To(Equal(instanceID))
 				Expect(instances[0].Function()).To(Equal(function))
-				Expect(instances[0].LastExecuted().UnixNano()).To(Equal(functionInstance.LastExecuted().UnixNano()))
+				Expect(instances[0].Busy()).To(BeFalse())
+
+				Expect(instances[0].LastExecuted()).To(Equal(time.Time{}))
+
+				Expect(instances[1].ID()).To(Equal(instanceID1))
+				Expect(instances[1].Function()).To(Equal(function))
+				Expect(instances[1].Busy()).To(BeTrue())
+
+				Expect(instances[1].LastExecuted()).To(BeTemporally("~", lastExecuted, 10*time.Millisecond))
 			})
 		})
 	})
@@ -148,7 +230,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 		Context("when instances exist", func() {
 			BeforeEach(func(ctx SpecContext) {
-				lo.Must0(repo.Upsert(ctx, functionInstance))
+				lo.Must0(repo.Add(ctx, function, instanceID))
 			})
 
 			It("returns instances", func(ctx SpecContext) {
@@ -163,7 +245,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 	Describe("Delete", func() {
 		Context("when instance does not exist", func() {
 			It("returns an error", func(ctx SpecContext) {
-				err := repo.Delete(ctx, instanceID)
+				err := repo.Delete(ctx, function, instanceID)
 
 				Expect(err).To(MatchError(core.ErrInstanceNotFound))
 			})
@@ -171,31 +253,17 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 		Context("when instance exists", func() {
 			BeforeEach(func(ctx SpecContext) {
-				lo.Must0(repo.Upsert(ctx, functionInstance))
+				lo.Must0(repo.Add(ctx, function, instanceID))
 			})
 
-			Context("when function does not exist", func() {
-				It("returns an error", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(nil, core.ErrFunctionNotFound).Once()
+			It("deletes the instance", func(ctx SpecContext) {
+				err := repo.Delete(ctx, function, instanceID)
 
-					err := repo.Delete(ctx, instanceID)
+				Expect(err).ToNot(HaveOccurred())
 
-					Expect(err).To(MatchError(core.ErrFunctionNotFound))
-				})
-			})
+				_, err = repo.Get(ctx, function, instanceID)
 
-			Context("when function exists", func() {
-				It("deletes the instance", func(ctx SpecContext) {
-					functionsRepoMock.On("Get", ctx, functionName).Return(function, nil).Once()
-
-					err := repo.Delete(ctx, instanceID)
-
-					Expect(err).ToNot(HaveOccurred())
-
-					_, err = repo.Get(ctx, instanceID)
-
-					Expect(err).To(MatchError(core.ErrInstanceNotFound))
-				})
+				Expect(err).To(MatchError(core.ErrInstanceNotFound))
 			})
 		})
 	})

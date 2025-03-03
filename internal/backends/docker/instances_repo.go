@@ -19,8 +19,6 @@ import (
 type InstancesRepo struct {
 	logger logrus.FieldLogger
 	bucket core.KVBucket
-
-	functionsRepo core.FunctionsRepo
 }
 
 func NewInstancesRepo(injector *do.Injector) (*InstancesRepo, error) {
@@ -30,29 +28,36 @@ func NewInstancesRepo(injector *do.Injector) (*InstancesRepo, error) {
 	kv := do.MustInvoke[core.KV](injector)
 	bucket := lo.Must(kv.Bucket(ctx, core.BucketNameInstances))
 
-	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
-
 	return &InstancesRepo{
 		logger: do.MustInvoke[logrus.FieldLogger](injector).
 			WithField("component", "backends.docker.InstancesRepo"),
-		bucket:        bucket,
-		functionsRepo: functionsRepo,
+		bucket: bucket,
 	}, nil
 }
 
-func (r InstancesRepo) List(ctx context.Context, function core.FunctionDefinition) ([]core.FunctionsInstance, error) {
-	instances, err := r.bucket.All(ctx, key(function.Name(), "*"))
+func (r InstancesRepo) List(ctx context.Context, function core.FunctionDefinition) ([]core.FunctionInstance, error) {
+	list, err := r.bucket.All(ctx, allKeys(function.Name(), "*"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list functions: %w", err)
+		return nil, fmt.Errorf("failed to list instances: %w", err)
 	}
 
-	return lo.Map(instances, func(item core.KVEntry, _ int) core.FunctionsInstance {
-		return NewFunctionInstance(item, function)
-	}), nil
+	grouped := lo.GroupBy(list, func(item core.KVEntry) string {
+		_, id := parseKey(item.Key)
+
+		return id
+	})
+
+	instances := make([]core.FunctionInstance, 0, len(grouped))
+
+	for id, items := range grouped {
+		instances = append(instances, NewFunctionInstance(id, function, groupByKey(items)))
+	}
+
+	return instances, nil
 }
 
 func (r InstancesRepo) Count(ctx context.Context, function core.FunctionDefinition) (int64, error) {
-	count, err := r.bucket.Count(ctx, key(function.Name(), "*"))
+	count, err := r.bucket.Count(ctx, presenceKey(function.Name(), "*"))
 	if err != nil {
 		return 0, fmt.Errorf("failed to count functions instances: %w", err)
 	}
@@ -68,70 +73,121 @@ func (r InstancesRepo) Shutdown() error {
 	return nil
 }
 
-func (r InstancesRepo) Upsert(ctx context.Context, instance core.FunctionsInstance) error {
-	err := r.bucket.Put(ctx, key(instance.Function().Name(), instance.ID()), serializeTime(instance.LastExecuted()))
-	if err != nil {
-		return fmt.Errorf("failed to store instance: %w", err)
-	}
-
-	return nil
-}
-
-func (r InstancesRepo) Get(ctx context.Context, id string) (core.FunctionsInstance, error) {
-	list, err := r.bucket.All(ctx, key("*", id))
+func (r InstancesRepo) Get(
+	ctx context.Context,
+	function core.FunctionDefinition,
+	id string,
+) (core.FunctionInstance, error) {
+	list, err := r.bucket.All(ctx, allKeys(function.Name(), id))
 	if err != nil {
 		if errors.Is(err, core.ErrKeyNotFound) {
 			return nil, core.ErrInstanceNotFound
 		}
 
-		return nil, fmt.Errorf("failed to get instance: %w", err)
+		return nil, fmt.Errorf("failed to get instance info: %w", err)
 	}
 
 	if len(list) == 0 {
 		return nil, core.ErrInstanceNotFound
 	}
 
-	entry := list[0]
+	indexedRecords := groupByKey(list)
 
-	functionName, _ := parseKey(entry.Key)
-
-	definition, err := r.functionsRepo.Get(ctx, functionName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get function definition: %w", err)
-	}
-
-	return NewFunctionInstance(entry, definition), nil
+	return NewFunctionInstance(id, function, indexedRecords), nil
 }
 
-func (r InstancesRepo) Delete(ctx context.Context, id string) error {
-	instance, err := r.Get(ctx, id)
+func (r InstancesRepo) Delete(ctx context.Context, function core.FunctionDefinition, id string) error {
+	list, err := r.bucket.All(ctx, allKeys(function.Name(), id))
 	if err != nil {
-		return fmt.Errorf("failed to get instance: %w", err)
+		return fmt.Errorf("failed to get records: %w", err)
 	}
 
-	err = r.bucket.Delete(ctx, key(instance.Function().Name(), id))
-	if err != nil {
-		if errors.Is(err, core.ErrKeyNotFound) {
-			return core.ErrInstanceNotFound
-		}
+	if len(list) == 0 {
+		return core.ErrInstanceNotFound
+	}
 
-		return fmt.Errorf("failed to delete instance: %w", err)
+	// TODO: parallel?
+	for _, item := range list {
+		err = r.bucket.Delete(ctx, item.Key)
+		if err != nil {
+			return fmt.Errorf("failed to delete record: %w", err)
+		}
 	}
 
 	return nil
 }
 
-func key(functionName, instanceID string) string {
-	return fmt.Sprintf("%s.%s", functionName, instanceID)
+func (r InstancesRepo) Add(ctx context.Context, function core.FunctionDefinition, id string) error {
+	_, err := r.bucket.Create(ctx, presenceKey(function.Name(), id), []byte{}) // TODO: put something in?
+	if err != nil {
+		if errors.Is(err, core.ErrKeyExists) {
+			return fmt.Errorf("%w: %s", core.ErrInstanceAlreadyExists, id)
+		}
+
+		return fmt.Errorf("failed to create instance: %w", err)
+	}
+
+	return r.UpdateBusy(ctx, function, id, false)
 }
 
-// parseKey parses a key of format <functionName>.<uuid> into function and instance UUID
+func (r InstancesRepo) UpdateLastExecuted(
+	ctx context.Context,
+	function core.FunctionDefinition,
+	id string,
+	timestamp time.Time,
+) error {
+	err := r.bucket.Put(ctx, lastExecutedKey(function.Name(), id), serializeTime(timestamp))
+	if err != nil {
+		return fmt.Errorf("failed to update last executed time: %w", err)
+	}
+
+	return nil
+}
+
+func (r InstancesRepo) UpdateBusy(ctx context.Context, function core.FunctionDefinition, id string, busy bool) error {
+	var err error
+	if busy {
+		err = r.bucket.Delete(ctx, idleKey(function.Name(), id))
+	} else {
+		err = r.bucket.Put(ctx, idleKey(function.Name(), id), []byte{}) // TODO: put something in?
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to update busy status: %w", err)
+	}
+
+	return nil
+}
+
+func (r InstancesRepo) CountIdle(ctx context.Context, function core.FunctionDefinition) (int64, error) {
+	count, err := r.bucket.Count(ctx, idleKey(function.Name(), "*"))
+	if err != nil {
+		return 0, fmt.Errorf("failed to count idle instances: %w", err)
+	}
+
+	return count, nil
+}
+
+func lastExecutedKey(functionName, instanceID string) string {
+	return fmt.Sprintf("%s.%s.lastExecuted", functionName, instanceID)
+}
+
+func idleKey(functionName, instanceID string) string {
+	return fmt.Sprintf("%s.%s.idle", functionName, instanceID)
+}
+
+func presenceKey(functionName, instanceID string) string {
+	return fmt.Sprintf("%s.%s.presence", functionName, instanceID)
+}
+
+func allKeys(functionName, instanceID string) string {
+	return fmt.Sprintf("%s.%s.*", functionName, instanceID)
+}
+
+// parseKey parses a lastExecutedKey of format <functionName>.<uuid> into function and instance UUID
 // Panics if format is incorrect!
 func parseKey(key string) (string, string) {
 	parts := strings.Split(key, ".")
-	if len(parts) != 2 { //nolint:mnd
-		panic("incorrect key format")
-	}
 
 	return parts[0], parts[1]
 }
@@ -150,4 +206,13 @@ func deserializeTime(data []byte) time.Time {
 	nanos := int64(binary.LittleEndian.Uint64(data)) //nolint:gosec
 
 	return time.Unix(0, nanos)
+}
+
+func groupByKey(list []core.KVEntry) map[string]core.KVEntry {
+	result := make(map[string]core.KVEntry)
+	for _, item := range list {
+		result[item.Key] = item
+	}
+
+	return result
 }

@@ -244,7 +244,7 @@ func (s Scaler) killInstances(ctx context.Context, req core.ScalingRequest) erro
 			return fmt.Errorf("failed to kill instance: %w", err)
 		}
 
-		err = s.instancesRepo.Delete(ctx, instanceID)
+		err = s.instancesRepo.Delete(ctx, s.function, instanceID)
 		if err != nil {
 			return fmt.Errorf("failed to delete instance record: %w", err)
 		}
