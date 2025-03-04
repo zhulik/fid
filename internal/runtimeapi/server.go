@@ -43,7 +43,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:mnd
-	cancel()
+	defer cancel()
 
 	function, err := functionsRepo.Get(ctx, config.FunctionName())
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *Server) Shutdown() error {
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	cancel()
+	defer cancel()
 
 	return s.functionInstance.delete(ctx)
 }
