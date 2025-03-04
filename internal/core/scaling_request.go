@@ -10,6 +10,5 @@ const (
 type ScalingRequest struct {
 	Type ScalingRequestType
 
-	InstanceIDs []string // Should be specified for ScaleDown requests
-	Count       int      // Should be specified for ScaleUp requests
+	InstanceID string // Should be specified for ScaleDown requests
 }

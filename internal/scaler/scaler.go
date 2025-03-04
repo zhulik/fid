@@ -172,20 +172,12 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 
 		switch req.Type {
 		case core.ScalingRequestTypeScaleUp:
-			if req.Count == 0 {
-				s.logger.Warn("Scaling up with 0 instances")
-
-				msg.Ack()
-
-				continue
-			}
-
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 				defer cancel()
 
 				// TODO: reply to scale request with instance IDs
-				_, err = s.scaleUp(ctx, req)
+				_, err = s.scaleUp(ctx)
 				if err != nil {
 					s.logger.Errorf("Failed to scale up %+v", err)
 
@@ -195,20 +187,12 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 				msg.Ack()
 			}()
 		case core.ScalingRequestTypeScaleDown:
-			if len(req.InstanceIDs) == 0 {
-				s.logger.Warn("Killing 0 instances")
-
-				msg.Ack()
-
-				continue
-			}
-
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), s.function.Timeout())
 				defer cancel()
 
 				// TODO: reply to scale request when deleted
-				err = s.killInstances(ctx, req)
+				err = s.killInstance(ctx, req.InstanceID)
 				if err != nil {
 					s.logger.Errorf("Failed to scale down %+v", err)
 
@@ -226,47 +210,40 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 	return nil
 }
 
-func (s Scaler) killInstances(ctx context.Context, req core.ScalingRequest) error {
+func (s Scaler) killInstance(ctx context.Context, instanceID string) error {
 	count, err := s.instancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instance count: %w", err)
 	}
 
-	for _, instanceID := range req.InstanceIDs {
-		if count <= s.function.ScalingConfig().Min {
-			s.logger.Infof("cannot kill instances %s: too few instances left", instanceID)
+	count--
 
-			continue
-		}
+	if count <= s.function.ScalingConfig().Min {
+		s.logger.Infof("cannot kill instances %s: too few instances left", instanceID)
 
-		err = s.backend.KillInstance(ctx, instanceID)
-		if err != nil {
-			return fmt.Errorf("failed to kill instance: %w", err)
-		}
+		return nil
+	}
 
-		err = s.instancesRepo.Delete(ctx, s.function, instanceID)
-		if err != nil {
-			return fmt.Errorf("failed to delete instance record: %w", err)
-		}
+	err = s.backend.KillInstance(ctx, instanceID)
+	if err != nil {
+		return fmt.Errorf("failed to kill instance: %w", err)
+	}
 
-		count--
+	err = s.instancesRepo.Delete(ctx, s.function, instanceID)
+	if err != nil {
+		return fmt.Errorf("failed to delete instance record: %w", err)
 	}
 
 	return nil
 }
 
-func (s Scaler) scaleUp(ctx context.Context, req core.ScalingRequest) ([]string, error) {
-	s.logger.Infof("Scaling up with %d instances", req.Count)
-	instances := make([]string, req.Count)
+func (s Scaler) scaleUp(ctx context.Context) (string, error) {
+	s.logger.Info("Scaling up")
 
-	for i := range req.Count {
-		instanceID, err := s.backend.AddInstance(ctx, s.function)
-		if err != nil {
-			return nil, fmt.Errorf("failed to add instance: %w", err)
-		}
-
-		instances[i] = instanceID
+	instanceID, err := s.backend.AddInstance(ctx, s.function)
+	if err != nil {
+		return "", fmt.Errorf("failed to add instance: %w", err)
 	}
 
-	return instances, nil
+	return instanceID, nil
 }
