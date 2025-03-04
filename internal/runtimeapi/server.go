@@ -1,22 +1,24 @@
 package runtimeapi
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/internal/middlewares"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
 
 type Server struct {
 	*httpserver.Server
 
-	pubSuber core.PubSuber
+	pubSuber         core.PubSuber
+	functionInstance functionInstance
 }
 
 // NewServer creates a new Server instance.
@@ -28,24 +30,41 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	}
 
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
-		"component":    "runtimeapi.Server",
-		"functionName": config.FunctionName(),
+		"component": "runtimeapi.Server",
+		"function":  config.FunctionName(),
 	})
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
+	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
 
 	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	server.Router.Use(middlewares.FunctionMiddleware(functionsRepo, func(c *gin.Context) string {
-		return config.FunctionName()
-	}))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:mnd
+	cancel()
+
+	function, err := functionsRepo.Get(ctx, config.FunctionName())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get function: %w", err)
+	}
+
+	instance := functionInstance{
+		FunctionDefinition: function,
+		id:                 config.FunctionInstanceID(),
+		instancesRepo:      instancesRepo,
+	}
+
+	err = instance.add(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to add function to instances repo: %w", err)
+	}
 
 	srv := &Server{
-		Server:   server,
-		pubSuber: pubSuber,
+		Server:           server,
+		pubSuber:         pubSuber,
+		functionInstance: instance,
 	}
 
 	// Mimicking the AWS Lambda runtime API for custom runtimes
@@ -57,18 +76,34 @@ func NewServer(injector *do.Injector) (*Server, error) {
 	return srv, nil
 }
 
+func (s *Server) Shutdown() error {
+	err := s.Server.Shutdown()
+	if err != nil {
+		return err //nolint:wrapcheck
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	cancel()
+
+	return s.functionInstance.delete(ctx)
+}
+
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
-	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
-	subject := s.pubSuber.ConsumeSubjectName(function)
+	subject := s.pubSuber.ConsumeSubjectName(s.functionInstance)
 
-	logger := s.Logger.WithField("function", function)
+	s.Logger.Info("Function connected, waiting for events...")
 
-	logger.Info("Function connected, waiting for events...")
+	streamName := s.pubSuber.FunctionStreamName(s.functionInstance)
 
-	streamName := s.pubSuber.FunctionStreamName(function)
+	err := s.functionInstance.busy(c.Request.Context(), false)
+	if err != nil {
+		c.Error(err)
 
-	msg, err := s.pubSuber.Next(ctx, streamName, []string{subject}, function.Name())
+		return
+	}
+
+	msg, err := s.pubSuber.Next(ctx, streamName, []string{subject}, s.functionInstance.Name())
 	if err != nil {
 		c.Error(err)
 
@@ -77,7 +112,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	msg.Ack()
 
-	logger.Infof("Event received: %s", msg.Headers()[core.HeaderNameRequestID][0])
+	s.Logger.Infof("Event received: %s", msg.Headers()[core.HeaderNameRequestID][0])
 
 	for key, values := range msg.Headers() {
 		for _, value := range values {
@@ -90,11 +125,9 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	function := c.MustGet("function").(core.FunctionDefinition) //nolint:forcetypeassert
-	subject := s.pubSuber.ResponseSubjectName(function, requestID)
+	subject := s.pubSuber.ResponseSubjectName(s.functionInstance, requestID)
 
 	logger := s.Logger.WithFields(map[string]interface{}{
-		"function":  function,
 		"requestID": requestID,
 		"subject":   subject,
 	})
@@ -111,6 +144,13 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 	msg := core.Msg{
 		Subject: subject,
 		Data:    response,
+	}
+
+	err = s.functionInstance.executed(c.Request.Context())
+	if err != nil {
+		c.Error(err)
+
+		return
 	}
 
 	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
@@ -145,6 +185,13 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	msg := core.Msg{
 		Subject: s.pubSuber.ErrorSubjectName(function, requestID),
 		Data:    response,
+	}
+
+	err = s.functionInstance.executed(c.Request.Context())
+	if err != nil {
+		c.Error(err)
+
+		return
 	}
 
 	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {

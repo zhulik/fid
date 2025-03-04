@@ -7,12 +7,17 @@ import (
 type Config struct {
 	HTTPPort_ int `env:"HTTP_PORT" envDefault:"8180"`
 
-	FunctionName_ string `env:"FUNCTION_NAME"`
+	FunctionName_       string `env:"FUNCTION_NAME"`
+	FunctionInstanceID_ string `env:"FUNCTION_INSTANCE_ID"`
 
 	NATSURL_  string `env:"NATS_URL"` //nolint:stylecheck
 	LogLevel_ string `env:"LOG_LEVEL" envDefault:"info"`
 
 	ElectionsBucketTTL_ time.Duration `env:"ELECTIONS_BUCKET_TTL" envDefault:"2s"`
+}
+
+func (c Config) FunctionInstanceID() string {
+	return c.FunctionInstanceID_
 }
 
 func (c Config) ElectionsBucketTTL() time.Duration {
