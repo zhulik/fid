@@ -162,6 +162,12 @@ func (s Scaler) Shutdown() error {
 }
 
 func (s Scaler) runScaler(sub core.Subscription) error {
+	err := s.rescaleToConfig()
+	if err != nil {
+		return err
+	}
+
+	// TODO: subscribe to definition change and scale accordingly
 	for msg := range sub.C() {
 		s.logger.Debugf("Scaler received message: %s", msg.Data())
 
@@ -210,15 +216,45 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 	return nil
 }
 
+func (s Scaler) rescaleToConfig() error {
+	instances, err := s.instancesRepo.Count(context.Background(), s.function)
+	if err != nil {
+		return fmt.Errorf("failed to get instances: %w", err)
+	}
+
+	if instances < s.function.ScalingConfig().Min {
+		toCreate := s.function.ScalingConfig().Min - instances
+		s.logger.Info("%d instances running, minimum is %d, creating %d", instances, s.function.ScalingConfig().Min, toCreate)
+
+		for range toCreate {
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+
+			_, err = s.scaleUp(ctx)
+
+			cancel()
+
+			if err != nil {
+				return fmt.Errorf("failed to scale up: %w", err)
+			}
+		}
+	}
+
+	if instances > s.function.ScalingConfig().Max {
+		toKill := instances - s.function.ScalingConfig().Max
+		s.logger.Info("%d instances running, maximum is %d, killing %d", instances, s.function.ScalingConfig().Max, toKill)
+		// TODO: implement
+	}
+
+	return nil
+}
+
 func (s Scaler) killInstance(ctx context.Context, instanceID string) error {
 	count, err := s.instancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instance count: %w", err)
 	}
 
-	count--
-
-	if count <= s.function.ScalingConfig().Min {
+	if count-1 <= s.function.ScalingConfig().Min {
 		s.logger.Infof("cannot kill instances %s: too few instances left", instanceID)
 
 		return nil
@@ -237,13 +273,15 @@ func (s Scaler) killInstance(ctx context.Context, instanceID string) error {
 	return nil
 }
 
-func (s Scaler) scaleUp(ctx context.Context) (string, error) {
+func (s Scaler) scaleUp(ctx context.Context) (string, error) { //nolint:unparam
 	s.logger.Info("Scaling up")
 
 	instanceID, err := s.backend.AddInstance(ctx, s.function)
 	if err != nil {
 		return "", fmt.Errorf("failed to add instance: %w", err)
 	}
+
+	s.logger.Infof("Instance added %s", instanceID)
 
 	return instanceID, nil
 }
