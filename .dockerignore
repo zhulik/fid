@@ -1,4 +1,5 @@
 .git/
+requests/
 
 .dockerignore
 .golangci.yml
@@ -6,3 +7,4 @@
 Dockerfile
 docker-compose.yml
 taskfile.yaml
+*_test.go
