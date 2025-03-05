@@ -43,3 +43,7 @@ func init() { //nolint:gochecknoinits
 	infoserver.Register()
 	scaler.Register()
 }
+
+func Logger() logrus.FieldLogger {
+	return do.MustInvoke[logrus.FieldLogger](nil)
+}

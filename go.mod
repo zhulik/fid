@@ -246,6 +246,7 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/ultraware/funlen v0.2.0 // indirect
 	github.com/ultraware/whitespace v0.2.0 // indirect
+	github.com/urfave/cli/v3 v3.0.0-beta1 // indirect
 	github.com/uudashr/gocognit v1.2.0 // indirect
 	github.com/uudashr/iface v1.3.1 // indirect
 	github.com/vektra/mockery/v2 v2.52.4 // indirect
