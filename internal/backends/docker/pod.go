@@ -177,9 +177,9 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.FunctionD
 }
 
 func (p FunctionPod) runtimeAPIContainerName() string {
-	return p.UUID + "-runtimeapi"
+	return fmt.Sprintf("%s-%s", p.UUID, core.ComponentNameRuntimeAPI)
 }
 
 func (p FunctionPod) functionContainerName() string {
-	return p.UUID + "-function"
+	return fmt.Sprintf("%s-%s", p.UUID, core.ComponentNameFunction)
 }

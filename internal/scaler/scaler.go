@@ -104,7 +104,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 			case elect.Won:
 				s.logger.Info("Elected as a leader")
 
-				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				sub, err = s.subscribe(ctx)
 
 				cancel()
@@ -151,7 +151,7 @@ func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 }
 
 func (s Scaler) subscriberName() string {
-	return s.function.Name() + "-scaler"
+	return fmt.Sprintf("%s-%s", s.function.Name(), core.ComponentNameScaler)
 }
 
 func (s Scaler) Shutdown() error {
@@ -222,7 +222,8 @@ func (s Scaler) rescaleToConfig() error {
 		return fmt.Errorf("failed to get instances: %w", err)
 	}
 
-	if instances < s.function.ScalingConfig().Min {
+	switch {
+	case instances < s.function.ScalingConfig().Min:
 		toCreate := s.function.ScalingConfig().Min - instances
 		s.logger.Info("%d instances running, minimum is %d, creating %d", instances, s.function.ScalingConfig().Min, toCreate)
 
@@ -237,12 +238,13 @@ func (s Scaler) rescaleToConfig() error {
 				return fmt.Errorf("failed to scale up: %w", err)
 			}
 		}
-	}
-
-	if instances > s.function.ScalingConfig().Max {
+	case instances > s.function.ScalingConfig().Max:
 		// TODO: implement
 		toKill := instances - s.function.ScalingConfig().Max
 		s.logger.Info("%d instances running, maximum is %d, killing %d", instances, s.function.ScalingConfig().Max, toKill)
+	default:
+		s.logger.Infof("No need to rescale to config: %d instances running, min is %d, max is %d", instances,
+			s.function.ScalingConfig().Min, s.function.ScalingConfig().Max)
 	}
 
 	return nil
