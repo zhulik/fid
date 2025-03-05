@@ -18,18 +18,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build  \
     go build -ldflags="-w -s" -o app
 
 
-FROM alpine
-
-
-# TODO: use /app --healthcheck instead
-RUN apk add --no-cache curl
+FROM scratch
 
 COPY --from=builder /app/app /
 
 ENV HTTP_PORT=80
 ENV GIN_MODE=release
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=1s CMD curl --fail http://127.0.0.1/health || exit 1
+HEALTHCHECK --interval=5s --timeout=2s --start-period=1s CMD ["/app", "healthcheck"]
 
 # TODO: non-root user with access to docker socket file.
 ENTRYPOINT ["/app"]

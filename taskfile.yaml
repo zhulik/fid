@@ -50,14 +50,14 @@ tasks:
     cmds:
       - docker kill $(docker ps -q)
 
-  init:
+  start:
     deps:
       - nats
       - build
     cmds:
-      - docker compose up -d init
+      - docker compose up start
 
   restart:
     cmds:
       - task: down
-      - task: init
+      - task: start
