@@ -8,12 +8,13 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/gateway"
 )
 
 var gatewayCMD = &cli.Command{
-	Name:     "gateway",
+	Name:     core.ComponentNameGateway,
 	Aliases:  []string{"gw"},
 	Usage:    "Run gateway server.",
 	Category: "Service",

@@ -11,11 +11,9 @@ services:
       - nats
 
   init:
-    image: ghcr.io/zhulik/fid-init
-    build:
-      context: .
-      args:
-        COMPONENT: "init"
+    image: ghcr.io/zhulik/fid
+    command:
+      - start
     environment:
       - NATS_URL=nats://nats:4222
     volumes:

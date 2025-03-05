@@ -3,8 +3,6 @@ package json
 import (
 	libJSON "encoding/json"
 	"fmt"
-
-	"github.com/goccy/go-json"
 )
 
 func Unmarshal[T any](data []byte) (T, error) {
@@ -19,7 +17,7 @@ func Unmarshal[T any](data []byte) (T, error) {
 }
 
 func Marshal(data any) ([]byte, error) {
-	bytes, err := json.Marshal(data)
+	bytes, err := libJSON.Marshal(data)
 	if err != nil {
 		return bytes, fmt.Errorf("failed to marshal JSON: %w", err)
 	}
@@ -28,7 +26,7 @@ func Marshal(data any) ([]byte, error) {
 }
 
 func MarshalIndent(data any, prefix, indent string) ([]byte, error) {
-	bytes, err := json.MarshalIndent(data, prefix, indent)
+	bytes, err := libJSON.MarshalIndent(data, prefix, indent)
 	if err != nil {
 		return bytes, fmt.Errorf("failed to marshal JSON: %w", err)
 	}

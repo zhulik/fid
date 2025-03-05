@@ -8,12 +8,13 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/scaler"
 )
 
 var scalerCMD = &cli.Command{
-	Name:     "scaler",
+	Name:     core.ComponentNameScaler,
 	Aliases:  []string{"sc"},
 	Usage:    "Run scaler.",
 	Category: "Function",

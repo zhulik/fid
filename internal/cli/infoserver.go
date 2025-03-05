@@ -8,12 +8,13 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/infoserver"
 )
 
 var infoserverCMD = &cli.Command{
-	Name:     "infoserver",
+	Name:     core.ComponentNameInfoServer,
 	Aliases:  []string{"is"},
 	Usage:    "Run info server.",
 	Category: "Service",

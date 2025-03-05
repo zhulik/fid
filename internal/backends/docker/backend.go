@@ -71,13 +71,14 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 	logger := b.logger.WithField("function", function)
 
 	containerConfig := &container.Config{
-		Image: core.ImageNameScaler,
+		Image: core.ImageNameFID,
+		Cmd:   []string{core.ComponentNameScaler},
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameFunctionName: function.Name(),
 			core.EnvNameNatsURL:      b.config.NATSURL(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.ComponentLabelValueScaler,
+			core.LabelNameComponent: core.ComponentNameScaler,
 		},
 	}
 
@@ -187,12 +188,13 @@ func (b Backend) KillInstance(ctx context.Context, instanceID string) error {
 
 func (b Backend) StartGateway(ctx context.Context) (string, error) {
 	containerConfig := &container.Config{
-		Image: core.ImageNameGateway,
+		Image: core.ImageNameFID,
+		Cmd:   []string{core.ComponentNameGateway},
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameNatsURL: b.config.NATSURL(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.ComponentLabelValueGateway,
+			core.LabelNameComponent: core.ComponentNameGateway,
 		},
 		ExposedPorts: nat.PortSet{
 			core.PortTCP80: struct{}{},
@@ -243,12 +245,13 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 
 func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 	containerConfig := &container.Config{
-		Image: core.ImageNameInfoServer,
+		Image: core.ImageNameFID,
+		Cmd:   []string{core.ComponentNameInfoServer},
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameNatsURL: b.config.NATSURL(),
 		}),
 		Labels: map[string]string{
-			core.LabelNameComponent: core.ComponentLabelValueInfoServer,
+			core.LabelNameComponent: core.ComponentNameInfoServer,
 		},
 		ExposedPorts: nat.PortSet{
 			core.PortTCP80: struct{}{},

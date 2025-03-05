@@ -12,20 +12,17 @@ const (
 
 	LabelNameComponent = "wtf.zhulik.fid.component"
 
-	ComponentLabelValueRuntimeAPI = "runtimeapi"
-	ComponentLabelValueFunction   = "function"
-	ComponentLabelValueScaler     = "scaler"
-	ComponentLabelValueInfoServer = "info-server"
-	ComponentLabelValueGateway    = "gateway"
+	ComponentNameRuntimeAPI = "runtimeapi"
+	ComponentNameFunction   = "function"
+	ComponentNameScaler     = "scaler"
+	ComponentNameInfoServer = "info-server"
+	ComponentNameGateway    = "gateway"
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
 	MaxTimeout = 15 * time.Minute
 
-	ImageNameRuntimeAPI = "ghcr.io/zhulik/fid-runtimeapi"
-	ImageNameScaler     = "ghcr.io/zhulik/fid-scaler"
-	ImageNameInfoServer = "ghcr.io/zhulik/fid-infoserver"
-	ImageNameGateway    = "ghcr.io/zhulik/fid-gateway"
+	ImageNameFID = "ghcr.io/zhulik/fid"
 
 	EnvNameAWSLambdaRuntimeAPI   = "AWS_LAMBDA_RUNTIME_API"
 	EnvNameFunctionName          = "FUNCTION_NAME"

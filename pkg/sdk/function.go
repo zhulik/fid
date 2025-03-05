@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
 )
 
@@ -31,7 +30,7 @@ const (
 
 var (
 	// TODO: extract constants.
-	apiURL  = os.Getenv(core.EnvNameAWSLambdaRuntimeAPI)                          //nolint:gochecknoglobals
+	apiURL  = os.Getenv("AWS_LAMBDA_RUNTIME_API")                                 //nolint:gochecknoglobals
 	nextURL = fmt.Sprintf("http://%s/2018-06-01/runtime/invocation/next", apiURL) //nolint:gochecknoglobals
 
 	ErrUnexpectedStatus    = errors.New("unexpected status code")
@@ -100,7 +99,7 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 
 	var reqErr error
 
-	requestID := resp.Header.Get(core.HeaderNameRequestID)
+	requestID := resp.Header.Get("Lambda-Runtime-Aws-Request-Id")
 
 	ctx, cancel := context.WithDeadline(context.Background(), deadline)
 	defer cancel()

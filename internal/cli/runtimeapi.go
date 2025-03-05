@@ -8,12 +8,13 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/runtimeapi"
 )
 
 var runtimeapiCMD = &cli.Command{
-	Name:     "runtimeapi",
+	Name:     core.ComponentNameRuntimeAPI,
 	Aliases:  []string{"ra"},
 	Usage:    "Run runtime api server.",
 	Category: "Function",

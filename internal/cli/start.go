@@ -7,6 +7,6 @@ import (
 var startCMD = &cli.Command{
 	Name:     "start",
 	Aliases:  []string{"s"},
-	Usage:    "Start FID. ",
+	Usage:    "Start FID.",
 	Category: "User",
 }

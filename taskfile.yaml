@@ -30,20 +30,9 @@ tasks:
       - go run github.com/onsi/ginkgo/v2/ginkgo run -r -race
 
   build:
-    vars:
-      COMPONENTS:
-        - init
-        - gateway
-        - runtimeapi
-        - infoserver
-        - scaler
-        - demo-function
     cmds:
-      - |
-        {{range $index, $component := .COMPONENTS}}
-          docker buildx build --build-arg COMPONENT={{ $component }} -t ghcr.io/zhulik/fid-{{ $component }} . &
-        {{end}}
-        wait
+      - docker buildx build --build-arg COMPONENT=demo-function -t ghcr.io/zhulik/fid-demo-function .
+      - docker buildx build --build-arg COMPONENT=fid -t ghcr.io/zhulik/fid .
 
   env:
     deps:
