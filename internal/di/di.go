@@ -47,3 +47,7 @@ func init() { //nolint:gochecknoinits
 func Logger() logrus.FieldLogger {
 	return do.MustInvoke[logrus.FieldLogger](nil)
 }
+
+func Config() core.Config {
+	return do.MustInvoke[core.Config](nil)
+}
