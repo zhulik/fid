@@ -15,7 +15,7 @@ func NewClient(injector *do.Injector) (*Client, error) {
 
 	natsClient, err := libNats.Connect(config.NATSURL())
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to NATS client: %w", err)
+		return nil, fmt.Errorf("failed to connect to NATS: %w", err)
 	}
 
 	jetStream, err := jetstream.New(natsClient)

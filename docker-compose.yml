@@ -10,7 +10,7 @@ services:
     networks:
       - nats
 
-  init:
+  start:
     image: ghcr.io/zhulik/fid
     command:
       - start
