@@ -46,9 +46,29 @@ tasks:
         wait
 
   env:
+    deps:
+      - nats
+
+  nats:
     cmds:
       - docker compose up -d nats
 
   mocks:
     cmds:
       - go tool github.com/vektra/mockery/v2
+
+  down:
+    cmds:
+      - docker kill $(docker ps -q)
+
+  init:
+    deps:
+      - nats
+      - build
+    cmds:
+      - docker compose up -d init
+
+  restart:
+    cmds:
+      - task: down
+      - task: init
