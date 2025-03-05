@@ -90,7 +90,7 @@ func (s *Server) Shutdown() error {
 
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
-	subject := s.pubSuber.ConsumeSubjectName(s.functionInstance)
+	subject := s.pubSuber.InvokeSubjectName(s.functionInstance)
 
 	s.Logger.Info("Function connected, waiting for events...")
 

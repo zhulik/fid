@@ -240,9 +240,9 @@ func (s Scaler) rescaleToConfig() error {
 	}
 
 	if instances > s.function.ScalingConfig().Max {
+		// TODO: implement
 		toKill := instances - s.function.ScalingConfig().Max
 		s.logger.Info("%d instances running, maximum is %d, killing %d", instances, s.function.ScalingConfig().Max, toKill)
-		// TODO: implement
 	}
 
 	return nil

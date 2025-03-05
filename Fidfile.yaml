@@ -19,7 +19,7 @@ functions:
       SOME_OTHER_VAR: "=1"
       ANOTHER_VAR:
 
-    min: 3
+    min: 1
     max: 5
 
     timeout: 10s

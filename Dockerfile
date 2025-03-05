@@ -20,6 +20,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build  \
 
 FROM alpine
 
+
+# TODO: use /app --healthcheck instead
 RUN apk add --no-cache curl
 
 COPY --from=builder /app/app /

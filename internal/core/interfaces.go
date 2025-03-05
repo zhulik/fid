@@ -102,7 +102,6 @@ type PubSuber interface { //nolint:interfacebloat
 	FunctionStreamName(function FunctionDefinition) string
 	ScaleSubjectName(function FunctionDefinition) string
 	InvokeSubjectName(function FunctionDefinition) string
-	ConsumeSubjectName(function FunctionDefinition) string
 	ResponseSubjectName(function FunctionDefinition, requestID string) string
 	ErrorSubjectName(function FunctionDefinition, requestID string) string
 }
