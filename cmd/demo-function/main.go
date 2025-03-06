@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"math/rand/v2"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/zhulik/fid/pkg/json"
@@ -70,6 +72,38 @@ func handler(ctx context.Context, input []byte) ([]byte, error) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1/health", nil)
+		if err != nil {
+			log.Fatalf("error: %s", err)
+		}
+
+		client := http.Client{
+			Timeout: time.Second,
+			Transport: &http.Transport{
+				ResponseHeaderTimeout: time.Second,
+			},
+		}
+
+		resp, err := client.Do(req)
+
+		cancel()
+
+		if err != nil {
+			log.Fatalf("error: %s", err)
+		}
+
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			log.Fatalf("non-200 status: %d", resp.StatusCode)
+		}
+
+		return
+	}
+
 	if err := sdk.Serve(handler); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
