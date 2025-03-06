@@ -18,7 +18,15 @@ var runtimeapiCMD = &cli.Command{
 	Aliases:  []string{"ra"},
 	Usage:    "Run runtime api server.",
 	Category: "Function",
-	Action: func(ctx context.Context, command *cli.Command) error {
+	Flags: []cli.Flag{
+		natsURLFlag,
+		functionNameFlag,
+		functionInstanceIDFlag,
+		serverPortFlag,
+		logLevelFlag,
+	},
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		registerConfig(cmd)
 		server := do.MustInvoke[*runtimeapi.Server](nil)
 
 		di.Logger().Info("Starting...")

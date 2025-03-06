@@ -2,10 +2,10 @@ package cli
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"github.com/urfave/cli/v3"
-	"github.com/zhulik/fid/internal/di"
 )
 
 const VERSION = "0.1.0"
@@ -27,6 +27,6 @@ func Run() {
 		initCMD,
 	}
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		di.Logger().WithError(err).Fatal("failed to run command")
+		log.Fatal(err)
 	}
 }

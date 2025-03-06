@@ -48,7 +48,9 @@ tasks:
 
   down:
     cmds:
-      - docker kill $(docker ps -q)
+      # TODO: only stop and delete fid containers
+      - docker stop $(docker ps -qa)
+      - docker rm $(docker ps -qa)
 
   start:
     deps:

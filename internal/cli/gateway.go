@@ -18,7 +18,13 @@ var gatewayCMD = &cli.Command{
 	Aliases:  []string{"gw"},
 	Usage:    "Run gateway server.",
 	Category: "Service",
-	Action: func(ctx context.Context, command *cli.Command) error {
+	Flags: []cli.Flag{
+		natsURLFlag,
+		serverPortFlag,
+		logLevelFlag,
+	},
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		registerConfig(cmd)
 		server := do.MustInvoke[*gateway.Server](nil)
 
 		di.Logger().Info("Starting...")

@@ -18,7 +18,15 @@ var infoserverCMD = &cli.Command{
 	Aliases:  []string{"is"},
 	Usage:    "Run info server.",
 	Category: "Service",
-	Action: func(ctx context.Context, command *cli.Command) error {
+	Flags: []cli.Flag{
+		natsURLFlag,
+		serverPortFlag,
+		logLevelFlag,
+	},
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		registerConfig(cmd)
+
+		di.Logger().Info("Starting...")
 		server := do.MustInvoke[*infoserver.Server](nil)
 
 		di.Logger().Info("Starting...")

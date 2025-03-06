@@ -17,7 +17,7 @@ var healthcheckCMD = &cli.Command{
 	Aliases:  []string{"hc"},
 	Usage:    "Run healthcheck.",
 	Category: "Utility",
-	Action: func(ctx context.Context, command *cli.Command) error {
+	Action: func(ctx context.Context, cmd *cli.Command) error {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1/health", nil)
 		if err != nil {
 			return fmt.Errorf("failed to create HTTP request: %w", err)

@@ -114,7 +114,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock", // TODO: configurable
 		},
-		AutoRemove: true,
+		// AutoRemove: true,
 	}
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{
@@ -155,7 +155,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.FunctionD
 		StopTimeout: &stopTimeout,
 	}
 	hostConfig := &container.HostConfig{
-		AutoRemove: true,
+		// AutoRemove: true,
 	}
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{

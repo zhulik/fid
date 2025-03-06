@@ -18,7 +18,15 @@ var scalerCMD = &cli.Command{
 	Aliases:  []string{"sc"},
 	Usage:    "Run scaler.",
 	Category: "Function",
-	Action: func(ctx context.Context, command *cli.Command) error {
+	Flags: []cli.Flag{
+		natsURLFlag,
+		functionNameFlag,
+		serverPortFlag,
+		logLevelFlag,
+	},
+
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		registerConfig(cmd)
 		server := do.MustInvoke[*scaler.Server](nil)
 
 		di.Logger().Info("Starting...")

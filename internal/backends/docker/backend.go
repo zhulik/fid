@@ -86,7 +86,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock", // TODO: configurable
 		},
-		AutoRemove: true,
+		// AutoRemove: true,
 	}
 	networkingConfig := &network.NetworkingConfig{
 		EndpointsConfig: map[string]*network.EndpointSettings{
@@ -202,7 +202,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 	}
 
 	hostConfig := &container.HostConfig{
-		AutoRemove: true,
+		// AutoRemove: true,
 		PortBindings: nat.PortMap{
 			// TODO: configurable
 			core.PortTCP80: {
@@ -262,7 +262,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock", // TODO: configurable
 		},
-		AutoRemove: true,
+		// AutoRemove: true,
 		PortBindings: nat.PortMap{
 			// TODO: configurable
 			core.PortTCP80: {

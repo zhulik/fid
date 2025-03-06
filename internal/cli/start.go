@@ -12,25 +12,27 @@ import (
 	"github.com/zhulik/fid/internal/fidfile"
 )
 
-var fidFilePath string
-
 var startCMD = &cli.Command{
 	Name:     "start",
 	Aliases:  []string{"s"},
 	Usage:    "Start FID.",
 	Category: "User",
 	Flags: []cli.Flag{
+		natsURLFlag,
+		logLevelFlag,
 		&cli.StringFlag{
-			Name:        "fidfile",
-			Aliases:     []string{"f"},
-			Value:       "Fidfile.yaml",
-			Usage:       "Load Fidfile.yaml from `FILE`",
-			Sources:     cli.EnvVars("FIDFILE"),
-			Destination: &fidFilePath,
+			Name:    "fidfile",
+			Aliases: []string{"f"},
+			Value:   "Fidfile.yaml",
+			Usage:   "Load Fidfile.yaml from `FILE`",
+			Sources: cli.EnvVars("FIDFILE"),
 		},
 	},
 
-	Action: func(ctx context.Context, command *cli.Command) error {
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		registerConfig(cmd)
+
+		fidFilePath := cmd.String("fidfile")
 		di.Logger().Info("Starting...")
 		di.Logger().Infof("Loading %s...", fidFilePath)
 

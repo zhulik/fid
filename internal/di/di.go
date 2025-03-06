@@ -6,7 +6,6 @@ import (
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/backends"
-	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/gateway"
 	"github.com/zhulik/fid/internal/infoserver"
@@ -31,8 +30,6 @@ func init() { //nolint:gochecknoinits
 
 		return logger, nil
 	})
-
-	config.Register()
 
 	runtimeapi.Register()
 	backends.Register()

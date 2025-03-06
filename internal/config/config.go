@@ -2,18 +2,18 @@ package config
 
 import (
 	"time"
+
+	"github.com/samber/lo"
 )
 
 type Config struct {
-	HTTPPort_ int `env:"HTTP_PORT" envDefault:"8180"`
+	HTTPPort_ int
 
-	FunctionName_       string `env:"FUNCTION_NAME"`
-	FunctionInstanceID_ string `env:"FUNCTION_INSTANCE_ID"`
+	FunctionName_       string
+	FunctionInstanceID_ string
 
-	NATSURL_  string `env:"NATS_URL"` //nolint:stylecheck
-	LogLevel_ string `env:"LOG_LEVEL" envDefault:"info"`
-
-	ElectionsBucketTTL_ time.Duration `env:"ELECTIONS_BUCKET_TTL" envDefault:"2s"`
+	NATSURL_  string //nolint:stylecheck
+	LogLevel_ string
 }
 
 func (c Config) FunctionInstanceID() string {
@@ -21,8 +21,8 @@ func (c Config) FunctionInstanceID() string {
 }
 
 func (c Config) ElectionsBucketTTL() time.Duration {
-	return c.ElectionsBucketTTL_
-}
+	return lo.Must(time.ParseDuration("2s"))
+} // TODO: use const everywhere
 
 func (c Config) NATSURL() string {
 	return c.NATSURL_
