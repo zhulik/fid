@@ -40,7 +40,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 			return kv, nil
 		})
 
-		repo = lo.Must(docker.NewInstancesRepo(injector))
+		repo = lo.Must(docker.NewInstancesRepo(ctx, injector))
 	})
 
 	Describe("Add", func() {

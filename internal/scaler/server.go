@@ -3,7 +3,6 @@ package scaler
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/samber/do"
 	"github.com/sirupsen/logrus"
@@ -18,7 +17,7 @@ type Server struct {
 }
 
 // NewServer creates a new Server instance.
-func NewServer(injector *do.Injector) (*Server, error) {
+func NewServer(ctx context.Context, injector *do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "scaler.Server")
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
@@ -28,16 +27,12 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	// TODO: figure out how to get context from the outside
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
 	function, err := functionsRepo.Get(ctx, config.FunctionName())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get function: %w", err)
 	}
 
-	scaler, err := NewScaler(function, injector)
+	scaler, err := NewScaler(ctx, function, injector)
 	if err != nil {
 		return nil, err
 	}

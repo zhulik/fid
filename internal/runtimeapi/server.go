@@ -22,7 +22,7 @@ type Server struct {
 }
 
 // NewServer creates a new Server instance.
-func NewServer(injector *do.Injector) (*Server, error) {
+func NewServer(ctx context.Context, injector *do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 
 	if config.FunctionName() == "" {
@@ -42,7 +42,7 @@ func NewServer(injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) //nolint:mnd
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) //nolint:mnd
 	defer cancel()
 
 	function, err := functionsRepo.Get(ctx, config.FunctionName())
@@ -82,7 +82,7 @@ func (s *Server) Shutdown() error {
 		return err //nolint:wrapcheck
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	return s.functionInstance.delete(ctx)

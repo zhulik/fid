@@ -1,6 +1,7 @@
 package di
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/samber/do"
@@ -31,14 +32,16 @@ func init() { //nolint:gochecknoinits
 		return logger, nil
 	})
 
-	runtimeapi.Register()
-	backends.Register()
-	gateway.Register()
-	pubsub.Register()
-	kv.Register()
-	invocation.Register()
-	infoserver.Register()
-	scaler.Register()
+	ctx := context.Background()
+
+	runtimeapi.Register(ctx)
+	backends.Register(ctx)
+	gateway.Register(ctx)
+	pubsub.Register(ctx)
+	kv.Register(ctx)
+	invocation.Register(ctx)
+	infoserver.Register(ctx)
+	scaler.Register(ctx)
 }
 
 func Logger() logrus.FieldLogger {

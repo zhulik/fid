@@ -52,7 +52,7 @@ func New(kv KV, ttl time.Duration, key string, id string, opts ...Option) (*Elec
 func (e Elect) Start() chan Outcome {
 	outcomeCh := make(chan Outcome, 1)
 
-	go e.election(outcomeCh)
+	go e.election(context.Background(), outcomeCh)
 
 	return outcomeCh
 }
@@ -61,7 +61,7 @@ func (e Elect) Stop() {
 	close(e.stop)
 }
 
-func (e Elect) election(outcomeCh chan<- Outcome) { //nolint:cyclop,funlen
+func (e Elect) election(ctx context.Context, outcomeCh chan<- Outcome) { //nolint:cyclop,funlen
 	var currentStatus ElectionStatus
 
 	newStatusCh := make(chan ElectionStatus, 1)
@@ -78,7 +78,7 @@ func (e Elect) election(outcomeCh chan<- Outcome) { //nolint:cyclop,funlen
 
 	newStatusCh <- Unknown
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	for {

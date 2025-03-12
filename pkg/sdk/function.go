@@ -80,7 +80,6 @@ func Serve(handler Handler) error {
 }
 
 func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
-	// TODO: recover from panic in the handler
 	resp, err := fetchNextEvent(nextReq)
 	if err != nil {
 		return err
@@ -103,7 +102,7 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 
 	requestID := resp.Header.Get("Lambda-Runtime-Aws-Request-Id")
 
-	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	ctx, cancel := context.WithDeadline(nextReq.Context(), deadline)
 	defer cancel()
 
 	ctx = context.WithValue(ctx, RequestID, requestID)
@@ -126,7 +125,7 @@ func fetchEventAndHandle(nextReq *http.Request, handler Handler) error {
 		return fmt.Errorf("failed to create response request: %w", err)
 	}
 
-	err = postResponse(respReq)
+	err = postResponse(nextReq.Context(), respReq)
 	if err != nil {
 		return err
 	}
@@ -173,8 +172,8 @@ func fetchNextEvent(nextReq *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func postResponse(respReq *http.Request) error {
-	respCtx, cancel := context.WithTimeout(context.Background(), ResponseTimeout)
+func postResponse(ctx context.Context, respReq *http.Request) error {
+	respCtx, cancel := context.WithTimeout(ctx, ResponseTimeout)
 	defer cancel()
 
 	respReq = respReq.WithContext(respCtx)

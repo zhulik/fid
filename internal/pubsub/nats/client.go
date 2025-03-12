@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 	"fmt"
+	"time"
 
 	libNats "github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -41,7 +42,10 @@ func (c Client) HealthCheck() error {
 		return fmt.Errorf("healthcheck failed: %w", err)
 	}
 
-	_, err = c.JetStream.AccountInfo(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err = c.JetStream.AccountInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("healthcheck failed: %w", err)
 	}

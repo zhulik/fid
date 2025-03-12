@@ -18,8 +18,8 @@ type FunctionsRepo struct {
 	bucket core.KVBucket
 }
 
-func NewFunctionsRepo(injector *do.Injector) (*FunctionsRepo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func NewFunctionsRepo(ctx context.Context, injector *do.Injector) (*FunctionsRepo, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
 	kv := do.MustInvoke[core.KV](injector)

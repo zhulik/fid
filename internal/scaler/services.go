@@ -1,9 +1,13 @@
 package scaler
 
 import (
+	"context"
+
 	"github.com/samber/do"
 )
 
-func Register() {
-	do.Provide(nil, NewServer)
+func Register(ctx context.Context) {
+	do.Provide(nil, func(injector *do.Injector) (*Server, error) {
+		return NewServer(ctx, injector)
+	})
 }

@@ -27,7 +27,7 @@ type Scaler struct {
 	elector *elect.Elect
 }
 
-func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler, error) {
+func NewScaler(ctx context.Context, function core.FunctionDefinition, injector *do.Injector) (*Scaler, error) {
 	electID := uuid.NewString()
 
 	config := do.MustInvoke[core.Config](injector)
@@ -41,7 +41,7 @@ func NewScaler(function core.FunctionDefinition, injector *do.Injector) (*Scaler
 	kv := do.MustInvoke[core.KV](injector)
 	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
 	bucket, err := kv.Bucket(ctx, core.BucketNameElections)
@@ -114,7 +114,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 				}
 
 				go func() {
-					err := s.runScaler(sub)
+					err := s.runScaler(context.Background(), sub)
 					if err != nil {
 						errCh <- err
 					}
@@ -161,8 +161,8 @@ func (s Scaler) Shutdown() error {
 	return nil
 }
 
-func (s Scaler) runScaler(sub core.Subscription) error {
-	err := s.rescaleToConfig()
+func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
+	err := s.rescaleToConfig(ctx)
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 		switch req.Type {
 		case core.ScalingRequestTypeScaleUp:
 			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+				ctx, cancel := context.WithTimeout(ctx, time.Second)
 				defer cancel()
 
 				// TODO: reply to scale request with instance IDs
@@ -194,7 +194,7 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 			}()
 		case core.ScalingRequestTypeScaleDown:
 			go func() {
-				ctx, cancel := context.WithTimeout(context.Background(), s.function.Timeout())
+				ctx, cancel := context.WithTimeout(ctx, s.function.Timeout())
 				defer cancel()
 
 				// TODO: reply to scale request when deleted
@@ -216,8 +216,8 @@ func (s Scaler) runScaler(sub core.Subscription) error {
 	return nil
 }
 
-func (s Scaler) rescaleToConfig() error {
-	instances, err := s.instancesRepo.Count(context.Background(), s.function)
+func (s Scaler) rescaleToConfig(ctx context.Context) error {
+	instances, err := s.instancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instances: %w", err)
 	}
@@ -228,7 +228,7 @@ func (s Scaler) rescaleToConfig() error {
 		s.logger.Info("%d instances running, minimum is %d, creating %d", instances, s.function.ScalingConfig().Min, toCreate)
 
 		for range toCreate {
-			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
 
 			_, err = s.scaleUp(ctx)
 

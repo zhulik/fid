@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -147,7 +148,10 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 func (b Backend) HealthCheck() error {
 	b.logger.Debug("ContainerBackend health check.")
 
-	_, err := b.docker.Info(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err := b.docker.Info(ctx)
 	if err != nil {
 		return fmt.Errorf("backend health check failed: %w", err)
 	}

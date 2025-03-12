@@ -21,8 +21,8 @@ type InstancesRepo struct {
 	bucket core.KVBucket
 }
 
-func NewInstancesRepo(injector *do.Injector) (*InstancesRepo, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func NewInstancesRepo(ctx context.Context, injector *do.Injector) (*InstancesRepo, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
 	kv := do.MustInvoke[core.KV](injector)
