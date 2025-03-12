@@ -41,11 +41,6 @@ var startCMD = &cli.Command{
 			return fmt.Errorf("failed to parse %s: %w", fidFilePath, err)
 		}
 
-		err = createBuckets(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to create buckets: %w", err)
-		}
-
 		backend := do.MustInvoke[core.ContainerBackend](nil)
 
 		_, err = startGateway(ctx, backend)
@@ -66,29 +61,6 @@ var startCMD = &cli.Command{
 
 		return registerFunctions(ctx, backend, fidFile.Functions)
 	},
-}
-
-func createBuckets(ctx context.Context) error {
-	kv := do.MustInvoke[core.KV](nil)
-
-	_, err := kv.CreateBucket(ctx, core.BucketNameInstances, 0)
-	if err != nil {
-		return fmt.Errorf("failed to create or update instances bucket: %w", err)
-	}
-
-	_, err = kv.CreateBucket(ctx, core.BucketNameElections, di.Config().ElectionsBucketTTL())
-	if err != nil {
-		return fmt.Errorf("failed to create or update elections bucket: %w", err)
-	}
-
-	_, err = kv.CreateBucket(ctx, core.BucketNameFunctions, 0)
-	if err != nil {
-		return fmt.Errorf("failed to create or update functions bucket: %w", err)
-	}
-
-	di.Logger().Info("Buckets created or updated")
-
-	return nil
 }
 
 func registerFunctions(
