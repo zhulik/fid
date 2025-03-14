@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/samber/do"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/internal/di"
 )
 
 var initCMD = &cli.Command{
@@ -34,15 +34,16 @@ var initCMD = &cli.Command{
 }
 
 func createBuckets(ctx context.Context, injector *do.Injector) error {
-	logger := di.Logger(injector)
+	logger := do.MustInvoke[logrus.FieldLogger](injector)
 	kv := do.MustInvoke[core.KV](injector)
+	cfg := do.MustInvoke[core.Config](injector)
 
 	_, err := kv.CreateBucket(ctx, core.BucketNameInstances, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create or update instances bucket: %w", err)
 	}
 
-	_, err = kv.CreateBucket(ctx, core.BucketNameElections, di.Config(injector).ElectionsBucketTTL())
+	_, err = kv.CreateBucket(ctx, core.BucketNameElections, cfg.ElectionsBucketTTL())
 	if err != nil {
 		return fmt.Errorf("failed to create or update elections bucket: %w", err)
 	}

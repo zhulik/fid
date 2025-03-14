@@ -7,10 +7,10 @@ import (
 	"syscall"
 
 	"github.com/samber/do"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/gateway"
 )
 
@@ -24,7 +24,7 @@ var gatewayCMD = &cli.Command{
 		injector := initDI(cmd)
 		server := do.MustInvoke[*gateway.Server](injector)
 
-		logger := di.Logger(injector)
+		logger := do.MustInvoke[logrus.FieldLogger](injector)
 
 		logger.Info("Starting...")
 

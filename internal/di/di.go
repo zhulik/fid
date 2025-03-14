@@ -47,11 +47,3 @@ func Init() *do.Injector {
 
 	return injector
 }
-
-func Logger(injector *do.Injector) logrus.FieldLogger {
-	return do.MustInvoke[logrus.FieldLogger](injector)
-}
-
-func Config(injector *do.Injector) core.Config {
-	return do.MustInvoke[core.Config](injector)
-}
