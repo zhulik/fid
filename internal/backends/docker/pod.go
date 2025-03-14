@@ -24,13 +24,17 @@ type FunctionPod struct {
 	docker *client.Client
 }
 
-func CreateFunctionPod(ctx context.Context, function core.FunctionDefinition) (*FunctionPod, error) {
+func CreateFunctionPod(
+	ctx context.Context,
+	function core.FunctionDefinition,
+	injector *do.Injector,
+) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
 	pod := &FunctionPod{
 		UUID:   podID,
-		config: do.MustInvoke[core.Config](nil),
-		docker: do.MustInvoke[*client.Client](nil),
+		config: do.MustInvoke[core.Config](injector),
+		docker: do.MustInvoke[*client.Client](injector),
 	}
 
 	err := pod.createNetwork(ctx)

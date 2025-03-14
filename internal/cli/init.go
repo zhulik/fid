@@ -21,9 +21,9 @@ var initCMD = &cli.Command{
 	},
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		registerConfig(cmd)
+		injector := initDI(cmd)
 
-		err := createBuckets(ctx)
+		err := createBuckets(ctx, injector)
 		if err != nil {
 			return fmt.Errorf("failed to create buckets: %w", err)
 		}
@@ -32,15 +32,16 @@ var initCMD = &cli.Command{
 	},
 }
 
-func createBuckets(ctx context.Context) error {
-	kv := do.MustInvoke[core.KV](nil)
+func createBuckets(ctx context.Context, injector *do.Injector) error {
+	logger := di.Logger(injector)
+	kv := do.MustInvoke[core.KV](injector)
 
 	_, err := kv.CreateBucket(ctx, core.BucketNameInstances, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create or update instances bucket: %w", err)
 	}
 
-	_, err = kv.CreateBucket(ctx, core.BucketNameElections, di.Config().ElectionsBucketTTL())
+	_, err = kv.CreateBucket(ctx, core.BucketNameElections, di.Config(injector).ElectionsBucketTTL())
 	if err != nil {
 		return fmt.Errorf("failed to create or update elections bucket: %w", err)
 	}
@@ -50,7 +51,7 @@ func createBuckets(ctx context.Context) error {
 		return fmt.Errorf("failed to create or update functions bucket: %w", err)
 	}
 
-	di.Logger().Info("Buckets created or updated")
+	logger.Info("Buckets created or updated")
 
 	return nil
 }

@@ -17,9 +17,11 @@ import (
 	"github.com/zhulik/fid/internal/scaler"
 )
 
-func init() { //nolint:gochecknoinits
-	do.Provide(nil, func(_ *do.Injector) (logrus.FieldLogger, error) {
-		cfg := do.MustInvoke[core.Config](nil)
+func Init() *do.Injector {
+	injector := do.New()
+
+	do.Provide(injector, func(injector *do.Injector) (logrus.FieldLogger, error) {
+		cfg := do.MustInvoke[core.Config](injector)
 		logger := logrus.New()
 
 		logLevel, err := logrus.ParseLevel(cfg.LogLevel())
@@ -34,20 +36,22 @@ func init() { //nolint:gochecknoinits
 
 	ctx := context.Background()
 
-	runtimeapi.Register(ctx)
-	backends.Register(ctx)
-	gateway.Register(ctx)
-	pubsub.Register(ctx)
-	kv.Register(ctx)
-	invocation.Register(ctx)
-	infoserver.Register(ctx)
-	scaler.Register(ctx)
+	runtimeapi.Register(ctx, injector)
+	backends.Register(ctx, injector)
+	gateway.Register(ctx, injector)
+	pubsub.Register(ctx, injector)
+	kv.Register(ctx, injector)
+	invocation.Register(ctx, injector)
+	infoserver.Register(ctx, injector)
+	scaler.Register(ctx, injector)
+
+	return injector
 }
 
-func Logger() logrus.FieldLogger {
-	return do.MustInvoke[logrus.FieldLogger](nil)
+func Logger(injector *do.Injector) logrus.FieldLogger {
+	return do.MustInvoke[logrus.FieldLogger](injector)
 }
 
-func Config() core.Config {
-	return do.MustInvoke[core.Config](nil)
+func Config(injector *do.Injector) core.Config {
+	return do.MustInvoke[core.Config](injector)
 }

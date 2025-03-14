@@ -20,6 +20,8 @@ type Backend struct {
 	config        core.Config
 	logger        logrus.FieldLogger
 	functionsRepo core.FunctionsRepo
+
+	injector *do.Injector
 }
 
 func New(injector *do.Injector) (*Backend, error) {
@@ -30,6 +32,7 @@ func New(injector *do.Injector) (*Backend, error) {
 		logger: do.MustInvoke[logrus.FieldLogger](injector).
 			WithField("component", "backends.docker.Backend"),
 		functionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
+		injector:      injector,
 	}, nil
 }
 
@@ -174,7 +177,7 @@ func (b Backend) Shutdown() error {
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
 	b.logger.Infof("Creating new function pod for function %s", function)
 
-	pod, err := CreateFunctionPod(ctx, function)
+	pod, err := CreateFunctionPod(ctx, function, b.injector)
 	if err != nil {
 		return "", err
 	}

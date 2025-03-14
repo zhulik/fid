@@ -30,18 +30,20 @@ var startCMD = &cli.Command{
 	},
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		registerConfig(cmd)
+		injector := initDI(cmd)
+
+		logger := di.Logger(injector)
 
 		fidFilePath := cmd.String("fidfile")
-		di.Logger().Info("Starting...")
-		di.Logger().Infof("Loading %s...", fidFilePath)
+		logger.Info("Starting...")
+		logger.Infof("Loading %s...", fidFilePath)
 
 		fidFile, err := fidfile.ParseFile(fidFilePath)
 		if err != nil {
 			return fmt.Errorf("failed to parse %s: %w", fidFilePath, err)
 		}
 
-		backend := do.MustInvoke[core.ContainerBackend](nil)
+		backend := do.MustInvoke[core.ContainerBackend](injector)
 
 		_, err = startGateway(ctx, backend)
 		if err != nil {
@@ -59,22 +61,24 @@ var startCMD = &cli.Command{
 			}
 		}
 
-		return registerFunctions(ctx, backend, fidFile.Functions)
+		return registerFunctions(ctx, injector, backend, fidFile.Functions)
 	},
 }
 
 func registerFunctions(
 	ctx context.Context,
+	injector *do.Injector,
 	backend core.ContainerBackend,
 	functions map[string]*fidfile.Function,
 ) error {
-	pubSuber := do.MustInvoke[core.PubSuber](nil)
-	functionsRepo := do.MustInvoke[core.FunctionsRepo](nil)
+	pubSuber := do.MustInvoke[core.PubSuber](injector)
+	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
+	logger := di.Logger(injector)
 
-	di.Logger().Infof("Registering %d functions...", len(functions))
+	logger.Infof("Registering %d functions...", len(functions))
 
 	for _, function := range functions {
-		logger := di.Logger().WithField("function", function.Name())
+		logger := logger.WithField("function", function.Name())
 
 		err := pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 		if err != nil {

@@ -20,10 +20,12 @@ var gatewayCMD = &cli.Command{
 	Category: "Service",
 	Flags:    flagsServer,
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		registerConfig(cmd)
-		server := do.MustInvoke[*gateway.Server](nil)
+		injector := initDI(cmd)
+		server := do.MustInvoke[*gateway.Server](injector)
 
-		di.Logger().Info("Starting...")
+		logger := di.Logger(injector)
+
+		logger.Info("Starting...")
 
 		go func() {
 			err := server.Run()
@@ -32,10 +34,10 @@ var gatewayCMD = &cli.Command{
 				return
 			}
 
-			di.Logger().WithError(err).Fatal("Failed to run server")
+			logger.WithError(err).Fatal("Failed to run server")
 		}()
 
-		di.Logger().Info("Running...")
+		logger.Info("Running...")
 
 		return do.DefaultInjector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	},

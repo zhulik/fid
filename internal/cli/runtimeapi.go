@@ -20,10 +20,12 @@ var runtimeapiCMD = &cli.Command{
 	Category: "Function",
 	Flags:    append(flagsServer, flagFunctionName, flagFunctionInstanceID),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		registerConfig(cmd)
-		server := do.MustInvoke[*runtimeapi.Server](nil)
+		injector := initDI(cmd)
+		server := do.MustInvoke[*runtimeapi.Server](injector)
 
-		di.Logger().Info("Starting...")
+		logger := di.Logger(injector)
+
+		logger.Info("Starting...")
 
 		go func() {
 			err := server.Run()
@@ -32,10 +34,10 @@ var runtimeapiCMD = &cli.Command{
 				return
 			}
 
-			di.Logger().WithError(err).Fatal("Failed to run server")
+			logger.WithError(err).Fatal("Failed to run server")
 		}()
 
-		di.Logger().Info("Running...")
+		logger.Info("Running...")
 
 		return do.DefaultInjector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	},

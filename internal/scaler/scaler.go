@@ -27,7 +27,7 @@ type Scaler struct {
 	elector *elect.Elect
 }
 
-func NewScaler(ctx context.Context, function core.FunctionDefinition, injector *do.Injector) (*Scaler, error) {
+func NewScaler(ctx context.Context, injector *do.Injector, function core.FunctionDefinition) (*Scaler, error) {
 	electID := uuid.NewString()
 
 	config := do.MustInvoke[core.Config](injector)

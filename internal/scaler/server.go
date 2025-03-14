@@ -32,7 +32,7 @@ func NewServer(ctx context.Context, injector *do.Injector) (*Server, error) {
 		return nil, fmt.Errorf("failed to get function: %w", err)
 	}
 
-	scaler, err := NewScaler(ctx, function, injector)
+	scaler, err := NewScaler(ctx, injector, function)
 	if err != nil {
 		return nil, err
 	}

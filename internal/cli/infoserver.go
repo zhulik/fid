@@ -20,12 +20,14 @@ var infoServerCMD = &cli.Command{
 	Category: "Service",
 	Flags:    append(flagsServer, flagsBackend...),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		registerConfig(cmd)
+		injector := initDI(cmd)
 
-		di.Logger().Info("Starting...")
-		server := do.MustInvoke[*infoserver.Server](nil)
+		logger := di.Logger(injector)
 
-		di.Logger().Info("Starting...")
+		logger.Info("Starting...")
+		server := do.MustInvoke[*infoserver.Server](injector)
+
+		logger.Info("Starting...")
 
 		go func() {
 			err := server.Run()
@@ -34,10 +36,10 @@ var infoServerCMD = &cli.Command{
 				return
 			}
 
-			di.Logger().WithError(err).Fatal("Failed to run server")
+			logger.WithError(err).Fatal("Failed to run server")
 		}()
 
-		di.Logger().Info("Running...")
+		logger.Info("Running...")
 
 		return do.DefaultInjector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
 	},

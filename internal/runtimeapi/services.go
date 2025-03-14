@@ -6,8 +6,8 @@ import (
 	"github.com/samber/do"
 )
 
-func Register(ctx context.Context) {
-	do.Provide(nil, func(injector *do.Injector) (*Server, error) {
+func Register(ctx context.Context, injector *do.Injector) {
+	do.Provide(injector, func(injector *do.Injector) (*Server, error) {
 		return NewServer(ctx, injector)
 	})
 }
