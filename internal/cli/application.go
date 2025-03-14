@@ -14,10 +14,7 @@ var cmd = &cli.Command{
 	Name:    "fid",
 	Usage:   "Function in docker cli.",
 	Version: VERSION,
-}
-
-func Run() {
-	cmd.Commands = []*cli.Command{
+	Commands: []*cli.Command{
 		gatewayCMD,
 		infoServerCMD,
 		runtimeapiCMD,
@@ -25,7 +22,10 @@ func Run() {
 		healthcheckCMD,
 		startCMD,
 		initCMD,
-	}
+	},
+}
+
+func Run() {
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
 	}

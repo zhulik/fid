@@ -10,7 +10,7 @@ import (
 
 func Register(ctx context.Context) {
 	do.Provide(nil, nats.NewClient)
-	do.Provide[core.PubSuber](nil, func(injector *do.Injector) (core.PubSuber, error) {
+	do.Provide(nil, func(injector *do.Injector) (core.PubSuber, error) {
 		return nats.NewPubSuber(injector)
 	})
 }

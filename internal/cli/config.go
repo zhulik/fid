@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"log"
-
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/config"
@@ -10,9 +8,7 @@ import (
 )
 
 func registerConfig(cmd *cli.Command) {
-	do.Provide[core.Config](nil, func(injector *do.Injector) (core.Config, error) {
-		log.Printf("%+v", cmd.String(flagNameLogLevel))
-
+	do.Provide(nil, func(injector *do.Injector) (core.Config, error) {
 		return config.Config{
 			HTTPPort_:           int(cmd.Int(flagNameServerPort)),
 			FunctionName_:       cmd.String(flagNameFunctionName),

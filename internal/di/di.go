@@ -18,7 +18,7 @@ import (
 )
 
 func init() { //nolint:gochecknoinits
-	do.Provide[logrus.FieldLogger](nil, func(_ *do.Injector) (logrus.FieldLogger, error) {
+	do.Provide(nil, func(_ *do.Injector) (logrus.FieldLogger, error) {
 		cfg := do.MustInvoke[core.Config](nil)
 		logger := logrus.New()
 
