@@ -198,7 +198,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 				defer cancel()
 
 				// TODO: reply to scale request when deleted
-				err = s.killInstance(ctx, req.InstanceID)
+				err = s.stopInstance(ctx, req.InstanceID)
 				if err != nil {
 					s.logger.Errorf("Failed to scale down %+v", err)
 
@@ -250,7 +250,7 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 	return nil
 }
 
-func (s Scaler) killInstance(ctx context.Context, instanceID string) error {
+func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
 	count, err := s.instancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instance count: %w", err)
@@ -262,7 +262,7 @@ func (s Scaler) killInstance(ctx context.Context, instanceID string) error {
 		return nil
 	}
 
-	err = s.backend.KillInstance(ctx, instanceID)
+	err = s.backend.StopInstance(ctx, instanceID)
 	if err != nil {
 		return fmt.Errorf("failed to kill instance: %w", err)
 	}

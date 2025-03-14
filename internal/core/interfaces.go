@@ -37,7 +37,7 @@ type ContainerBackend interface {
 	StartInfoServer(ctx context.Context) (string, error)
 
 	AddInstance(ctx context.Context, function FunctionDefinition) (string, error)
-	KillInstance(ctx context.Context, instanceID string) error
+	StopInstance(ctx context.Context, instanceID string) error
 }
 
 type FunctionsRepo interface {
