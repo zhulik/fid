@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"fmt"
@@ -11,13 +11,14 @@ var (
 	defaultBackend    = "docker"
 )
 
-func newBackendFlag() cli.Flag {
+func NewBackendFlag() cli.Flag {
 	return &cli.GenericFlag{
-		Name:    flagNameBackend,
+		Name:    FlagNameBackend,
 		Aliases: []string{"b"},
 		Usage:   fmt.Sprintf("Set backend to `BACKEND`. Supported backends: %v", supportedBackends),
 		Value: &EnumFlag{
 			selected: defaultBackend,
+			possible: supportedBackends,
 		},
 		Sources: cli.EnvVars("BACKEND"),
 	}

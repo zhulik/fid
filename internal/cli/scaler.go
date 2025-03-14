@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/scaler"
@@ -18,7 +19,11 @@ var scalerCMD = &cli.Command{
 	Aliases:  []string{"sc"},
 	Usage:    "Run scaler.",
 	Category: "Function",
-	Flags:    append(append(flagsServer, flagFunctionName), flagsBackend...),
+	Flags: append(append(
+		flags.ForServer,
+		flags.FunctionName),
+		flags.ForBackend...,
+	),
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		injector := initDI(cmd)

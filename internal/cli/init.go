@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 )
@@ -16,8 +17,8 @@ var initCMD = &cli.Command{
 	Usage:    "Init FID. Does not start any services.",
 	Category: "User",
 	Flags: []cli.Flag{
-		flagNatsURL,
-		flagLogLevel,
+		flags.NatsURL,
+		flags.LogLevel,
 	},
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {

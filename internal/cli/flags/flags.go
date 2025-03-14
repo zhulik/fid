@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"github.com/urfave/cli/v3"
@@ -8,75 +8,75 @@ import (
 const defaultHTTPPort = 8080
 
 const (
-	flagNameNATSURL            = "nats-url"
-	flagNameFunctionName       = "function-name"
-	flagNameFunctionInstanceID = "function-instance-id"
-	flagNameServerPort         = "port"
-	flagNameLogLevel           = "log-level"
-	flagNameBackend            = "backend"
-	flagNameDockerURL          = "docker-url"
+	FlagNameNATSURL            = "nats-url"
+	FlagNameFunctionName       = "function-name"
+	FlagNameFunctionInstanceID = "function-instance-id"
+	FlagNameServerPort         = "port"
+	FlagNameLogLevel           = "log-level"
+	FlagNameBackend            = "backend"
+	FlagNameDockerURL          = "docker-url"
 )
 
 var (
-	flagNatsURL = &cli.StringFlag{
-		Name:    flagNameNATSURL,
+	NatsURL = &cli.StringFlag{
+		Name:    FlagNameNATSURL,
 		Aliases: []string{"n"},
 		Usage:   "Nats `URL`, eg nats://127.0.0.1:4222",
 		Value:   "nats://127.0.0.1:4222",
 		Sources: cli.EnvVars(core.EnvNameNatsURL),
 	}
 
-	flagFunctionName = &cli.StringFlag{
-		Name:     flagNameFunctionName,
+	FunctionName = &cli.StringFlag{
+		Name:     FlagNameFunctionName,
 		Aliases:  []string{"f"},
 		Usage:    "Set function to `NAME`.",
 		Sources:  cli.EnvVars(core.EnvNameFunctionName),
 		Required: true,
 	}
 
-	flagFunctionInstanceID = &cli.StringFlag{
-		Name:     flagNameFunctionInstanceID,
+	FunctionInstanceID = &cli.StringFlag{
+		Name:     FlagNameFunctionInstanceID,
 		Aliases:  []string{"fid"},
 		Usage:    "Set function instance to `ID`.",
 		Sources:  cli.EnvVars(core.EnvNameInstanceID),
 		Required: true,
 	}
 
-	flagServerPort = &cli.IntFlag{
-		Name:    flagNameServerPort,
+	ServerPort = &cli.IntFlag{
+		Name:    FlagNameServerPort,
 		Aliases: []string{"p"},
 		Usage:   "Set server port tp `ID`.",
 		Value:   defaultHTTPPort,
 		Sources: cli.EnvVars("HTTP_PORT"),
 	}
 
-	flagLogLevel = &cli.StringFlag{
-		Name:    flagNameLogLevel,
+	LogLevel = &cli.StringFlag{
+		Name:    FlagNameLogLevel,
 		Aliases: []string{"l"},
 		Usage:   "Set log level to `LEVEL`.",
 		Value:   "info",
 		Sources: cli.EnvVars("LOG_LEVEL"),
 	}
 
-	flagBackend = newBackendFlag()
+	Backend = NewBackendFlag()
 
-	flagDockerURL = &cli.StringFlag{
-		Name:    flagNameDockerURL,
+	DockerURL = &cli.StringFlag{
+		Name:    FlagNameDockerURL,
 		Aliases: []string{"du"},
 		Usage:   "Set docker url `URL`. For docker backend only. Can be a TCP socket or a Unix socket.",
 		Value:   "/var/run/docker.sock",
 		Sources: cli.EnvVars("DOCKER_URL"),
 	}
 
-	flagsCommon = []cli.Flag{
-		flagNatsURL,
-		flagLogLevel,
+	Common = []cli.Flag{
+		NatsURL,
+		LogLevel,
 	}
 
-	flagsDockerBackendConfig = []cli.Flag{
-		flagDockerURL,
-	}
+	ForServer = append(
+		Common,
+		ServerPort,
+	)
 
-	flagsServer  = append(flagsCommon, flagServerPort)
-	flagsBackend = append([]cli.Flag{flagBackend}, flagsDockerBackendConfig...)
+	ForBackend = []cli.Flag{Backend, DockerURL}
 )

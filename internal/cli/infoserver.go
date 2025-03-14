@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/infoserver"
@@ -18,7 +19,10 @@ var infoServerCMD = &cli.Command{
 	Aliases:  []string{"is"},
 	Usage:    "Run info server.",
 	Category: "Service",
-	Flags:    append(flagsServer, flagsBackend...),
+	Flags: append(
+		flags.ForServer,
+		flags.ForBackend...,
+	),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		injector := initDI(cmd)
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/fidfile"
@@ -18,8 +19,8 @@ var startCMD = &cli.Command{
 	Usage:    "Start FID.",
 	Category: "User",
 	Flags: []cli.Flag{
-		flagNatsURL,
-		flagLogLevel,
+		flags.NatsURL,
+		flags.LogLevel,
 		&cli.StringFlag{
 			Name:    "fidfile",
 			Aliases: []string{"f"},

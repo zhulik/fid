@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/do"
 	"github.com/urfave/cli/v3"
+	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/di"
 	"github.com/zhulik/fid/internal/runtimeapi"
@@ -18,7 +19,11 @@ var runtimeapiCMD = &cli.Command{
 	Aliases:  []string{"ra"},
 	Usage:    "Run runtime api server.",
 	Category: "Function",
-	Flags:    append(flagsServer, flagFunctionName, flagFunctionInstanceID),
+	Flags: append(
+		flags.ForServer,
+		flags.FunctionName,
+		flags.FunctionInstanceID,
+	),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		injector := initDI(cmd)
 		server := do.MustInvoke[*runtimeapi.Server](injector)
