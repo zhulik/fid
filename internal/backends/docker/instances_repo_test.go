@@ -242,7 +242,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 		})
 	})
 
-	Describe("Delete", func() {
+	Describe("Stop", func() {
 		Context("when instance does not exist", func() {
 			It("returns an error", func(ctx SpecContext) {
 				err := repo.Delete(ctx, function, instanceID)

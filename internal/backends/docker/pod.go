@@ -57,7 +57,7 @@ func CreateFunctionPod(
 	return pod, nil
 }
 
-func (p FunctionPod) Delete(ctx context.Context) error {
+func (p FunctionPod) Stop(ctx context.Context) error {
 	containerName := p.functionContainerName()
 
 	err := p.docker.ContainerStop(ctx, containerName, container.StopOptions{})
