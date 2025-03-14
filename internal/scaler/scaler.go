@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/elect"
@@ -27,7 +27,7 @@ type Scaler struct {
 	elector *elect.Elect
 }
 
-func NewScaler(ctx context.Context, injector *do.Injector, function core.FunctionDefinition) (*Scaler, error) {
+func NewScaler(ctx context.Context, injector do.Injector, function core.FunctionDefinition) (*Scaler, error) {
 	electID := uuid.NewString()
 
 	config := do.MustInvoke[core.Config](injector)

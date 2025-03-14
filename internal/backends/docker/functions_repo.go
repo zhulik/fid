@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -18,7 +18,7 @@ type FunctionsRepo struct {
 	bucket core.KVBucket
 }
 
-func NewFunctionsRepo(ctx context.Context, injector *do.Injector) (*FunctionsRepo, error) {
+func NewFunctionsRepo(ctx context.Context, injector do.Injector) (*FunctionsRepo, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 

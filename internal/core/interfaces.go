@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 )
 
 type ServiceDependency interface {
-	do.Healthcheckable
-	do.Shutdownable
+	do.Healthchecker
+	do.ShutdownerWithError
 }
 
 type Config interface {

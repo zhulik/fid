@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
@@ -22,7 +22,7 @@ type Server struct {
 }
 
 // NewServer creates a new Server instance.
-func NewServer(ctx context.Context, injector *do.Injector) (*Server, error) {
+func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 
 	if config.FunctionName() == "" {

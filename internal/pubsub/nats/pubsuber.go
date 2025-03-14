@@ -8,7 +8,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -28,7 +28,7 @@ type PubSuber struct {
 	logger logrus.FieldLogger
 }
 
-func NewPubSuber(injector *do.Injector) (*PubSuber, error) {
+func NewPubSuber(injector do.Injector) (*PubSuber, error) {
 	pubSuber := &PubSuber{
 		nats:   do.MustInvoke[*Client](injector),
 		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "pubsub.Nats.PubSuber"),

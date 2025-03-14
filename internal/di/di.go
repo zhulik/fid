@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/backends"
 	"github.com/zhulik/fid/internal/core"
@@ -17,10 +17,10 @@ import (
 	"github.com/zhulik/fid/internal/scaler"
 )
 
-func Init() *do.Injector {
+func Init() *do.RootScope {
 	injector := do.New()
 
-	do.Provide(injector, func(injector *do.Injector) (logrus.FieldLogger, error) {
+	do.Provide(injector, func(injector do.Injector) (logrus.FieldLogger, error) {
 		cfg := do.MustInvoke[core.Config](injector)
 		logger := logrus.New()
 

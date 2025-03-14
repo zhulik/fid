@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -19,7 +19,7 @@ type Server struct {
 	error error
 }
 
-func NewServer(injector *do.Injector, logger logrus.FieldLogger, port int) (*Server, error) {
+func NewServer(injector do.Injector, logger logrus.FieldLogger, port int) (*Server, error) {
 	defer logger.Info("Server created.")
 
 	router := gin.New()

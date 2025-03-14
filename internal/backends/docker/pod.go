@@ -9,7 +9,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -27,7 +27,7 @@ type FunctionPod struct {
 func CreateFunctionPod(
 	ctx context.Context,
 	function core.FunctionDefinition,
-	injector *do.Injector,
+	injector do.Injector,
 ) (*FunctionPod, error) {
 	podID := uuid.NewString()
 

@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/backends/docker"
 	"github.com/zhulik/fid/internal/core"
@@ -24,7 +24,7 @@ var function = docker.Function{
 }
 
 var _ = Describe("InstancesRepo", Serial, func() {
-	var injector *do.Injector
+	var injector do.Injector
 	var repo *docker.InstancesRepo
 	var kv core.KV
 
@@ -36,7 +36,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, core.BucketNameInstances) }) //nolint:errcheck
 
-		do.Provide(injector, func(injector *do.Injector) (core.KV, error) {
+		do.Provide(injector, func(injector do.Injector) (core.KV, error) {
 			return kv, nil
 		})
 

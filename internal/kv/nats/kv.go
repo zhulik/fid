@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/core"
 	pubsubNats "github.com/zhulik/fid/internal/pubsub/nats"
 )
 
-func NewKV(injector *do.Injector) (*KV, error) {
+func NewKV(injector do.Injector) (*KV, error) {
 	return &KV{
 		Nats: do.MustInvoke[*pubsubNats.Client](injector),
 	}, nil

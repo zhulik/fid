@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
@@ -33,7 +33,7 @@ var initCMD = &cli.Command{
 	},
 }
 
-func createBuckets(ctx context.Context, injector *do.Injector) error {
+func createBuckets(ctx context.Context, injector do.Injector) error {
 	logger := do.MustInvoke[logrus.FieldLogger](injector)
 	kv := do.MustInvoke[core.KV](injector)
 	cfg := do.MustInvoke[core.Config](injector)

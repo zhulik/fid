@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
@@ -21,7 +21,7 @@ type InstancesRepo struct {
 	bucket core.KVBucket
 }
 
-func NewInstancesRepo(ctx context.Context, injector *do.Injector) (*InstancesRepo, error) {
+func NewInstancesRepo(ctx context.Context, injector do.Injector) (*InstancesRepo, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 

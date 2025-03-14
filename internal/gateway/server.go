@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/middlewares"
@@ -20,7 +20,7 @@ type Server struct {
 }
 
 // NewServer creates a new Server instance.
-func NewServer(injector *do.Injector) (*Server, error) {
+func NewServer(injector do.Injector) (*Server, error) {
 	config := do.MustInvoke[core.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "gateway.Server")
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)

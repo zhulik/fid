@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
 
 // TODO: move to pubusub?
 
-func NewInvoker(injector *do.Injector) (*Invoker, error) {
+func NewInvoker(injector do.Injector) (*Invoker, error) {
 	return &Invoker{
 		pubSuber: do.MustInvoke[core.PubSuber](injector),
 		logger:   do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "invocation.Invoker"),

@@ -10,7 +10,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
@@ -21,10 +21,10 @@ type Backend struct {
 	logger        logrus.FieldLogger
 	functionsRepo core.FunctionsRepo
 
-	injector *do.Injector
+	injector do.Injector
 }
 
-func New(injector *do.Injector) (*Backend, error) {
+func New(injector do.Injector) (*Backend, error) {
 	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
 		docker: do.MustInvoke[*client.Client](injector),

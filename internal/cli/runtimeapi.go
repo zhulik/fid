@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"syscall"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
@@ -44,6 +44,8 @@ var runtimeapiCMD = &cli.Command{
 
 		logger.Info("Running...")
 
-		return do.DefaultInjector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
+		_, err := injector.ShutdownOnSignals(syscall.SIGINT, syscall.SIGTERM)
+
+		return err
 	},
 }

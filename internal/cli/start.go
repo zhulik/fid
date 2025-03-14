@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
@@ -68,7 +68,7 @@ var startCMD = &cli.Command{
 
 func registerFunctions(
 	ctx context.Context,
-	injector *do.Injector,
+	injector do.Injector,
 	backend core.ContainerBackend,
 	functions map[string]*fidfile.Function,
 ) error {

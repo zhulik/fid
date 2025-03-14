@@ -3,7 +3,7 @@ package nats_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/do"
+	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/kv/nats"
@@ -11,7 +11,7 @@ import (
 )
 
 var _ = Describe("Nats KV", Serial, func() {
-	var injector *do.Injector
+	var injector do.Injector
 	var kv core.KV
 
 	BeforeEach(func(ctx SpecContext) {
