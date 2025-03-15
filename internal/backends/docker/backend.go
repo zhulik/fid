@@ -182,15 +182,15 @@ func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefiniti
 		return "", err
 	}
 
-	b.logger.Infof("Function pod function %s created ID_=%s", function, pod.UUID)
+	b.logger.Infof("Function pod function %s created ID_=%s", function, pod.uuid)
 
-	return pod.UUID, nil
+	return pod.uuid, nil
 }
 
 func (b Backend) StopInstance(ctx context.Context, instanceID string) error {
 	b.logger.Infof("Killing function instance %s", instanceID)
 
-	return FunctionPod{UUID: instanceID, docker: b.docker}.Stop(ctx)
+	return FunctionPod{uuid: instanceID, docker: b.docker}.Stop(ctx)
 }
 
 func (b Backend) StartGateway(ctx context.Context) (string, error) {
