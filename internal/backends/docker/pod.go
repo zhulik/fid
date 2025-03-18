@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
 	"github.com/samber/do/v2"
+	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -22,6 +24,7 @@ type FunctionPod struct {
 	uuid   string // Of the "pod"
 	config core.Config
 	docker *client.Client
+	logger logrus.FieldLogger
 
 	runtimeAPIContainerName string
 	functionContainerName   string
@@ -34,15 +37,35 @@ func CreateFunctionPod(
 ) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
+	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
+		"component": "backends.docker.Pod",
+		"podID":     podID,
+		"function":  function,
+	})
+
 	pod := &FunctionPod{
 		uuid:                    podID,
 		config:                  do.MustInvoke[core.Config](injector),
 		docker:                  do.MustInvoke[*client.Client](injector),
 		runtimeAPIContainerName: fmt.Sprintf("%s-%s", podID, core.ComponentNameRuntimeAPI),
 		functionContainerName:   fmt.Sprintf("%s-%s", podID, core.ComponentNameFunction),
+		logger:                  logger,
 	}
 
-	err := pod.createNetwork(ctx)
+	var err error
+
+	defer func() {
+		if err != nil {
+			logger.WithError(err).Warn("Pod creation failed, cleaning up...")
+
+			err := pod.Stop(ctx)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to clean up after failed pod creation.")
+			}
+		}
+	}()
+
+	err = pod.createNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,25 +80,27 @@ func CreateFunctionPod(
 		return nil, err
 	}
 
-	// TODO: cleanup on error
-
 	return pod, nil
 }
 
 func (p FunctionPod) Stop(ctx context.Context) error {
-	err := p.docker.ContainerStop(ctx, p.functionContainerName, container.StopOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to stop container '%s': %w", p.functionContainerName, err)
+	fnStopErr := p.docker.ContainerStop(ctx, p.functionContainerName, container.StopOptions{})
+	if fnStopErr != nil {
+		fnStopErr = fmt.Errorf("failed to stop container '%s': %w", p.functionContainerName, fnStopErr)
 	}
 
-	err = p.docker.ContainerStop(ctx, p.runtimeAPIContainerName, container.StopOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to stop container '%s': %w", p.runtimeAPIContainerName, err)
+	apiStopErr := p.docker.ContainerStop(ctx, p.runtimeAPIContainerName, container.StopOptions{})
+	if apiStopErr != nil {
+		apiStopErr = fmt.Errorf("failed to stop container '%s': %w", p.runtimeAPIContainerName, apiStopErr)
 	}
 
-	err = p.deleteNetwork(ctx)
-	if err != nil {
-		return err
+	netDeleteErr := p.deleteNetwork(ctx)
+	if netDeleteErr != nil {
+		netDeleteErr = fmt.Errorf("failed to delete network '%s': %w", p.uuid, netDeleteErr)
+	}
+
+	if fnStopErr != nil || apiStopErr != nil || netDeleteErr != nil {
+		return errors.Join(fnStopErr, apiStopErr, netDeleteErr)
 	}
 
 	return nil
