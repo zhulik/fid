@@ -51,7 +51,7 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 	return nil
 }
 
-// Deregister deletes function's template, scaler, and garbage collector(TODO).
+// Deregister deletes function's template.
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
 	// TODO: how to cleanup running instances?
 	logger := b.logger.WithField("function", function)
@@ -61,10 +61,8 @@ func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinitio
 		return err //nolint:wrapcheck
 	}
 
-	err = b.docker.ContainerStop(ctx, b.scalerContainerName(function), container.StopOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to stop scaler: %w", err)
-	}
+	// TODO: we only delete the definition, the containers should be stopped and deleted by the
+	// garbage collector.
 
 	logger.Infof("Function deregistered")
 
