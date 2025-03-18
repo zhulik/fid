@@ -22,6 +22,8 @@ var cmd = &cli.Command{
 		healthcheckCMD,
 		startCMD,
 		initCMD,
+		garbageCollectorCMD,
+		functionGarbageCollectorCMD,
 	},
 }
 

@@ -12,11 +12,13 @@ const (
 
 	LabelNameComponent = "wtf.zhulik.fid.component"
 
-	ComponentNameRuntimeAPI = "runtimeapi"
-	ComponentNameFunction   = "function"
-	ComponentNameScaler     = "scaler"
-	ComponentNameInfoServer = "info-server"
-	ComponentNameGateway    = "gateway"
+	ComponentNameRuntimeAPI               = "runtimeapi"
+	ComponentNameFunction                 = "function"
+	ComponentNameScaler                   = "scaler"
+	ComponentNameInfoServer               = "info-server"
+	ComponentNameGateway                  = "gateway"
+	ComponentNameGarbageCollector         = "garbage-collector"
+	ComponentNameFunctionGarbageCollector = "function-garbage-collector"
 
 	ContentTypeJSON = "application/json; charset=utf-8"
 
