@@ -11,6 +11,10 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
+// Responsibilities:
+// Monitor pods: if function or runtime api crash - delete the rest and the network.
+// Call the scaler or do it here?
+// What if scaler crashes?
 var functionGarbageCollectorCMD = &cli.Command{
 	Name:     core.ComponentNameFunctionGarbageCollector,
 	Aliases:  []string{"fngc"},

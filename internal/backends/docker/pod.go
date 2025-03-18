@@ -86,12 +86,24 @@ func CreateFunctionPod(
 func (p FunctionPod) Stop(ctx context.Context) error {
 	fnStopErr := p.docker.ContainerStop(ctx, p.functionContainerName, container.StopOptions{})
 	if fnStopErr != nil {
-		fnStopErr = fmt.Errorf("failed to stop container '%s': %w", p.functionContainerName, fnStopErr)
+		if client.IsErrNotFound(fnStopErr) {
+			p.logger.Info("Function container '%s' does not exist, ignoring.")
+
+			fnStopErr = nil
+		} else {
+			fnStopErr = fmt.Errorf("failed to stop container '%s': %w", p.functionContainerName, fnStopErr)
+		}
 	}
 
 	apiStopErr := p.docker.ContainerStop(ctx, p.runtimeAPIContainerName, container.StopOptions{})
 	if apiStopErr != nil {
-		apiStopErr = fmt.Errorf("failed to stop container '%s': %w", p.runtimeAPIContainerName, apiStopErr)
+		if client.IsErrNotFound(apiStopErr) {
+			p.logger.Info("Runtime API container '%s' does not exist, ignoring.")
+
+			fnStopErr = nil
+		} else {
+			apiStopErr = fmt.Errorf("failed to stop container '%s': %w", p.runtimeAPIContainerName, apiStopErr)
+		}
 	}
 
 	netDeleteErr := p.deleteNetwork(ctx)

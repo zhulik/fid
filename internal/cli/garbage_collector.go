@@ -11,6 +11,9 @@ import (
 	"github.com/zhulik/fid/internal/core"
 )
 
+// Responsibilities:
+// Delete all resources and containers if a function is deleted.
+// ???
 var garbageCollectorCMD = &cli.Command{
 	Name:     core.ComponentNameGarbageCollector,
 	Aliases:  []string{"gc"},

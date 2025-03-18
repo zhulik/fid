@@ -53,7 +53,6 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 
 // Deregister deletes function's template.
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
-	// TODO: how to cleanup running instances?
 	logger := b.logger.WithField("function", function)
 
 	err := b.functionsRepo.Delete(ctx, function.Name())
