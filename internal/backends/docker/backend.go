@@ -36,7 +36,7 @@ func New(injector do.Injector) (*Backend, error) {
 	}, nil
 }
 
-// Register creates a new function's template, scaler, forwarder(TODO) and garbage collector(TODO).
+// Register creates a new function's template, scaler, and garbage collector(TODO).
 func (b Backend) Register(ctx context.Context, function core.FunctionDefinition) error {
 	err := b.createFunctionTemplate(ctx, function)
 	if err != nil {
@@ -51,7 +51,7 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 	return nil
 }
 
-// Deregister deletes function's template, scaler, forwarder(TODO) and garbage collector(TODO).
+// Deregister deletes function's template, scaler, and garbage collector(TODO).
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
 	// TODO: how to cleanup running instances?
 	logger := b.logger.WithField("function", function)
