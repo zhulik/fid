@@ -12,7 +12,7 @@ type Config struct {
 	FunctionName_       string
 	FunctionInstanceID_ string
 
-	NATSURL_  string //nolint:stylecheck
+	NATSURL_  string
 	LogLevel_ string
 }
 

@@ -14,7 +14,7 @@ import (
 	"github.com/zhulik/fid/pkg/json"
 )
 
-var Stopped = errors.New("stopped") //nolint:errname,gochecknoglobals,stylecheck
+var Stopped = errors.New("stopped") //nolint:errname,gochecknoglobals,staticcheck
 
 type Scaler struct {
 	function core.FunctionDefinition

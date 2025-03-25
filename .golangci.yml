@@ -1,64 +1,70 @@
+version: "2"
 run:
   modules-download-mode: readonly
-
 linters:
-  enable-all: true
+  default: all
   disable:
-    # Deprecated
-    - tenv
-
-    # Disabled purposely
-    - exhaustruct # Does not make any sense
-    - godox # Does not make any sense
-    - depguard # Too boring to configure and maintain
-    - ireturn # Removes it's own nolints and then complains
-
-linters-settings:
-  varnamelen:
-    ignore-decls:
-      - w http.ResponseWriter
-      - r *http.Request
-      - c *gin.Context
-      - ok bool
-      - kv jetstream.KeyValue
-      - kv *nats.KV
-      - kv core.KV
-      - kv KV
-      - id string
-      - wg *sync.WaitGroup
-      - js jetstream.JetStream
-      - i int
-      - n int64
-      - wg sync.WaitGroup
-
-  errcheck:
-    exclude-functions:
-      - (*github.com/gin-gonic/gin.Context).Error
-      - (github.com/zhulik/fid/internal/core.Message).Ack
-
-  wrapcheck:
-    extra-ignore-sigs:
-      - .Unpack(
-
-  gochecknoglobals:
-
-
-
-  revive:
+    - depguard
+    - exhaustruct
+    - godox
+    - ireturn
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*github.com/gin-gonic/gin.Context).Error
+        - (github.com/zhulik/fid/internal/core.Message).Ack
+    revive:
+      rules:
+        - name: dot-imports
+          disabled: true
+    varnamelen:
+      ignore-decls:
+        - w http.ResponseWriter
+        - r *http.Request
+        - c *gin.Context
+        - ok bool
+        - kv jetstream.KeyValue
+        - kv *nats.KV
+        - kv core.KV
+        - kv KV
+        - id string
+        - wg *sync.WaitGroup
+        - js jetstream.JetStream
+        - i int
+        - n int64
+        - wg sync.WaitGroup
+    wrapcheck:
+      extra-ignore-sigs:
+        - .Unpack(
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: dot-imports
-        disabled: true
-
-
+      - linters:
+          - gochecknoglobals
+        path: _test\.go
+      - linters:
+          - gochecknoglobals
+        path: internal/cli/.+\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-same-issues: 0
-
-
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gochecknoglobals
-
-    - path: internal/cli/.+\.go
-      linters:
-        - gochecknoglobals
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
