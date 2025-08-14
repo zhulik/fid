@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/samber/lo"
@@ -13,7 +14,7 @@ type Config struct {
 	FunctionInstanceID_ string
 
 	NATSURL_  string
-	LogLevel_ string
+	LogLevel_ slog.Level
 }
 
 func (c Config) FunctionInstanceID() string {
@@ -32,7 +33,7 @@ func (c Config) HTTPPort() int {
 	return c.HTTPPort_
 }
 
-func (c Config) LogLevel() string {
+func (c Config) LogLevel() slog.Level {
 	return c.LogLevel_
 }
 

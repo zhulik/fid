@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/elect"
@@ -19,7 +19,7 @@ var Stopped = errors.New("stopped") //nolint:errname,gochecknoglobals,staticchec
 
 type Scaler struct {
 	function core.FunctionDefinition
-	logger   logrus.FieldLogger
+	logger   *slog.Logger
 
 	backend       core.ContainerBackend
 	pubSuber      core.PubSuber
@@ -32,11 +32,12 @@ func NewScaler(ctx context.Context, injector do.Injector, function core.Function
 	electID := uuid.NewString()
 
 	config := do.MustInvoke[config.Config](injector)
-	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
-		"component": "scaler.Scaler",
-		"function":  function,
-		"electID":   electID,
-	})
+	logger := do.MustInvoke[*slog.Logger](injector).With(
+		"component", "scaler.Scaler",
+		"function", function,
+		"electID", electID,
+	)
+
 	backend := do.MustInvoke[core.ContainerBackend](injector)
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 	kv := do.MustInvoke[core.KV](injector)
@@ -61,7 +62,7 @@ func NewScaler(ctx context.Context, injector do.Injector, function core.Function
 		return nil, fmt.Errorf("failed to create elector: %w", err)
 	}
 
-	logger.Infof("Scaler created")
+	logger.Info("Scaler created")
 
 	return &Scaler{
 		function:      function,
@@ -170,7 +171,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 
 	// TODO: subscribe to definition change and scale accordingly
 	for msg := range sub.C() {
-		s.logger.Debugf("Scaler received message: %s", msg.Data())
+		s.logger.Debug("Scaler received message", "message", msg.Data())
 
 		req, err := json.Unmarshal[core.ScalingRequest](msg.Data())
 		if err != nil {
@@ -186,7 +187,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 				// TODO: reply to scale request with instance IDs
 				_, err = s.scaleUp(ctx)
 				if err != nil {
-					s.logger.Errorf("Failed to scale up %+v", err)
+					s.logger.Error("Failed to scale up", "error", err)
 
 					return
 				}
@@ -201,7 +202,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 				// TODO: reply to scale request when deleted
 				err = s.stopInstance(ctx, req.InstanceID)
 				if err != nil {
-					s.logger.Errorf("Failed to scale down %+v", err)
+					s.logger.Error("Failed to scale down", "error", err)
 
 					return
 				}
@@ -210,7 +211,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 			}()
 
 		default:
-			s.logger.Warnf("Unknown scaling request type: %d", req.Type)
+			s.logger.Warn("Unknown scaling request type", "type", req.Type)
 		}
 	}
 
@@ -226,7 +227,11 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 	switch {
 	case instances < s.function.ScalingConfig().Min:
 		toCreate := s.function.ScalingConfig().Min - instances
-		s.logger.Info("%d instances running, minimum is %d, creating %d", instances, s.function.ScalingConfig().Min, toCreate)
+		s.logger.Info("No need to rescale to config",
+			"instances", instances,
+			"min", s.function.ScalingConfig().Min,
+			"toCreate", toCreate,
+		)
 
 		for range toCreate {
 			ctx, cancel := context.WithTimeout(ctx, time.Second)
@@ -242,10 +247,15 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 	case instances > s.function.ScalingConfig().Max:
 		// TODO: implement
 		toKill := instances - s.function.ScalingConfig().Max
-		s.logger.Info("%d instances running, maximum is %d, killing %d", instances, s.function.ScalingConfig().Max, toKill)
+		s.logger.Info("No need to rescale to config",
+			"instances", instances,
+			"max", s.function.ScalingConfig().Max,
+			"toKill", toKill,
+		)
 	default:
-		s.logger.Infof("No need to rescale to config: %d instances running, min is %d, max is %d", instances,
-			s.function.ScalingConfig().Min, s.function.ScalingConfig().Max)
+		s.logger.Info("No need to rescale to config",
+			"instances", instances,
+			"min", s.function.ScalingConfig().Min, "max", s.function.ScalingConfig().Max)
 	}
 
 	return nil
@@ -258,7 +268,7 @@ func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
 	}
 
 	if count-1 <= s.function.ScalingConfig().Min {
-		s.logger.Infof("cannot kill instances %s: too few instances left", instanceID)
+		s.logger.Info("cannot kill instances, too few instances left", "instanceID", instanceID)
 
 		return nil
 	}
@@ -284,7 +294,7 @@ func (s Scaler) scaleUp(ctx context.Context) (string, error) { //nolint:unparam
 		return "", fmt.Errorf("failed to add instance: %w", err)
 	}
 
-	s.logger.Infof("Instance added %s", instanceID)
+	s.logger.Info("Instance added", "instanceID", instanceID)
 
 	return instanceID, nil
 }

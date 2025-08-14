@@ -2,19 +2,19 @@ package nats
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
 
 type subscriptionWrapper struct {
 	consumerCtx jetstream.ConsumeContext
 	ch          chan core.Message
-	logger      logrus.FieldLogger
+	logger      *slog.Logger
 }
 
-func newSubscriptionWrapper(cons jetstream.Consumer, logger logrus.FieldLogger) (subscriptionWrapper, error) {
+func newSubscriptionWrapper(cons jetstream.Consumer, logger *slog.Logger) (subscriptionWrapper, error) {
 	msgChan := make(chan core.Message)
 
 	consumerCtx, err := cons.Consume(func(msg jetstream.Msg) {

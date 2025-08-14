@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
@@ -33,11 +33,11 @@ var startCMD = &cli.Command{
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		injector := initDI(cmd)
 
-		logger := do.MustInvoke[logrus.FieldLogger](injector)
+		logger := do.MustInvoke[*slog.Logger](injector)
 
 		fidFilePath := cmd.String("fidfile")
 		logger.Info("Starting...")
-		logger.Infof("Loading %s...", fidFilePath)
+		logger.Info("Loading", "fidfile", fidFilePath)
 
 		fidFile, err := fidfile.ParseFile(fidFilePath)
 		if err != nil {
@@ -74,12 +74,12 @@ func registerFunctions(
 ) error {
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
-	logger := do.MustInvoke[logrus.FieldLogger](injector)
+	logger := do.MustInvoke[*slog.Logger](injector)
 
-	logger.Infof("Registering %d functions...", len(functions))
+	logger.Info("Registering functions", "count", len(functions))
 
 	for _, function := range functions {
-		logger := logger.WithField("function", function.Name())
+		logger := logger.With("function", function.Name())
 
 		err := pubSuber.CreateOrUpdateFunctionStream(ctx, function)
 		if err != nil {

@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
@@ -30,10 +30,10 @@ func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 		return nil, core.ErrFunctionNameNotGiven
 	}
 
-	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
-		"component": "runtimeapi.Server",
-		"function":  config.FunctionName(),
-	})
+	logger := do.MustInvoke[*slog.Logger](injector).With(
+		"component", "runtimeapi.Server",
+		"function", config.FunctionName(),
+	)
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
@@ -113,7 +113,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 	msg.Ack()
 
-	s.Logger.Infof("Event received: %s", msg.Headers()[core.HeaderNameRequestID][0])
+	s.Logger.Info("Event received", "requestID", msg.Headers()[core.HeaderNameRequestID][0])
 
 	for key, values := range msg.Headers() {
 		for _, value := range values {
@@ -128,10 +128,10 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
 	subject := s.pubSuber.ResponseSubjectName(s.functionInstance, requestID)
 
-	logger := s.Logger.WithFields(map[string]interface{}{
-		"requestID": requestID,
-		"subject":   subject,
-	})
+	logger := s.Logger.With(
+		"requestID", requestID,
+		"subject", subject,
+	)
 
 	logger.Info("Sending response...")
 
@@ -167,10 +167,10 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
 	subject := s.pubSuber.ErrorSubjectName(s.functionInstance, requestID)
 
-	logger := s.Logger.WithFields(map[string]interface{}{
-		"requestID": requestID,
-		"subject":   subject,
-	})
+	logger := s.Logger.With(
+		"requestID", requestID,
+		"subject", subject,
+	)
 
 	logger.Info("Sending error response...")
 

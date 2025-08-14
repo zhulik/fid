@@ -3,12 +3,12 @@ package infoserver
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
@@ -24,7 +24,7 @@ type Server struct {
 // NewServer creates a new Server instance.
 func NewServer(injector do.Injector) (*Server, error) {
 	config := do.MustInvoke[config.Config](injector)
-	logger := do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "infoserver.Server")
+	logger := do.MustInvoke[*slog.Logger](injector).With("component", "infoserver.Server")
 	backend := do.MustInvoke[core.ContainerBackend](injector)
 	functionsrepo := do.MustInvoke[core.FunctionsRepo](injector)
 

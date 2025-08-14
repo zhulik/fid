@@ -3,9 +3,9 @@ package cli
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/config"
@@ -35,7 +35,7 @@ var initCMD = &cli.Command{
 }
 
 func createBuckets(ctx context.Context, injector do.Injector) error {
-	logger := do.MustInvoke[logrus.FieldLogger](injector)
+	logger := do.MustInvoke[*slog.Logger](injector)
 	kv := do.MustInvoke[core.KV](injector)
 	cfg := do.MustInvoke[config.Config](injector)
 

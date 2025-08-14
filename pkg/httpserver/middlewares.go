@@ -1,11 +1,11 @@
 package httpserver
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -26,13 +26,13 @@ func JSONRecovery() gin.HandlerFunc {
 	}
 }
 
-func JSONErrorHandler(logger logrus.FieldLogger) gin.HandlerFunc {
+func JSONErrorHandler(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
 
 		if len(c.Errors) > 0 {
 			for _, err := range c.Errors {
-				logger.WithError(err.Err).Errorf("Error during handling %s: %s", c.Request.URL.Path, err)
+				logger.Error("Error during handling", "url", c.Request.URL.Path, "error", err)
 			}
 
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{
@@ -43,18 +43,18 @@ func JSONErrorHandler(logger logrus.FieldLogger) gin.HandlerFunc {
 }
 
 // LoggingMiddleware logs each request's URI and method.
-func LoggingMiddleware(logger logrus.FieldLogger) gin.HandlerFunc {
+func LoggingMiddleware(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 
 		defer func() {
 			total := time.Since(start)
-			logger.WithFields(logrus.Fields{
-				"method":   c.Request.Method,
-				"path":     c.Request.URL.Path,
-				"duration": total,
-				"status":   c.Writer.Status(),
-			}).Infof("%s %s", c.Request.Method, c.Request.URL.Path)
+			logger.With(
+				"method", c.Request.Method,
+				"path", c.Request.URL.Path,
+				"duration", total,
+				"status", c.Writer.Status(),
+			).Info("Request", "method", c.Request.Method, "path", c.Request.URL.Path)
 		}()
 
 		c.Next()

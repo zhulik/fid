@@ -3,12 +3,12 @@ package invocation
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -17,7 +17,7 @@ import (
 func NewInvoker(injector do.Injector) (*Invoker, error) {
 	return &Invoker{
 		pubSuber: do.MustInvoke[core.PubSuber](injector),
-		logger:   do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "invocation.Invoker"),
+		logger:   do.MustInvoke[*slog.Logger](injector).With("component", "invocation.Invoker"),
 		kv:       do.MustInvoke[core.KV](injector),
 	}, nil
 }
@@ -25,7 +25,7 @@ func NewInvoker(injector do.Injector) (*Invoker, error) {
 type Invoker struct {
 	pubSuber core.PubSuber
 	kv       core.KV
-	logger   logrus.FieldLogger
+	logger   *slog.Logger
 }
 
 func (i Invoker) HealthCheck() error {
@@ -62,10 +62,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, p
 		Timeout: function.Timeout(),
 	}
 
-	i.logger.WithFields(logrus.Fields{
-		"requestID": requestID,
-		"function":  function,
-	}).Info("Invoking...")
+	i.logger.With("requestID", requestID, "function", function).Info("Invoking...")
 
 	response, err := i.pubSuber.PublishWaitResponse(ctx, responseInput)
 	if err != nil {

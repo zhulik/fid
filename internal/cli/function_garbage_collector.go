@@ -2,10 +2,10 @@ package cli
 
 import (
 	"context"
+	"log/slog"
 	"syscall"
 
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
@@ -29,7 +29,7 @@ var functionGarbageCollectorCMD = &cli.Command{
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		injector := initDI(cmd)
 
-		logger := do.MustInvoke[logrus.FieldLogger](injector)
+		logger := do.MustInvoke[*slog.Logger](injector)
 
 		logger.Info("Starting...")
 

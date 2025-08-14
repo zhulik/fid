@@ -3,23 +3,23 @@ package httpserver
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
 	server http.Server
 
 	Router *gin.Engine
-	Logger logrus.FieldLogger
+	Logger *slog.Logger
 
 	error error
 }
 
-func NewServer(injector do.Injector, logger logrus.FieldLogger, port int) (*Server, error) {
+func NewServer(injector do.Injector, logger *slog.Logger, port int) (*Server, error) {
 	defer logger.Info("Server created.")
 
 	router := gin.New()
@@ -71,7 +71,7 @@ func (s *Server) Shutdown() error {
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	s.Logger.Info("Starting server at: ", s.server.Addr)
+	s.Logger.Info("Starting server", "addr", s.server.Addr)
 
 	s.error = s.server.ListenAndServe()
 

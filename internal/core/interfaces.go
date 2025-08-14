@@ -63,7 +63,7 @@ type Subscription interface {
 	Stop()
 }
 
-type PubSuber interface { //nolint:interfacebloat
+type PubSuber interface {
 	Publish(ctx context.Context, msg Msg) error
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (Message, error)
 	Next(ctx context.Context, streamName string, subjects []string, durableName string) (Message, error)

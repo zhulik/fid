@@ -5,19 +5,19 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/samber/do/v2"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 )
 
 // Key structure "<function-name>.<instance-uuid>"
 
 type InstancesRepo struct {
-	logger logrus.FieldLogger
+	logger *slog.Logger
 	bucket core.KVBucket
 }
 
@@ -29,8 +29,8 @@ func NewInstancesRepo(ctx context.Context, injector do.Injector) (*InstancesRepo
 	bucket := lo.Must(kv.Bucket(ctx, core.BucketNameInstances))
 
 	return &InstancesRepo{
-		logger: do.MustInvoke[logrus.FieldLogger](injector).
-			WithField("component", "backends.docker.InstancesRepo"),
+		logger: do.MustInvoke[*slog.Logger](injector).
+			With("component", "backends.docker.InstancesRepo"),
 		bucket: bucket,
 	}, nil
 }

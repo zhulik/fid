@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do/v2"
 	"github.com/samber/lo"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
 )
@@ -25,13 +25,13 @@ const (
 type PubSuber struct {
 	nats *Client
 
-	logger logrus.FieldLogger
+	logger *slog.Logger
 }
 
 func NewPubSuber(injector do.Injector) (*PubSuber, error) {
 	pubSuber := &PubSuber{
 		nats:   do.MustInvoke[*Client](injector),
-		logger: do.MustInvoke[logrus.FieldLogger](injector).WithField("component", "pubsub.Nats.PubSuber"),
+		logger: do.MustInvoke[*slog.Logger](injector).With("component", "pubsub.Nats.PubSuber"),
 	}
 
 	return pubSuber, nil
@@ -84,7 +84,7 @@ func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWai
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.WithField("subject", input.Msg.Subject).Debug("Message sent, awaiting response")
+	p.logger.With("subject", input.Msg.Subject).Debug("Message sent, awaiting response")
 
 	select {
 	case <-ctx.Done():
@@ -112,7 +112,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 // TODO: something more universal, for any kind of streams?
 func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function core.FunctionDefinition) error {
 	streamName := p.FunctionStreamName(function)
-	logger := p.logger.WithField("streamName", streamName)
+	logger := p.logger.With("streamName", streamName)
 
 	cfg := jetstream.StreamConfig{
 		Name: streamName,
@@ -164,11 +164,11 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 		durableName = cons.CachedInfo().Name
 	}
 
-	logger := p.logger.WithFields(logrus.Fields{
-		"stream":      streamName,
-		"consumerCtx": durableName,
-		"subjects":    subjects,
-	})
+	logger := p.logger.With(
+		"stream", streamName,
+		"consumerCtx", durableName,
+		"subjects", subjects,
+	)
 
 	logger.Debug("NATS Consumer created")
 
@@ -218,11 +218,11 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 		durableName = cons.CachedInfo().Name
 	}
 
-	logger := p.logger.WithFields(logrus.Fields{
-		"stream":      streamName,
-		"consumerCtx": durableName,
-		"subjects":    subjects,
-	})
+	logger := p.logger.With(
+		"stream", streamName,
+		"consumerCtx", durableName,
+		"subjects", subjects,
+	)
 
 	return newSubscriptionWrapper(cons, logger)
 }

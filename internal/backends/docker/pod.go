@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -11,7 +12,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 )
@@ -25,7 +25,7 @@ type FunctionPod struct {
 	uuid   string // Of the "pod"
 	config config.Config
 	docker *client.Client
-	logger logrus.FieldLogger
+	logger *slog.Logger
 
 	runtimeAPIContainerName string
 	functionContainerName   string
@@ -38,11 +38,11 @@ func CreateFunctionPod(
 ) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
-	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
-		"component": "backends.docker.Pod",
-		"podID":     podID,
-		"function":  function,
-	})
+	logger := do.MustInvoke[*slog.Logger](injector).With(
+		"component", "backends.docker.Pod",
+		"podID", podID,
+		"function", function,
+	)
 
 	pod := &FunctionPod{
 		uuid:                    podID,
@@ -57,11 +57,11 @@ func CreateFunctionPod(
 
 	defer func() {
 		if err != nil {
-			logger.WithError(err).Warn("Pod creation failed, cleaning up...")
+			logger.Warn("Pod creation failed, cleaning up...", "error", err)
 
 			err := pod.Stop(ctx)
 			if err != nil {
-				logger.WithError(err).Warn("Failed to clean up after failed pod creation.")
+				logger.Warn("Failed to clean up after failed pod creation.", "error", err)
 			}
 		}
 	}()

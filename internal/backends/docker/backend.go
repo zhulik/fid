@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 )
@@ -19,7 +19,7 @@ import (
 type Backend struct {
 	docker        *client.Client
 	config        config.Config
-	logger        logrus.FieldLogger
+	logger        *slog.Logger
 	functionsRepo core.FunctionsRepo
 
 	injector do.Injector
@@ -28,10 +28,9 @@ type Backend struct {
 func New(injector do.Injector) (*Backend, error) {
 	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
-		docker: do.MustInvoke[*client.Client](injector),
-		config: do.MustInvoke[config.Config](injector),
-		logger: do.MustInvoke[logrus.FieldLogger](injector).
-			WithField("component", "backends.docker.Backend"),
+		docker:        do.MustInvoke[*client.Client](injector),
+		config:        do.MustInvoke[config.Config](injector),
+		logger:        do.MustInvoke[*slog.Logger](injector).With("component", "backends.docker.Backend"),
 		functionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
 		injector:      injector,
 	}, nil
@@ -54,7 +53,7 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 
 // Deregister deletes function's template.
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.logger.WithField("function", function)
+	logger := b.logger.With("function", function)
 
 	err := b.functionsRepo.Delete(ctx, function.Name())
 	if err != nil {
@@ -64,13 +63,13 @@ func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinitio
 	// TODO: we only delete the definition, the containers should be stopped and deleted by the
 	// garbage collector.
 
-	logger.Infof("Function deregistered")
+	logger.Info("Function deregistered")
 
 	return nil
 }
 
 func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.logger.WithField("function", function)
+	logger := b.logger.With("function", function)
 
 	containerConfig := &container.Config{
 		Image: core.ImageNameFID,
@@ -101,7 +100,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 	_, err := b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
-			logger.Infof("Scaler container already exists")
+			logger.Info("Scaler container already exists")
 
 			return nil
 		}
@@ -114,7 +113,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 		return fmt.Errorf("failed to start scaler container: %w", err)
 	}
 
-	logger.Infof("Scaler container created and started")
+	logger.Info("Scaler container created and started")
 
 	return nil
 }
@@ -129,7 +128,7 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	b.logger.WithField("function", function).Info("Function template stored")
+	b.logger.With("function", function).Info("Function template stored")
 
 	return nil
 }
@@ -173,20 +172,20 @@ func (b Backend) Shutdown() error {
 }
 
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
-	b.logger.Infof("Creating new function pod for function %s", function)
+	b.logger.Info("Creating new function pod", "function", function)
 
 	pod, err := CreateFunctionPod(ctx, function, b.injector)
 	if err != nil {
 		return "", err
 	}
 
-	b.logger.Infof("Function pod function %s created ID_=%s", function, pod.uuid)
+	b.logger.Info("Function pod created", "function", function, "podID", pod.uuid)
 
 	return pod.uuid, nil
 }
 
 func (b Backend) StopInstance(ctx context.Context, instanceID string) error {
-	b.logger.Infof("Killing function instance %s", instanceID)
+	b.logger.Info("Killing function instance", "instanceID", instanceID)
 
 	return FunctionPod{uuid: instanceID, docker: b.docker}.Stop(ctx)
 }
@@ -230,7 +229,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
-			b.logger.Infof("Gateway container already exists")
+			b.logger.Info("Gateway container already exists")
 
 			return "", core.ErrContainerAlreadyExists
 		}
@@ -290,7 +289,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
-			b.logger.Infof("Info server container already exists")
+			b.logger.Info("Info server container already exists")
 
 			return "", core.ErrContainerAlreadyExists
 		}

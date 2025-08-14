@@ -3,11 +3,11 @@ package cli
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"syscall"
 
 	"github.com/samber/do/v2"
-	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
@@ -29,7 +29,7 @@ var scalerCMD = &cli.Command{
 		injector := initDI(cmd)
 
 		server := do.MustInvoke[*scaler.Server](injector)
-		logger := do.MustInvoke[logrus.FieldLogger](injector)
+		logger := do.MustInvoke[*slog.Logger](injector)
 
 		logger.Info("Starting...")
 
@@ -40,7 +40,7 @@ var scalerCMD = &cli.Command{
 				return
 			}
 
-			logger.WithError(err).Fatal("Failed to run server")
+			logger.Error("Failed to run server", "error", err)
 		}()
 
 		logger.Info("Running...")
