@@ -8,6 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -36,7 +37,7 @@ var initCMD = &cli.Command{
 func createBuckets(ctx context.Context, injector do.Injector) error {
 	logger := do.MustInvoke[logrus.FieldLogger](injector)
 	kv := do.MustInvoke[core.KV](injector)
-	cfg := do.MustInvoke[core.Config](injector)
+	cfg := do.MustInvoke[config.Config](injector)
 
 	_, err := kv.CreateBucket(ctx, core.BucketNameInstances, 0)
 	if err != nil {

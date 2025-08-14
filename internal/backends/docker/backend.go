@@ -12,12 +12,13 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 )
 
 type Backend struct {
 	docker        *client.Client
-	config        core.Config
+	config        config.Config
 	logger        logrus.FieldLogger
 	functionsRepo core.FunctionsRepo
 
@@ -28,7 +29,7 @@ func New(injector do.Injector) (*Backend, error) {
 	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
 		docker: do.MustInvoke[*client.Client](injector),
-		config: do.MustInvoke[core.Config](injector),
+		config: do.MustInvoke[config.Config](injector),
 		logger: do.MustInvoke[logrus.FieldLogger](injector).
 			WithField("component", "backends.docker.Backend"),
 		functionsRepo: do.MustInvoke[core.FunctionsRepo](injector),

@@ -6,12 +6,12 @@ import (
 
 	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
-	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/config"
 )
 
 func Register(ctx context.Context, injector do.Injector) {
 	do.Provide(injector, func(injector do.Injector) (logrus.FieldLogger, error) {
-		cfg := do.MustInvoke[core.Config](injector)
+		cfg := do.MustInvoke[config.Config](injector)
 		logger := logrus.New()
 
 		logLevel, err := logrus.ParseLevel(cfg.LogLevel())

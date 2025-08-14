@@ -4,30 +4,9 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/samber/do/v2"
 )
 
-type ServiceDependency interface {
-	do.Healthchecker
-	do.ShutdownerWithError
-}
-
-type Config interface {
-	HTTPPort() int // For every component
-
-	FunctionName() string       // For runtimeapi
-	FunctionInstanceID() string // For runtimeapi
-
-	NATSURL() string
-	LogLevel() string
-
-	ElectionsBucketTTL() time.Duration
-}
-
 type ContainerBackend interface {
-	ServiceDependency
-
 	Info(ctx context.Context) (map[string]any, error)
 
 	Register(ctx context.Context, function FunctionDefinition) error
@@ -41,8 +20,6 @@ type ContainerBackend interface {
 }
 
 type FunctionsRepo interface {
-	ServiceDependency
-
 	Upsert(ctx context.Context, function FunctionDefinition) error
 	Get(ctx context.Context, name string) (FunctionDefinition, error)
 	List(ctx context.Context) ([]FunctionDefinition, error)
@@ -50,8 +27,6 @@ type FunctionsRepo interface {
 }
 
 type InstancesRepo interface {
-	ServiceDependency
-
 	Add(ctx context.Context, function FunctionDefinition, id string) error
 	SetLastExecuted(ctx context.Context, function FunctionDefinition, id string, timestamp time.Time) error
 	SetBusy(ctx context.Context, function FunctionDefinition, id string, busy bool) error
@@ -89,8 +64,6 @@ type Subscription interface {
 }
 
 type PubSuber interface { //nolint:interfacebloat
-	ServiceDependency
-
 	Publish(ctx context.Context, msg Msg) error
 	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (Message, error)
 	Next(ctx context.Context, streamName string, subjects []string, durableName string) (Message, error)
@@ -107,8 +80,6 @@ type PubSuber interface { //nolint:interfacebloat
 }
 
 type Invoker interface {
-	ServiceDependency
-
 	Invoke(ctx context.Context, function FunctionDefinition, payload []byte) ([]byte, error)
 }
 
@@ -147,8 +118,6 @@ type KVBucket interface { //nolint:interfacebloat
 }
 
 type KV interface {
-	ServiceDependency
-
 	CreateBucket(ctx context.Context, name string, ttl time.Duration) (KVBucket, error)
 	Bucket(ctx context.Context, name string) (KVBucket, error)
 	DeleteBucket(ctx context.Context, name string) error

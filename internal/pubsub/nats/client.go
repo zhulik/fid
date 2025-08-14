@@ -8,11 +8,11 @@ import (
 	libNats "github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/do/v2"
-	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/config"
 )
 
 func NewClient(injector do.Injector) (*Client, error) {
-	config := do.MustInvoke[core.Config](injector)
+	config := do.MustInvoke[config.Config](injector)
 
 	natsClient, err := libNats.Connect(config.NATSURL())
 	if err != nil {

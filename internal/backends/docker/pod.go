@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -22,7 +23,7 @@ const (
 // FunctionPod is a struct that represents a group of a function instance and it's forwader living in the same network.
 type FunctionPod struct {
 	uuid   string // Of the "pod"
-	config core.Config
+	config config.Config
 	docker *client.Client
 	logger logrus.FieldLogger
 
@@ -45,7 +46,7 @@ func CreateFunctionPod(
 
 	pod := &FunctionPod{
 		uuid:                    podID,
-		config:                  do.MustInvoke[core.Config](injector),
+		config:                  do.MustInvoke[config.Config](injector),
 		docker:                  do.MustInvoke[*client.Client](injector),
 		runtimeAPIContainerName: fmt.Sprintf("%s-%s", podID, core.ComponentNameRuntimeAPI),
 		functionContainerName:   fmt.Sprintf("%s-%s", podID, core.ComponentNameFunction),

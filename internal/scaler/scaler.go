@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/elect"
 	"github.com/zhulik/fid/pkg/json"
@@ -30,7 +31,7 @@ type Scaler struct {
 func NewScaler(ctx context.Context, injector do.Injector, function core.FunctionDefinition) (*Scaler, error) {
 	electID := uuid.NewString()
 
-	config := do.MustInvoke[core.Config](injector)
+	config := do.MustInvoke[config.Config](injector)
 	logger := do.MustInvoke[logrus.FieldLogger](injector).WithFields(map[string]interface{}{
 		"component": "scaler.Scaler",
 		"function":  function,

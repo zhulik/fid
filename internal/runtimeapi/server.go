@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 	"github.com/sirupsen/logrus"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
 )
@@ -23,7 +24,7 @@ type Server struct {
 
 // NewServer creates a new Server instance.
 func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
-	config := do.MustInvoke[core.Config](injector)
+	config := do.MustInvoke[config.Config](injector)
 
 	if config.FunctionName() == "" {
 		return nil, core.ErrFunctionNameNotGiven
