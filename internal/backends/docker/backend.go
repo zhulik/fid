@@ -76,7 +76,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 		Cmd:   []string{core.ComponentNameScaler},
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameFunctionName: function.Name(),
-			core.EnvNameNatsURL:      b.config.NATSURL(),
+			core.EnvNameNatsURL:      b.config.NATSURL,
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ComponentNameScaler,
@@ -195,7 +195,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameGateway},
 		Env: core.MapToEnvList(map[string]string{
-			core.EnvNameNatsURL: b.config.NATSURL(),
+			core.EnvNameNatsURL: b.config.NATSURL,
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ComponentNameGateway,
@@ -252,7 +252,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameInfoServer},
 		Env: core.MapToEnvList(map[string]string{
-			core.EnvNameNatsURL: b.config.NATSURL(),
+			core.EnvNameNatsURL: b.config.NATSURL,
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ComponentNameInfoServer,

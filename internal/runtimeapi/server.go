@@ -26,19 +26,19 @@ type Server struct {
 func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 	config := do.MustInvoke[config.Config](injector)
 
-	if config.FunctionName() == "" {
+	if config.FunctionName == "" {
 		return nil, core.ErrFunctionNameNotGiven
 	}
 
 	logger := do.MustInvoke[*slog.Logger](injector).With(
 		"component", "runtimeapi.Server",
-		"function", config.FunctionName(),
+		"function", config.FunctionName,
 	)
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 	pubSuber := do.MustInvoke[core.PubSuber](injector)
 	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
 
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
+	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
@@ -46,14 +46,14 @@ func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) //nolint:mnd
 	defer cancel()
 
-	function, err := functionsRepo.Get(ctx, config.FunctionName())
+	function, err := functionsRepo.Get(ctx, config.FunctionName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get function: %w", err)
 	}
 
 	instance := functionInstance{
 		FunctionDefinition: function,
-		id:                 config.FunctionInstanceID(),
+		id:                 config.FunctionInstanceID,
 		instancesRepo:      instancesRepo,
 	}
 

@@ -44,7 +44,7 @@ func createBuckets(ctx context.Context, injector do.Injector) error {
 		return fmt.Errorf("failed to create or update instances bucket: %w", err)
 	}
 
-	_, err = kv.CreateBucket(ctx, core.BucketNameElections, cfg.ElectionsBucketTTL())
+	_, err = kv.CreateBucket(ctx, core.BucketNameElections, cfg.ElectionsBucketTTL)
 	if err != nil {
 		return fmt.Errorf("failed to create or update elections bucket: %w", err)
 	}

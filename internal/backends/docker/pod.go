@@ -144,7 +144,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameFunctionName:          function.Name(),
 			core.EnvNameInstanceID:            p.uuid,
-			core.EnvNameNatsURL:               p.config.NATSURL(),
+			core.EnvNameNatsURL:               p.config.NATSURL,
 			core.EnvNameFunctionContainerName: p.functionContainerName,
 		}),
 		Labels: map[string]string{

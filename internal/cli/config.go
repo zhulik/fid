@@ -2,6 +2,7 @@ package cli
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/samber/do/v2"
 	"github.com/samber/lo"
@@ -20,11 +21,12 @@ func initDI(cmd *cli.Command) *do.RootScope {
 		lo.Must0(level.UnmarshalText([]byte(cmd.String(flags.FlagNameLogLevel))))
 
 		return config.Config{
-			HTTPPort_:           int(cmd.Int(flags.FlagNameServerPort)),
-			FunctionName_:       cmd.String(flags.FlagNameFunctionName),
-			FunctionInstanceID_: cmd.String(flags.FlagNameFunctionInstanceID),
-			NATSURL_:            cmd.String(flags.FlagNameNATSURL),
-			LogLevel_:           level,
+			HTTPPort:           int(cmd.Int(flags.FlagNameServerPort)),
+			FunctionName:       cmd.String(flags.FlagNameFunctionName),
+			FunctionInstanceID: cmd.String(flags.FlagNameFunctionInstanceID),
+			NATSURL:            cmd.String(flags.FlagNameNATSURL),
+			LogLevel:           level,
+			ElectionsBucketTTL: lo.Must(time.ParseDuration("2s")), // TODO: use const everywhere
 		}, nil
 	})
 

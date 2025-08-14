@@ -23,12 +23,12 @@ func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 	logger := do.MustInvoke[*slog.Logger](injector).With("component", "scaler.Server")
 	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
 
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
+	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}
 
-	function, err := functionsRepo.Get(ctx, config.FunctionName())
+	function, err := functionsRepo.Get(ctx, config.FunctionName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get function: %w", err)
 	}

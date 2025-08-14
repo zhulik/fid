@@ -28,7 +28,7 @@ func NewServer(injector do.Injector) (*Server, error) {
 	backend := do.MustInvoke[core.ContainerBackend](injector)
 	functionsrepo := do.MustInvoke[core.FunctionsRepo](injector)
 
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort())
+	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new http server: %w", err)
 	}

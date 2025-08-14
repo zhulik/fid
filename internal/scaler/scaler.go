@@ -57,7 +57,7 @@ func NewScaler(ctx context.Context, injector do.Injector, function core.Function
 
 	keyName := function.Name() + "-scaler-leader"
 
-	elector, err := elect.New(kvWrap, config.ElectionsBucketTTL(), keyName, electID)
+	elector, err := elect.New(kvWrap, config.ElectionsBucketTTL, keyName, electID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create elector: %w", err)
 	}
@@ -255,7 +255,9 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 	default:
 		s.logger.Info("No need to rescale to config",
 			"instances", instances,
-			"min", s.function.ScalingConfig().Min, "max", s.function.ScalingConfig().Max)
+			"min", s.function.ScalingConfig().Min,
+			"max", s.function.ScalingConfig().Max,
+		)
 	}
 
 	return nil

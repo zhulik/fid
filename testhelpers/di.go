@@ -11,7 +11,7 @@ import (
 
 func NewInjector() do.Injector {
 	injector := do.New()
-	do.ProvideValue[*slog.Logger](injector, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	do.ProvideValue(injector, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelWarn,
 	})))
 
