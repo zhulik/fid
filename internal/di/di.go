@@ -2,6 +2,7 @@ package di
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/backends"
@@ -13,7 +14,29 @@ import (
 	"github.com/zhulik/fid/internal/pubsub"
 	"github.com/zhulik/fid/internal/runtimeapi"
 	"github.com/zhulik/fid/internal/scaler"
+	"github.com/zhulik/pal"
 )
+
+func InitPal(ctx context.Context) (*pal.Pal, error) {
+	p := pal.New( //nolint:varnamelen
+		logging.Provide(),
+		runtimeapi.Provide(),
+		backends.Provide(),
+		gateway.Provide(),
+		pubsub.Provide(),
+		kv.Provide(),
+		invocation.Provide(),
+		infoserver.Provide(),
+		scaler.Provide(),
+	)
+
+	err := p.Init(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize pal: %w", err)
+	}
+
+	return p, nil
+}
 
 func Init() *do.RootScope {
 	injector := do.New()
