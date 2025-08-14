@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/samber/do/v2"
+	"github.com/samber/lo"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/pal"
 )
 
 var initCMD = &cli.Command{
@@ -23,9 +24,12 @@ var initCMD = &cli.Command{
 	},
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		injector := initDI(cmd)
+		p, err := initDI(ctx, cmd)
+		if err != nil {
+			return err
+		}
 
-		err := createBuckets(ctx, injector)
+		err = createBuckets(ctx, p)
 		if err != nil {
 			return fmt.Errorf("failed to create buckets: %w", err)
 		}
@@ -34,10 +38,10 @@ var initCMD = &cli.Command{
 	},
 }
 
-func createBuckets(ctx context.Context, injector do.Injector) error {
-	logger := do.MustInvoke[*slog.Logger](injector)
-	kv := do.MustInvoke[core.KV](injector)
-	cfg := do.MustInvoke[config.Config](injector)
+func createBuckets(ctx context.Context, p *pal.Pal) error {
+	logger := lo.Must(pal.Invoke[*slog.Logger](ctx, p))
+	kv := lo.Must(pal.Invoke[core.KV](ctx, p))
+	cfg := lo.Must(pal.Invoke[config.Config](ctx, p))
 
 	_, err := kv.CreateBucket(ctx, core.BucketNameInstances, 0)
 	if err != nil {

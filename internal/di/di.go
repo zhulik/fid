@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/backends"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/gateway"
 	"github.com/zhulik/fid/internal/infoserver"
 	"github.com/zhulik/fid/internal/invocation"
@@ -17,8 +17,9 @@ import (
 	"github.com/zhulik/pal"
 )
 
-func InitPal(ctx context.Context) (*pal.Pal, error) {
-	p := pal.New( //nolint:varnamelen
+func InitPal(ctx context.Context, cfg *config.Config) (*pal.Pal, error) {
+	p := pal.New(
+		pal.Provide(cfg),
 		logging.Provide(),
 		runtimeapi.Provide(),
 		backends.Provide(),
@@ -36,22 +37,4 @@ func InitPal(ctx context.Context) (*pal.Pal, error) {
 	}
 
 	return p, nil
-}
-
-func Init() *do.RootScope {
-	injector := do.New()
-
-	ctx := context.Background()
-
-	logging.Register(ctx, injector)
-	runtimeapi.Register(ctx, injector)
-	backends.Register(ctx, injector)
-	gateway.Register(ctx, injector)
-	pubsub.Register(ctx, injector)
-	kv.Register(ctx, injector)
-	invocation.Register(ctx, injector)
-	infoserver.Register(ctx, injector)
-	scaler.Register(ctx, injector)
-
-	return injector
 }

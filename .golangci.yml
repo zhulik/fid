@@ -33,6 +33,7 @@ linters:
         - i int
         - n int64
         - wg sync.WaitGroup
+        - p *pal.Pal
     wrapcheck:
       extra-ignore-sigs:
         - .Unpack(

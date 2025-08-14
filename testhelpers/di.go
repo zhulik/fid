@@ -14,7 +14,7 @@ import (
 )
 
 func NewPal(ctx context.Context) *pal.Pal {
-	p := pal.New( //nolint:varnamelen
+	p := pal.New(
 		logging.Provide(),
 		pal.Provide(&config.Config{}),
 		pal.Provide(&natsPubSub.Client{}),

@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/samber/do/v2"
+	"github.com/samber/lo"
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/fidfile"
+	"github.com/zhulik/pal"
 )
 
 var startCMD = &cli.Command{
@@ -31,9 +32,12 @@ var startCMD = &cli.Command{
 	},
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		injector := initDI(cmd)
+		p, err := initDI(ctx, cmd)
+		if err != nil {
+			return err
+		}
 
-		logger := do.MustInvoke[*slog.Logger](injector)
+		logger := lo.Must(pal.Invoke[*slog.Logger](ctx, p))
 
 		fidFilePath := cmd.String("fidfile")
 		logger.Info("Starting...")
@@ -44,7 +48,7 @@ var startCMD = &cli.Command{
 			return fmt.Errorf("failed to parse %s: %w", fidFilePath, err)
 		}
 
-		backend := do.MustInvoke[core.ContainerBackend](injector)
+		backend := lo.Must(pal.Invoke[core.ContainerBackend](ctx, p))
 
 		_, err = startGateway(ctx, backend)
 		if err != nil {
@@ -62,19 +66,19 @@ var startCMD = &cli.Command{
 			}
 		}
 
-		return registerFunctions(ctx, injector, backend, fidFile.Functions)
+		return registerFunctions(ctx, p, backend, fidFile.Functions)
 	},
 }
 
 func registerFunctions(
 	ctx context.Context,
-	injector do.Injector,
+	p *pal.Pal,
 	backend core.ContainerBackend,
 	functions map[string]*fidfile.Function,
 ) error {
-	pubSuber := do.MustInvoke[core.PubSuber](injector)
-	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
-	logger := do.MustInvoke[*slog.Logger](injector)
+	pubSuber := lo.Must(pal.Invoke[core.PubSuber](ctx, p))
+	functionsRepo := lo.Must(pal.Invoke[core.FunctionsRepo](ctx, p))
+	logger := lo.Must(pal.Invoke[*slog.Logger](ctx, p))
 
 	logger.Info("Registering functions", "count", len(functions))
 
