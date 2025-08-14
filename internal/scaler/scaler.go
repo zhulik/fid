@@ -18,14 +18,14 @@ import (
 var Stopped = errors.New("stopped") //nolint:errname,gochecknoglobals,staticcheck
 
 type Scaler struct {
-	function core.FunctionDefinition
-	logger   *slog.Logger
+	Function core.FunctionDefinition
+	Logger   *slog.Logger
 
-	backend       core.ContainerBackend
-	pubSuber      core.PubSuber
-	instancesRepo core.InstancesRepo
+	Backend       core.ContainerBackend
+	PubSuber      core.PubSuber
+	InstancesRepo core.InstancesRepo
 
-	elector *elect.Elect
+	Elector *elect.Elect
 }
 
 func NewScaler(ctx context.Context, injector do.Injector, function core.FunctionDefinition) (*Scaler, error) {
@@ -65,19 +65,19 @@ func NewScaler(ctx context.Context, injector do.Injector, function core.Function
 	logger.Info("Scaler created")
 
 	return &Scaler{
-		function:      function,
-		logger:        logger,
-		backend:       backend,
-		pubSuber:      pubSuber,
-		elector:       elector,
-		instancesRepo: instancesRepo,
+		Function:      function,
+		Logger:        logger,
+		Backend:       backend,
+		PubSuber:      pubSuber,
+		Elector:       elector,
+		InstancesRepo: instancesRepo,
 	}, nil
 }
 
 // Run the scaler. Never returns nil error. When Shutdown is called, returns Stopped.
 func (s Scaler) Run() error { //nolint:cyclop,funlen
-	s.logger.Info("Scaler started.")
-	defer s.logger.Info("Scaler stopped.")
+	s.Logger.Info("Scaler started.")
+	defer s.Logger.Info("Scaler stopped.")
 
 	var sub core.Subscription
 
@@ -89,7 +89,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 			sub = nil
 		}
 
-		s.logger.Info("Scaler unsubscribed")
+		s.Logger.Info("Scaler unsubscribed")
 	}
 
 	errCh := make(chan error)
@@ -97,14 +97,14 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 
 	defer stop()
 
-	outcomeCh := s.elector.Start()
+	outcomeCh := s.Elector.Start()
 
 	for {
 		select {
 		case outcome := <-outcomeCh:
 			switch outcome.Status {
 			case elect.Won:
-				s.logger.Info("Elected as a leader")
+				s.Logger.Info("Elected as a leader")
 
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 				sub, err = s.subscribe(ctx)
@@ -121,9 +121,9 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 						errCh <- err
 					}
 				}()
-				s.logger.Info("Scaler subscribed")
+				s.Logger.Info("Scaler subscribed")
 			case elect.Lost:
-				s.logger.Info("Lost leadership")
+				s.Logger.Info("Lost leadership")
 				stop()
 			case elect.Error:
 				return fmt.Errorf("elector error: %w", outcome.Error)
@@ -140,9 +140,9 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 }
 
 func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
-	sub, err := s.pubSuber.Subscribe(ctx,
-		s.pubSuber.FunctionStreamName(s.function),
-		[]string{s.pubSuber.ScaleSubjectName(s.function)},
+	sub, err := s.PubSuber.Subscribe(ctx,
+		s.PubSuber.FunctionStreamName(s.Function),
+		[]string{s.PubSuber.ScaleSubjectName(s.Function)},
 		s.subscriberName(),
 	)
 	if err != nil {
@@ -153,12 +153,12 @@ func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 }
 
 func (s Scaler) subscriberName() string {
-	return fmt.Sprintf("%s-%s", s.function.Name(), core.ComponentNameScaler)
+	return fmt.Sprintf("%s-%s", s.Function.Name(), core.ComponentNameScaler)
 }
 
 func (s Scaler) Shutdown() error {
-	defer s.logger.Info("Scaler is shooting down")
-	s.elector.Stop()
+	defer s.Logger.Info("Scaler is shooting down")
+	s.Elector.Stop()
 
 	return nil
 }
@@ -171,7 +171,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 
 	// TODO: subscribe to definition change and scale accordingly
 	for msg := range sub.C() {
-		s.logger.Debug("Scaler received message", "message", msg.Data())
+		s.Logger.Debug("Scaler received message", "message", msg.Data())
 
 		req, err := json.Unmarshal[core.ScalingRequest](msg.Data())
 		if err != nil {
@@ -187,7 +187,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 				// TODO: reply to scale request with instance IDs
 				_, err = s.scaleUp(ctx)
 				if err != nil {
-					s.logger.Error("Failed to scale up", "error", err)
+					s.Logger.Error("Failed to scale up", "error", err)
 
 					return
 				}
@@ -196,13 +196,13 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 			}()
 		case core.ScalingRequestTypeScaleDown:
 			go func() {
-				ctx, cancel := context.WithTimeout(ctx, s.function.Timeout())
+				ctx, cancel := context.WithTimeout(ctx, s.Function.Timeout())
 				defer cancel()
 
 				// TODO: reply to scale request when deleted
 				err = s.stopInstance(ctx, req.InstanceID)
 				if err != nil {
-					s.logger.Error("Failed to scale down", "error", err)
+					s.Logger.Error("Failed to scale down", "error", err)
 
 					return
 				}
@@ -211,7 +211,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 			}()
 
 		default:
-			s.logger.Warn("Unknown scaling request type", "type", req.Type)
+			s.Logger.Warn("Unknown scaling request type", "type", req.Type)
 		}
 	}
 
@@ -219,17 +219,17 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 }
 
 func (s Scaler) rescaleToConfig(ctx context.Context) error {
-	instances, err := s.instancesRepo.Count(ctx, s.function)
+	instances, err := s.InstancesRepo.Count(ctx, s.Function)
 	if err != nil {
 		return fmt.Errorf("failed to get instances: %w", err)
 	}
 
 	switch {
-	case instances < s.function.ScalingConfig().Min:
-		toCreate := s.function.ScalingConfig().Min - instances
-		s.logger.Info("No need to rescale to config",
+	case instances < s.Function.ScalingConfig().Min:
+		toCreate := s.Function.ScalingConfig().Min - instances
+		s.Logger.Info("No need to rescale to config",
 			"instances", instances,
-			"min", s.function.ScalingConfig().Min,
+			"min", s.Function.ScalingConfig().Min,
 			"toCreate", toCreate,
 		)
 
@@ -244,19 +244,19 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 				return fmt.Errorf("failed to scale up: %w", err)
 			}
 		}
-	case instances > s.function.ScalingConfig().Max:
+	case instances > s.Function.ScalingConfig().Max:
 		// TODO: implement
-		toKill := instances - s.function.ScalingConfig().Max
-		s.logger.Info("No need to rescale to config",
+		toKill := instances - s.Function.ScalingConfig().Max
+		s.Logger.Info("No need to rescale to config",
 			"instances", instances,
-			"max", s.function.ScalingConfig().Max,
+			"max", s.Function.ScalingConfig().Max,
 			"toKill", toKill,
 		)
 	default:
-		s.logger.Info("No need to rescale to config",
+		s.Logger.Info("No need to rescale to config",
 			"instances", instances,
-			"min", s.function.ScalingConfig().Min,
-			"max", s.function.ScalingConfig().Max,
+			"min", s.Function.ScalingConfig().Min,
+			"max", s.Function.ScalingConfig().Max,
 		)
 	}
 
@@ -264,23 +264,23 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 }
 
 func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
-	count, err := s.instancesRepo.Count(ctx, s.function)
+	count, err := s.InstancesRepo.Count(ctx, s.Function)
 	if err != nil {
 		return fmt.Errorf("failed to get instance count: %w", err)
 	}
 
-	if count-1 <= s.function.ScalingConfig().Min {
-		s.logger.Info("cannot kill instances, too few instances left", "instanceID", instanceID)
+	if count-1 <= s.Function.ScalingConfig().Min {
+		s.Logger.Info("cannot kill instances, too few instances left", "instanceID", instanceID)
 
 		return nil
 	}
 
-	err = s.backend.StopInstance(ctx, instanceID)
+	err = s.Backend.StopInstance(ctx, instanceID)
 	if err != nil {
 		return fmt.Errorf("failed to kill instance: %w", err)
 	}
 
-	err = s.instancesRepo.Delete(ctx, s.function, instanceID)
+	err = s.InstancesRepo.Delete(ctx, s.Function, instanceID)
 	if err != nil {
 		return fmt.Errorf("failed to delete instance record: %w", err)
 	}
@@ -289,14 +289,14 @@ func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
 }
 
 func (s Scaler) scaleUp(ctx context.Context) (string, error) { //nolint:unparam
-	s.logger.Info("Scaling up")
+	s.Logger.Info("Scaling up")
 
-	instanceID, err := s.backend.AddInstance(ctx, s.function)
+	instanceID, err := s.Backend.AddInstance(ctx, s.Function)
 	if err != nil {
 		return "", fmt.Errorf("failed to add instance: %w", err)
 	}
 
-	s.logger.Info("Instance added", "instanceID", instanceID)
+	s.Logger.Info("Instance added", "instanceID", instanceID)
 
 	return instanceID, nil
 }

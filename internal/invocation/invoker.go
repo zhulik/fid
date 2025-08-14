@@ -16,16 +16,16 @@ import (
 
 func NewInvoker(injector do.Injector) (*Invoker, error) {
 	return &Invoker{
-		pubSuber: do.MustInvoke[core.PubSuber](injector),
-		logger:   do.MustInvoke[*slog.Logger](injector).With("component", "invocation.Invoker"),
-		kv:       do.MustInvoke[core.KV](injector),
+		PubSuber: do.MustInvoke[core.PubSuber](injector),
+		Logger:   do.MustInvoke[*slog.Logger](injector).With("component", "invocation.Invoker"),
+		KV:       do.MustInvoke[core.KV](injector),
 	}, nil
 }
 
 type Invoker struct {
-	pubSuber core.PubSuber
-	kv       core.KV
-	logger   *slog.Logger
+	PubSuber core.PubSuber
+	KV       core.KV
+	Logger   *slog.Logger
 }
 
 func (i Invoker) HealthCheck() error {
@@ -38,7 +38,7 @@ func (i Invoker) Shutdown() error {
 
 func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, payload []byte) ([]byte, error) {
 	requestID := uuid.NewString()
-	subject := i.pubSuber.InvokeSubjectName(function)
+	subject := i.PubSuber.InvokeSubjectName(function)
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
 	msg := core.Msg{
@@ -50,21 +50,21 @@ func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, p
 		},
 	}
 
-	errorSubject := i.pubSuber.ErrorSubjectName(function, requestID)
+	errorSubject := i.PubSuber.ErrorSubjectName(function, requestID)
 
 	responseInput := core.PublishWaitResponseInput{
 		Subjects: []string{
-			i.pubSuber.ResponseSubjectName(function, requestID),
+			i.PubSuber.ResponseSubjectName(function, requestID),
 			errorSubject,
 		},
-		Stream:  i.pubSuber.FunctionStreamName(function),
+		Stream:  i.PubSuber.FunctionStreamName(function),
 		Msg:     msg,
 		Timeout: function.Timeout(),
 	}
 
-	i.logger.With("requestID", requestID, "function", function).Info("Invoking...")
+	i.Logger.With("requestID", requestID, "function", function).Info("Invoking...")
 
-	response, err := i.pubSuber.PublishWaitResponse(ctx, responseInput)
+	response, err := i.PubSuber.PublishWaitResponse(ctx, responseInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to publish and wait for response: %w", err)
 	}

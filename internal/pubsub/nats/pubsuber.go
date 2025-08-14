@@ -23,24 +23,24 @@ const (
 )
 
 type PubSuber struct {
-	nats *Client
+	Nats *Client
 
-	logger *slog.Logger
+	Logger *slog.Logger
 }
 
 func NewPubSuber(injector do.Injector) (*PubSuber, error) {
 	pubSuber := &PubSuber{
-		nats:   do.MustInvoke[*Client](injector),
-		logger: do.MustInvoke[*slog.Logger](injector).With("component", "pubsub.Nats.PubSuber"),
+		Nats:   do.MustInvoke[*Client](injector),
+		Logger: do.MustInvoke[*slog.Logger](injector).With("component", "pubsub.Nats.PubSuber"),
 	}
 
 	return pubSuber, nil
 }
 
 func (p PubSuber) HealthCheck() error {
-	p.logger.Debug("PubSuber health check...")
+	p.Logger.Debug("PubSuber health check...")
 
-	err := p.nats.HealthCheck()
+	err := p.Nats.HealthCheck()
 	if err != nil {
 		return fmt.Errorf("healthcheck failed: %w", err)
 	}
@@ -67,7 +67,7 @@ func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 	message.Data = data
 	message.Header = msg.Header
 
-	_, err := p.nats.JetStream.PublishMsg(ctx, message)
+	_, err := p.Nats.JetStream.PublishMsg(ctx, message)
 	if err != nil {
 		return fmt.Errorf("failed to publish: %w", err)
 	}
@@ -84,7 +84,7 @@ func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWai
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.logger.With("subject", input.Msg.Subject).Debug("Message sent, awaiting response")
+	p.Logger.With("subject", input.Msg.Subject).Debug("Message sent, awaiting response")
 
 	select {
 	case <-ctx.Done():
@@ -112,7 +112,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 // TODO: something more universal, for any kind of streams?
 func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function core.FunctionDefinition) error {
 	streamName := p.FunctionStreamName(function)
-	logger := p.logger.With("streamName", streamName)
+	logger := p.Logger.With("streamName", streamName)
 
 	cfg := jetstream.StreamConfig{
 		Name: streamName,
@@ -130,7 +130,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function cor
 		Replicas:  1,
 	}
 
-	_, err := p.nats.JetStream.CreateOrUpdateStream(ctx, cfg)
+	_, err := p.Nats.JetStream.CreateOrUpdateStream(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to create or update stream: %w", err)
 	}
@@ -155,7 +155,7 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 		InactiveThreshold: inactiveThreshold,
 	}
 
-	cons, err := p.nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
+	cons, err := p.Nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumerCtx: %w", err)
 	}
@@ -164,7 +164,7 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 		durableName = cons.CachedInfo().Name
 	}
 
-	logger := p.logger.With(
+	logger := p.Logger.With(
 		"stream", streamName,
 		"consumerCtx", durableName,
 		"subjects", subjects,
@@ -209,7 +209,7 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 		InactiveThreshold: inactiveThreshold,
 	}
 
-	cons, err := p.nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
+	cons, err := p.Nats.JetStream.CreateOrUpdateConsumer(ctx, streamName, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create consumerCtx: %w", err)
 	}
@@ -218,7 +218,7 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 		durableName = cons.CachedInfo().Name
 	}
 
-	logger := p.logger.With(
+	logger := p.Logger.With(
 		"stream", streamName,
 		"consumerCtx", durableName,
 		"subjects", subjects,

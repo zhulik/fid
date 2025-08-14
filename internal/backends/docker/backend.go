@@ -17,10 +17,10 @@ import (
 )
 
 type Backend struct {
-	docker        *client.Client
-	config        config.Config
-	logger        *slog.Logger
-	functionsRepo core.FunctionsRepo
+	Docker        *client.Client
+	Config        config.Config
+	Logger        *slog.Logger
+	FunctionsRepo core.FunctionsRepo
 
 	injector do.Injector
 }
@@ -28,10 +28,10 @@ type Backend struct {
 func New(injector do.Injector) (*Backend, error) {
 	// TODO: define separate repositories for functions, elections etc.
 	return &Backend{
-		docker:        do.MustInvoke[*client.Client](injector),
-		config:        do.MustInvoke[config.Config](injector),
-		logger:        do.MustInvoke[*slog.Logger](injector).With("component", "backends.docker.Backend"),
-		functionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
+		Docker:        do.MustInvoke[*client.Client](injector),
+		Config:        do.MustInvoke[config.Config](injector),
+		Logger:        do.MustInvoke[*slog.Logger](injector).With("component", "backends.docker.Backend"),
+		FunctionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
 		injector:      injector,
 	}, nil
 }
@@ -53,9 +53,9 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 
 // Deregister deletes function's template.
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.logger.With("function", function)
+	logger := b.Logger.With("function", function)
 
-	err := b.functionsRepo.Delete(ctx, function.Name())
+	err := b.FunctionsRepo.Delete(ctx, function.Name())
 	if err != nil {
 		return err //nolint:wrapcheck
 	}
@@ -69,14 +69,14 @@ func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinitio
 }
 
 func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.logger.With("function", function)
+	logger := b.Logger.With("function", function)
 
 	containerConfig := &container.Config{
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameScaler},
 		Env: core.MapToEnvList(map[string]string{
 			core.EnvNameFunctionName: function.Name(),
-			core.EnvNameNatsURL:      b.config.NATSURL,
+			core.EnvNameNatsURL:      b.Config.NATSURL,
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ComponentNameScaler,
@@ -97,7 +97,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 
 	containerName := b.scalerContainerName(function)
 
-	_, err := b.docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
+	_, err := b.Docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
 			logger.Info("Scaler container already exists")
@@ -108,7 +108,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 		return fmt.Errorf("failed to create scaler container: %w", err)
 	}
 
-	err = b.docker.ContainerStart(ctx, containerName, container.StartOptions{})
+	err = b.Docker.ContainerStart(ctx, containerName, container.StartOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to start scaler container: %w", err)
 	}
@@ -123,18 +123,18 @@ func (b Backend) scalerContainerName(function core.FunctionDefinition) string {
 }
 
 func (b Backend) createFunctionTemplate(ctx context.Context, function core.FunctionDefinition) error {
-	err := b.functionsRepo.Upsert(ctx, function)
+	err := b.FunctionsRepo.Upsert(ctx, function)
 	if err != nil {
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	b.logger.With("function", function).Info("Function template stored")
+	b.Logger.With("function", function).Info("Function template stored")
 
 	return nil
 }
 
 func (b Backend) Info(ctx context.Context) (map[string]any, error) {
-	info, err := b.docker.Info(ctx)
+	info, err := b.Docker.Info(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to docker info: %w", err)
 	}
@@ -146,12 +146,12 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 }
 
 func (b Backend) HealthCheck() error {
-	b.logger.Debug("ContainerBackend health check.")
+	b.Logger.Debug("ContainerBackend health check.")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	_, err := b.docker.Info(ctx)
+	_, err := b.Docker.Info(ctx)
 	if err != nil {
 		return fmt.Errorf("backend health check failed: %w", err)
 	}
@@ -160,10 +160,10 @@ func (b Backend) HealthCheck() error {
 }
 
 func (b Backend) Shutdown() error {
-	b.logger.Debug("ContainerBackend shutting down...")
-	defer b.logger.Debug("ContainerBackend shot down.")
+	b.Logger.Debug("ContainerBackend shutting down...")
+	defer b.Logger.Debug("ContainerBackend shot down.")
 
-	err := b.docker.Close()
+	err := b.Docker.Close()
 	if err != nil {
 		return fmt.Errorf("failed to shut down the backend: %w", err)
 	}
@@ -172,22 +172,22 @@ func (b Backend) Shutdown() error {
 }
 
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
-	b.logger.Info("Creating new function pod", "function", function)
+	b.Logger.Info("Creating new function pod", "function", function)
 
 	pod, err := CreateFunctionPod(ctx, function, b.injector)
 	if err != nil {
 		return "", err
 	}
 
-	b.logger.Info("Function pod created", "function", function, "podID", pod.uuid)
+	b.Logger.Info("Function pod created", "function", function, "podID", pod.uuid)
 
 	return pod.uuid, nil
 }
 
 func (b Backend) StopInstance(ctx context.Context, instanceID string) error {
-	b.logger.Info("Killing function instance", "instanceID", instanceID)
+	b.Logger.Info("Killing function instance", "instanceID", instanceID)
 
-	return FunctionPod{uuid: instanceID, docker: b.docker}.Stop(ctx)
+	return FunctionPod{uuid: instanceID, docker: b.Docker}.Stop(ctx)
 }
 
 func (b Backend) StartGateway(ctx context.Context) (string, error) {
@@ -195,7 +195,7 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameGateway},
 		Env: core.MapToEnvList(map[string]string{
-			core.EnvNameNatsURL: b.config.NATSURL,
+			core.EnvNameNatsURL: b.Config.NATSURL,
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ComponentNameGateway,
@@ -223,13 +223,13 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 		},
 	}
 
-	resp, err := b.docker.ContainerCreate(
+	resp, err := b.Docker.ContainerCreate(
 		ctx, containerConfig, hostConfig,
 		networkingConfig, nil, core.ContainerNameGateway,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
-			b.logger.Info("Gateway container already exists")
+			b.Logger.Info("Gateway container already exists")
 
 			return "", core.ErrContainerAlreadyExists
 		}
@@ -237,12 +237,12 @@ func (b Backend) StartGateway(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to create gateway container: %w", err)
 	}
 
-	err = b.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	err = b.Docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to start gateway container: %w", err)
 	}
 
-	b.logger.Info("Gateway container created and started")
+	b.Logger.Info("Gateway container created and started")
 
 	return resp.ID, nil
 }
@@ -252,7 +252,7 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameInfoServer},
 		Env: core.MapToEnvList(map[string]string{
-			core.EnvNameNatsURL: b.config.NATSURL,
+			core.EnvNameNatsURL: b.Config.NATSURL,
 		}),
 		Labels: map[string]string{
 			core.LabelNameComponent: core.ComponentNameInfoServer,
@@ -283,13 +283,13 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 		},
 	}
 
-	resp, err := b.docker.ContainerCreate(
+	resp, err := b.Docker.ContainerCreate(
 		ctx, containerConfig, hostConfig,
 		networkingConfig, nil, core.ContainerNameInfoServer,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
-			b.logger.Info("Info server container already exists")
+			b.Logger.Info("Info server container already exists")
 
 			return "", core.ErrContainerAlreadyExists
 		}
@@ -297,12 +297,12 @@ func (b Backend) StartInfoServer(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to create info server container: %w", err)
 	}
 
-	err = b.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	err = b.Docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to start info server container: %w", err)
 	}
 
-	b.logger.Info("Info server container created and started")
+	b.Logger.Info("Info server container created and started")
 
 	return resp.ID, nil
 }

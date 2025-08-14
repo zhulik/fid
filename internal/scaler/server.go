@@ -14,7 +14,7 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	scaler *Scaler
+	Scaler *Scaler
 }
 
 // NewServer creates a new Server instance.
@@ -40,7 +40,7 @@ func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 
 	srv := &Server{
 		Server: server,
-		scaler: scaler,
+		Scaler: scaler,
 	}
 
 	return srv, nil
@@ -50,7 +50,7 @@ func (s *Server) Run() error {
 	errs := make(chan error, 2) //nolint:mnd
 
 	go func() {
-		errs <- s.scaler.Run()
+		errs <- s.Scaler.Run()
 	}()
 
 	go func() {

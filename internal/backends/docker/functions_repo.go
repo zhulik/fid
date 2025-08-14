@@ -14,7 +14,7 @@ import (
 )
 
 type FunctionsRepo struct {
-	logger *slog.Logger
+	Logger *slog.Logger
 	bucket core.KVBucket
 }
 
@@ -26,7 +26,7 @@ func NewFunctionsRepo(ctx context.Context, injector do.Injector) (*FunctionsRepo
 	bucket := lo.Must(kv.Bucket(ctx, core.BucketNameFunctions))
 
 	return &FunctionsRepo{
-		logger: do.MustInvoke[*slog.Logger](injector).
+		Logger: do.MustInvoke[*slog.Logger](injector).
 			With("component", "backends.docker.FunctionsRepo"),
 		bucket: bucket,
 	}, nil
@@ -60,13 +60,13 @@ func (r FunctionsRepo) Upsert(ctx context.Context, function core.FunctionDefinit
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	r.logger.With("function", function).Info("Function template stored")
+	r.Logger.With("function", function).Info("Function template stored")
 
 	return nil
 }
 
 func (r FunctionsRepo) Get(ctx context.Context, name string) (core.FunctionDefinition, error) {
-	r.logger.With("function", name).Debug("Fetching function info")
+	r.Logger.With("function", name).Debug("Fetching function info")
 
 	bytes, err := r.bucket.Get(ctx, name)
 	if err != nil {
@@ -86,7 +86,7 @@ func (r FunctionsRepo) Get(ctx context.Context, name string) (core.FunctionDefin
 }
 
 func (r FunctionsRepo) List(ctx context.Context) ([]core.FunctionDefinition, error) {
-	r.logger.Debug("Fetching function list")
+	r.Logger.Debug("Fetching function list")
 
 	fns, err := r.bucket.All(ctx)
 	if err != nil {

@@ -17,7 +17,7 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	invoker core.Invoker
+	Invoker core.Invoker
 }
 
 // NewServer creates a new Server instance.
@@ -40,7 +40,7 @@ func NewServer(injector do.Injector) (*Server, error) {
 
 	srv := &Server{
 		Server:  server,
-		invoker: invoker,
+		Invoker: invoker,
 	}
 
 	srv.Router.POST("/invoke/:functionName", srv.InvokeHandler)
@@ -60,7 +60,7 @@ func (s *Server) InvokeHandler(c *gin.Context) {
 		return
 	}
 
-	response, err := s.invoker.Invoke(ctx, function, body)
+	response, err := s.Invoker.Invoke(ctx, function, body)
 	if err != nil {
 		c.Error(err)
 

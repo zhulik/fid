@@ -18,7 +18,7 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	pubSuber         core.PubSuber
+	PubSuber         core.PubSuber
 	functionInstance functionInstance
 }
 
@@ -64,7 +64,7 @@ func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
 
 	srv := &Server{
 		Server:           server,
-		pubSuber:         pubSuber,
+		PubSuber:         pubSuber,
 		functionInstance: instance,
 	}
 
@@ -91,11 +91,11 @@ func (s *Server) Shutdown() error {
 
 func (s *Server) NextHandler(c *gin.Context) {
 	ctx := c.Request.Context()
-	subject := s.pubSuber.InvokeSubjectName(s.functionInstance)
+	subject := s.PubSuber.InvokeSubjectName(s.functionInstance)
 
 	s.Logger.Info("Function connected, waiting for events...")
 
-	streamName := s.pubSuber.FunctionStreamName(s.functionInstance)
+	streamName := s.PubSuber.FunctionStreamName(s.functionInstance)
 
 	err := s.functionInstance.busy(c.Request.Context(), false)
 	if err != nil {
@@ -104,7 +104,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 		return
 	}
 
-	msg, err := s.pubSuber.Next(ctx, streamName, []string{subject}, s.functionInstance.Name())
+	msg, err := s.PubSuber.Next(ctx, streamName, []string{subject}, s.functionInstance.Name())
 	if err != nil {
 		c.Error(err)
 
@@ -126,7 +126,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 
 func (s *Server) ResponseHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	subject := s.pubSuber.ResponseSubjectName(s.functionInstance, requestID)
+	subject := s.PubSuber.ResponseSubjectName(s.functionInstance, requestID)
 
 	logger := s.Logger.With(
 		"requestID", requestID,
@@ -154,7 +154,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		return
 	}
 
-	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
+	if err := s.PubSuber.Publish(c.Request.Context(), msg); err != nil {
 		c.Error(err)
 
 		return
@@ -165,7 +165,7 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 
 func (s *Server) ErrorHandler(c *gin.Context) {
 	requestID := c.Param("requestID")
-	subject := s.pubSuber.ErrorSubjectName(s.functionInstance, requestID)
+	subject := s.PubSuber.ErrorSubjectName(s.functionInstance, requestID)
 
 	logger := s.Logger.With(
 		"requestID", requestID,
@@ -186,7 +186,7 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 		Data:    response,
 	}
 
-	if err := s.pubSuber.Publish(c.Request.Context(), msg); err != nil {
+	if err := s.PubSuber.Publish(c.Request.Context(), msg); err != nil {
 		c.Error(err)
 
 		return

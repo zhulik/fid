@@ -17,8 +17,8 @@ import (
 type Server struct {
 	*httpserver.Server
 
-	backend       core.ContainerBackend
-	functionsRepo core.FunctionsRepo
+	Backend       core.ContainerBackend
+	FunctionsRepo core.FunctionsRepo
 }
 
 // NewServer creates a new Server instance.
@@ -35,8 +35,8 @@ func NewServer(injector do.Injector) (*Server, error) {
 
 	srv := &Server{
 		Server:        server,
-		backend:       backend,
-		functionsRepo: functionsrepo,
+		Backend:       backend,
+		FunctionsRepo: functionsrepo,
 	}
 
 	srv.Router.GET("/backend", srv.BackendHandler)
@@ -47,7 +47,7 @@ func NewServer(injector do.Injector) (*Server, error) {
 }
 
 func (s *Server) BackendHandler(c *gin.Context) {
-	info, err := s.backend.Info(c)
+	info, err := s.Backend.Info(c)
 	if err != nil {
 		c.Error(err)
 	}
@@ -56,7 +56,7 @@ func (s *Server) BackendHandler(c *gin.Context) {
 }
 
 func (s *Server) FunctionsHandler(c *gin.Context) {
-	functions, err := s.functionsRepo.List(c.Request.Context())
+	functions, err := s.FunctionsRepo.List(c.Request.Context())
 	if err != nil {
 		c.Error(err)
 	}
@@ -69,7 +69,7 @@ func (s *Server) FunctionsHandler(c *gin.Context) {
 }
 
 func (s *Server) FunctionHandler(c *gin.Context) {
-	function, err := s.functionsRepo.Get(c.Request.Context(), c.Param("functionName"))
+	function, err := s.FunctionsRepo.Get(c.Request.Context(), c.Param("functionName"))
 	if err != nil {
 		if errors.Is(err, core.ErrFunctionNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "function not found"})
