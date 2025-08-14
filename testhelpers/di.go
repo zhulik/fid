@@ -10,10 +10,13 @@ import (
 )
 
 func NewInjector() do.Injector {
-	injector := do.New()
-	do.ProvideValue(injector, slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelWarn,
-	})))
+	}))
+	slog.SetDefault(logger)
+
+	injector := do.New()
+	do.ProvideValue(injector, logger)
 
 	do.ProvideValue(injector, config.Config{})
 	do.Provide(injector, natsPubSub.NewClient)

@@ -15,6 +15,7 @@ func Register(ctx context.Context, injector do.Injector) {
 		logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: cfg.LogLevel,
 		}))
+		slog.SetDefault(logger)
 
 		return logger, nil
 	})
