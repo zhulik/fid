@@ -56,11 +56,3 @@ func (k KV) DeleteBucket(ctx context.Context, name string) error {
 
 	return nil
 }
-
-func (k KV) HealthCheck() error {
-	return nil
-}
-
-func (k KV) Shutdown() error {
-	return nil
-}

@@ -6,86 +6,63 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/httpserver"
+	"github.com/zhulik/pal"
 )
 
 type Server struct {
 	*httpserver.Server
 
-	PubSuber         core.PubSuber
+	Config        *config.Config
+	Logger        *slog.Logger
+	PubSuber      core.PubSuber
+	FunctionsRepo core.FunctionsRepo
+	InstancesRepo core.InstancesRepo
+	Pal           *pal.Pal
+
 	functionInstance functionInstance
 }
 
 // NewServer creates a new Server instance.
-func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
-	config := do.MustInvoke[config.Config](injector)
-
-	if config.FunctionName == "" {
-		return nil, core.ErrFunctionNameNotGiven
+func (s *Server) Init(ctx context.Context) error {
+	if s.Config.FunctionName == "" {
+		return core.ErrFunctionNameNotGiven
 	}
 
-	logger := do.MustInvoke[*slog.Logger](injector).With(
-		"component", "runtimeapi.Server",
-		"function", config.FunctionName,
+	s.Logger = s.Logger.With(
+		"function", s.Config.FunctionName,
 	)
-	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
-	pubSuber := do.MustInvoke[core.PubSuber](injector)
-	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
 
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
+	function, err := s.FunctionsRepo.Get(ctx, s.Config.FunctionName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create a new http server: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second) //nolint:mnd
-	defer cancel()
-
-	function, err := functionsRepo.Get(ctx, config.FunctionName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get function: %w", err)
+		return fmt.Errorf("failed to get function: %w", err)
 	}
 
 	instance := functionInstance{
 		FunctionDefinition: function,
-		id:                 config.FunctionInstanceID,
-		instancesRepo:      instancesRepo,
+		id:                 s.Config.FunctionInstanceID,
+		instancesRepo:      s.InstancesRepo,
 	}
 
 	err = instance.add(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add function to instances repo: %w", err)
-	}
-
-	srv := &Server{
-		Server:           server,
-		PubSuber:         pubSuber,
-		functionInstance: instance,
+		return fmt.Errorf("failed to add function to instances repo: %w", err)
 	}
 
 	// Mimicking the AWS Lambda runtime API for custom runtimes
-	srv.Router.GET("/2018-06-01/runtime/invocation/next", srv.NextHandler)
-	srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/response", srv.ResponseHandler)
-	srv.Router.POST("/2018-06-01/runtime/invocation/:requestID/error", srv.ErrorHandler)
-	srv.Router.POST("/2018-06-01/runtime/init/error", srv.InitErrorHandler)
+	s.Router.GET("/2018-06-01/runtime/invocation/next", s.NextHandler)
+	s.Router.POST("/2018-06-01/runtime/invocation/:requestID/response", s.ResponseHandler)
+	s.Router.POST("/2018-06-01/runtime/invocation/:requestID/error", s.ErrorHandler)
+	s.Router.POST("/2018-06-01/runtime/init/error", s.InitErrorHandler)
 
-	return srv, nil
+	return nil
 }
 
-func (s *Server) Shutdown() error {
-	err := s.Server.Shutdown()
-	if err != nil {
-		return err //nolint:wrapcheck
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
+func (s *Server) Shutdown(ctx context.Context) error {
 	return s.functionInstance.delete(ctx)
 }
 

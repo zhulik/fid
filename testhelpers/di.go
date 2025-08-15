@@ -2,11 +2,8 @@ package testhelpers
 
 import (
 	"context"
-	"log/slog"
-	"os"
 	"time"
 
-	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/logging"
@@ -32,18 +29,4 @@ func NewPal(ctx context.Context, services ...pal.ServiceDef) *pal.Pal {
 	lo.Must0(p.Init(ctx))
 
 	return p
-}
-
-func NewInjector() do.Injector {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelWarn,
-	}))
-	slog.SetDefault(logger)
-
-	injector := do.New()
-	do.ProvideValue(injector, logger)
-
-	do.ProvideValue(injector, config.Config{})
-
-	return injector
 }

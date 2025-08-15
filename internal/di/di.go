@@ -17,18 +17,17 @@ import (
 	"github.com/zhulik/pal"
 )
 
-func InitPal(ctx context.Context, cfg *config.Config) (*pal.Pal, error) {
-	p := pal.New(
+func InitPal(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef) (*pal.Pal, error) {
+	services = append(services,
 		pal.Provide(cfg),
 		logging.Provide(),
-		runtimeapi.Provide(),
-		backends.Provide(),
-		gateway.Provide(),
 		pubsub.Provide(),
 		kv.Provide(),
 		invocation.Provide(),
-		infoserver.Provide(),
-		scaler.Provide(),
+		backends.Provide(),
+	)
+	p := pal.New(
+		services...,
 	)
 
 	err := p.Init(ctx)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -133,11 +132,8 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) HealthCheck() error {
+func (b Backend) HealthCheck(ctx context.Context) error {
 	b.Logger.Debug("ContainerBackend health check.")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 
 	_, err := b.Docker.Info(ctx)
 	if err != nil {
@@ -147,7 +143,7 @@ func (b Backend) HealthCheck() error {
 	return nil
 }
 
-func (b Backend) Shutdown() error {
+func (b Backend) Shutdown(_ context.Context) error {
 	b.Logger.Debug("ContainerBackend shutting down...")
 	defer b.Logger.Debug("ContainerBackend shot down.")
 

@@ -6,6 +6,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/infoserver"
 )
 
 var infoServerCMD = &cli.Command{
@@ -18,7 +19,7 @@ var infoServerCMD = &cli.Command{
 		flags.ForBackend...,
 	),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		p, err := initDI(ctx, cmd)
+		p, err := initDI(ctx, cmd, infoserver.Provide())
 		if err != nil {
 			return err
 		}

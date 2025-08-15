@@ -14,7 +14,7 @@ import (
 	"github.com/zhulik/pal"
 )
 
-func initDI(ctx context.Context, cmd *cli.Command) (*pal.Pal, error) {
+func initDI(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) (*pal.Pal, error) {
 	var level slog.Level
 
 	lo.Must0(level.UnmarshalText([]byte(cmd.String(flags.FlagNameLogLevel))))
@@ -28,7 +28,7 @@ func initDI(ctx context.Context, cmd *cli.Command) (*pal.Pal, error) {
 		ElectionsBucketTTL: lo.Must(time.ParseDuration("2s")), // TODO: use const everywhere
 	}
 
-	p, err := di.InitPal(ctx, cfg)
+	p, err := di.InitPal(ctx, cfg, services...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize pal: %w", err)
 	}

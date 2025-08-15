@@ -48,10 +48,6 @@ func (p PubSuber) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (p PubSuber) Shutdown() error {
-	return nil
-}
-
 func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 	data, ok := msg.Data.([]byte)
 	if !ok {

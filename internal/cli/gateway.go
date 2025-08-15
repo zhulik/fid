@@ -6,6 +6,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/gateway"
 )
 
 var gatewayCMD = &cli.Command{
@@ -15,7 +16,7 @@ var gatewayCMD = &cli.Command{
 	Category: "Service",
 	Flags:    flags.ForServer,
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		p, err := initDI(ctx, cmd)
+		p, err := initDI(ctx, cmd, gateway.Provide())
 		if err != nil {
 			return err
 		}

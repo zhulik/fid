@@ -6,6 +6,7 @@ import (
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/runtimeapi"
 )
 
 var runtimeapiCMD = &cli.Command{
@@ -19,7 +20,7 @@ var runtimeapiCMD = &cli.Command{
 		flags.FunctionInstanceID,
 	),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		p, err := initDI(ctx, cmd)
+		p, err := initDI(ctx, cmd, runtimeapi.Provide())
 		if err != nil {
 			return err
 		}
