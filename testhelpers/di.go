@@ -4,21 +4,26 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/logging"
-	natsPubSub "github.com/zhulik/fid/internal/pubsub/nats"
+	pubSubNats "github.com/zhulik/fid/internal/pubsub/nats"
 	"github.com/zhulik/pal"
 )
 
+//nolint:mnd
 func NewPal(ctx context.Context) *pal.Pal {
 	p := pal.New(
 		logging.Provide(),
 		pal.Provide(&config.Config{}),
-		pal.Provide(&natsPubSub.Client{}),
-	)
+		pal.Provide(&pubSubNats.Client{}),
+	).
+		InitTimeout(time.Second * 10).
+		HealthCheckTimeout(time.Second * 10).
+		ShutdownTimeout(time.Second * 10)
 
 	lo.Must0(p.Init(ctx))
 
@@ -35,7 +40,6 @@ func NewInjector() do.Injector {
 	do.ProvideValue(injector, logger)
 
 	do.ProvideValue(injector, config.Config{})
-	do.Provide(injector, natsPubSub.NewClient)
 
 	return injector
 }

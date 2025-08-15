@@ -37,10 +37,10 @@ func NewPubSuber(injector do.Injector) (*PubSuber, error) {
 	return pubSuber, nil
 }
 
-func (p PubSuber) HealthCheck() error {
+func (p PubSuber) HealthCheck(ctx context.Context) error {
 	p.Logger.Debug("PubSuber health check...")
 
-	err := p.Nats.HealthCheck()
+	err := p.Nats.HealthCheck(ctx)
 	if err != nil {
 		return fmt.Errorf("healthcheck failed: %w", err)
 	}

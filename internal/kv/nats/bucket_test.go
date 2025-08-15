@@ -7,11 +7,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/kv/nats"
 	"github.com/zhulik/fid/testhelpers"
+	"github.com/zhulik/pal"
 	"go.uber.org/atomic"
 )
 
@@ -25,14 +25,14 @@ const (
 )
 
 var _ = Describe("Nats KV Bucket", Serial, func() {
-	var injector do.Injector
-	var kv core.KV
+	var p *pal.Pal
+	var kv nats.KV
 	var bucket core.KVBucket
 
 	BeforeEach(func(ctx SpecContext) {
-		injector = testhelpers.NewInjector()
+		p = testhelpers.NewPal(ctx)
 
-		kv = lo.Must(nats.NewKV(injector))
+		lo.Must0(pal.InjectInto(ctx, p, &kv))
 
 		bucket = lo.Must(kv.CreateBucket(ctx, "test", 0))
 		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, "test") }) //nolint:errcheck

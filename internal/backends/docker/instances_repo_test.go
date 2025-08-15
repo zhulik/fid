@@ -9,7 +9,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/backends/docker"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/internal/kv/nats"
 	"github.com/zhulik/fid/testhelpers"
 )
 
@@ -30,7 +29,7 @@ var _ = Describe("InstancesRepo", Serial, func() {
 
 	BeforeEach(func(ctx SpecContext) {
 		injector = testhelpers.NewInjector()
-		kv = lo.Must(nats.NewKV(injector))
+		// kv = lo.Must(nats.NewKV(injector))
 
 		lo.Must(kv.CreateBucket(ctx, core.BucketNameInstances, 0))
 

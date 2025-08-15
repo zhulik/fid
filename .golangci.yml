@@ -24,7 +24,7 @@ linters:
         - c *gin.Context
         - ok bool
         - kv jetstream.KeyValue
-        - kv *nats.KV
+        - kv nats.KV
         - kv core.KV
         - kv KV
         - id string
