@@ -11,9 +11,9 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/pal"
 )
 
 type Backend struct {
@@ -21,19 +21,7 @@ type Backend struct {
 	Config        config.Config
 	Logger        *slog.Logger
 	FunctionsRepo core.FunctionsRepo
-
-	injector do.Injector
-}
-
-func New(injector do.Injector) (*Backend, error) {
-	// TODO: define separate repositories for functions, elections etc.
-	return &Backend{
-		Docker:        do.MustInvoke[*client.Client](injector),
-		Config:        do.MustInvoke[config.Config](injector),
-		Logger:        do.MustInvoke[*slog.Logger](injector).With("component", "backends.docker.Backend"),
-		FunctionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
-		injector:      injector,
-	}, nil
+	Pal           *pal.Pal
 }
 
 // Register creates a new function's template, scaler, and garbage collector(TODO).
@@ -174,7 +162,7 @@ func (b Backend) Shutdown() error {
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
 	b.Logger.Info("Creating new function pod", "function", function)
 
-	pod, err := CreateFunctionPod(ctx, function, b.injector)
+	pod, err := CreateFunctionPod(ctx, function, b.Pal)
 	if err != nil {
 		return "", err
 	}

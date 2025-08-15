@@ -11,9 +11,10 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
-	"github.com/samber/do/v2"
+	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/pal"
 )
 
 const (
@@ -34,11 +35,11 @@ type FunctionPod struct {
 func CreateFunctionPod(
 	ctx context.Context,
 	function core.FunctionDefinition,
-	injector do.Injector,
+	p *pal.Pal,
 ) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
-	logger := do.MustInvoke[*slog.Logger](injector).With(
+	logger := lo.Must(pal.Invoke[*slog.Logger](ctx, p)).With(
 		"component", "backends.docker.Pod",
 		"podID", podID,
 		"function", function,
@@ -46,8 +47,8 @@ func CreateFunctionPod(
 
 	pod := &FunctionPod{
 		uuid:                    podID,
-		config:                  do.MustInvoke[config.Config](injector),
-		docker:                  do.MustInvoke[*client.Client](injector),
+		config:                  lo.Must(pal.Invoke[config.Config](ctx, p)),
+		docker:                  lo.Must(pal.Invoke[*client.Client](ctx, p)),
 		runtimeAPIContainerName: fmt.Sprintf("%s-%s", podID, core.ComponentNameRuntimeAPI),
 		functionContainerName:   fmt.Sprintf("%s-%s", podID, core.ComponentNameFunction),
 		logger:                  logger,

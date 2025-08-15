@@ -5,11 +5,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/backends/docker"
 	"github.com/zhulik/fid/internal/core"
+	ikv "github.com/zhulik/fid/internal/kv"
 	"github.com/zhulik/fid/testhelpers"
+	"github.com/zhulik/pal"
 )
 
 const (
@@ -23,23 +24,21 @@ var function = docker.Function{
 }
 
 var _ = Describe("InstancesRepo", Serial, func() {
-	var injector do.Injector
+	var p *pal.Pal
 	var repo *docker.InstancesRepo
 	var kv core.KV
 
 	BeforeEach(func(ctx SpecContext) {
-		injector = testhelpers.NewInjector()
-		// kv = lo.Must(nats.NewKV(injector))
+		p = testhelpers.NewPal(ctx,
+			ikv.Provide(),
+			pal.Provide(&docker.InstancesRepo{}),
+		)
 
-		lo.Must(kv.CreateBucket(ctx, core.BucketNameInstances, 0))
+		kv = lo.Must(pal.Invoke[core.KV](ctx, p))
 
 		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, core.BucketNameInstances) }) //nolint:errcheck
 
-		do.Provide(injector, func(injector do.Injector) (core.KV, error) {
-			return kv, nil
-		})
-
-		repo = lo.Must(docker.NewInstancesRepo(ctx, injector))
+		repo = lo.Must(pal.Invoke[*docker.InstancesRepo](ctx, p))
 	})
 
 	Describe("Add", func() {

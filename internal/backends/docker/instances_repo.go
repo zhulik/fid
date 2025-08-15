@@ -9,30 +9,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
 )
 
 // Key structure "<function-name>.<instance-uuid>"
 
-type InstancesRepo struct {
-	logger *slog.Logger
+type InstancesRepo struct { //nolint:recvcheck
+	Logger *slog.Logger
+	KV     core.KV
+
 	bucket core.KVBucket
 }
 
-func NewInstancesRepo(ctx context.Context, injector do.Injector) (*InstancesRepo, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
+func (r *InstancesRepo) Init(ctx context.Context) error {
+	bucket, err := r.KV.CreateBucket(ctx, core.BucketNameInstances, 0)
+	if err != nil {
+		return fmt.Errorf("failed to create instances bucket: %w", err)
+	}
 
-	kv := do.MustInvoke[core.KV](injector)
-	bucket := lo.Must(kv.Bucket(ctx, core.BucketNameInstances))
+	r.bucket = bucket
 
-	return &InstancesRepo{
-		logger: do.MustInvoke[*slog.Logger](injector).
-			With("component", "backends.docker.InstancesRepo"),
-		bucket: bucket,
-	}, nil
+	return nil
 }
 
 func (r InstancesRepo) List(ctx context.Context, function core.FunctionDefinition) ([]core.FunctionInstance, error) {
@@ -63,14 +61,6 @@ func (r InstancesRepo) Count(ctx context.Context, function core.FunctionDefiniti
 	}
 
 	return count, nil
-}
-
-func (r InstancesRepo) HealthCheck() error {
-	return nil
-}
-
-func (r InstancesRepo) Shutdown() error {
-	return nil
 }
 
 func (r InstancesRepo) Get(

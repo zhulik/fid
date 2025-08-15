@@ -15,11 +15,15 @@ import (
 )
 
 //nolint:mnd
-func NewPal(ctx context.Context) *pal.Pal {
-	p := pal.New(
+func NewPal(ctx context.Context, services ...pal.ServiceDef) *pal.Pal {
+	services = append(services,
 		logging.Provide(),
 		pal.Provide(&config.Config{}),
 		pal.Provide(&pubSubNats.Client{}),
+	)
+
+	p := pal.New(
+		services...,
 	).
 		InitTimeout(time.Second * 10).
 		HealthCheckTimeout(time.Second * 10).
