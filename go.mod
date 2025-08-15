@@ -1,8 +1,8 @@
 module github.com/zhulik/fid
 
-go 1.24.1
+go 1.25
 
-toolchain go1.24.6
+toolchain go1.25.0
 
 require (
 	github.com/docker/docker v27.5.1+incompatible

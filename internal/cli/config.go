@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/samber/lo"
@@ -17,6 +18,12 @@ func runApp(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) e
 	var level slog.Level
 
 	lo.Must0(level.UnmarshalText([]byte(cmd.String(flags.FlagNameLogLevel))))
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	}))
+
+	slog.SetDefault(logger)
 
 	cfg := &config.Config{
 		HTTPPort:           int(cmd.Int(flags.FlagNameServerPort)),

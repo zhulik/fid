@@ -9,7 +9,6 @@ import (
 	"github.com/zhulik/fid/internal/httpserver"
 	"github.com/zhulik/fid/internal/invocation"
 	"github.com/zhulik/fid/internal/kv"
-	"github.com/zhulik/fid/internal/logging"
 	"github.com/zhulik/fid/internal/pubsub"
 	"github.com/zhulik/pal"
 )
@@ -24,7 +23,6 @@ func InitPal(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef
 	p := pal.New(
 		append(services,
 			pal.Provide(cfg),
-			logging.Provide(),
 			pubsub.Provide(),
 			kv.Provide(),
 			invocation.Provide(),
@@ -32,6 +30,7 @@ func InitPal(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef
 			httpserver.Provide(),
 		)...,
 	).
+		InjectSlog().
 		InitTimeout(initTimeout).
 		HealthCheckTimeout(healthCheckTimeout).
 		ShutdownTimeout(shutdownTimeout).
