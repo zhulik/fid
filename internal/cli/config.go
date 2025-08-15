@@ -13,7 +13,7 @@ import (
 	"github.com/zhulik/pal"
 )
 
-func initDI(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) (*pal.Pal, error) {
+func runApp(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) error {
 	var level slog.Level
 
 	lo.Must0(level.UnmarshalText([]byte(cmd.String(flags.FlagNameLogLevel))))
@@ -29,8 +29,8 @@ func initDI(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) (
 
 	p, err := di.InitPal(ctx, cfg, services...)
 	if err != nil {
-		return nil, err //nolint:wrapcheck
+		return err //nolint:wrapcheck
 	}
 
-	return p, nil
+	return p.Run(ctx) //nolint:wrapcheck
 }

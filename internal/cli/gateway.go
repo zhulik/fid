@@ -16,11 +16,6 @@ var gatewayCMD = &cli.Command{
 	Category: "Service",
 	Flags:    flags.ForServer,
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		p, err := initDI(ctx, cmd, gateway.Provide())
-		if err != nil {
-			return err
-		}
-
-		return p.Run(ctx)
+		return runApp(ctx, cmd, gateway.Provide())
 	},
 }

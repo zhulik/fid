@@ -20,11 +20,6 @@ var runtimeapiCMD = &cli.Command{
 		flags.FunctionInstanceID,
 	),
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		p, err := initDI(ctx, cmd, runtimeapi.Provide())
-		if err != nil {
-			return err
-		}
-
-		return p.Run(ctx)
+		return runApp(ctx, cmd, runtimeapi.Provide())
 	},
 }

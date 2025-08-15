@@ -21,11 +21,6 @@ var scalerCMD = &cli.Command{
 	),
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		p, err := initDI(ctx, cmd, scaler.Provide())
-		if err != nil {
-			return err
-		}
-
-		return p.Run(ctx)
+		return runApp(ctx, cmd, scaler.Provide())
 	},
 }
