@@ -9,7 +9,6 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
@@ -26,15 +25,6 @@ type PubSuber struct {
 	Nats *Client
 
 	Logger *slog.Logger
-}
-
-func NewPubSuber(injector do.Injector) (*PubSuber, error) {
-	pubSuber := &PubSuber{
-		Nats:   do.MustInvoke[*Client](injector),
-		Logger: do.MustInvoke[*slog.Logger](injector).With("component", "pubsub.Nats.PubSuber"),
-	}
-
-	return pubSuber, nil
 }
 
 func (p PubSuber) HealthCheck(ctx context.Context) error {
