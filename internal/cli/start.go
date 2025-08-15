@@ -8,6 +8,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 	"github.com/zhulik/fid/internal/cli/flags"
+	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/fidfile"
 	"github.com/zhulik/pal"
@@ -18,11 +19,11 @@ type Starter struct {
 	Backend       core.ContainerBackend
 	PubSuber      core.PubSuber
 	FunctionsRepo core.FunctionsRepo
+	Config        *config.Config
 }
 
 func (s *Starter) Run(ctx context.Context) error {
-	// TODO: get fidfile from config
-	fidFilePath := "" // cmd.String("fidfile")
+	fidFilePath := s.Config.FidfilePath
 
 	s.Logger.Info("Starting...")
 	s.Logger.Info("Loading", "fidfile", fidFilePath)

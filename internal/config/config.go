@@ -13,4 +13,5 @@ type Config struct {
 	NATSURL            string
 	LogLevel           slog.Level
 	ElectionsBucketTTL time.Duration
+	FidfilePath        string
 }

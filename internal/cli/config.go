@@ -32,6 +32,7 @@ func runApp(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) e
 		NATSURL:            cmd.String(flags.FlagNameNATSURL),
 		LogLevel:           level,
 		ElectionsBucketTTL: lo.Must(time.ParseDuration("2s")), // TODO: use const everywhere
+		FidfilePath:        cmd.String(cmd.String("fidfile")),
 	}
 
 	p, err := di.InitPal(ctx, cfg, services...)
