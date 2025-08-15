@@ -21,7 +21,7 @@ const (
 	APIDNSName = "api"
 )
 
-// FunctionPod is a struct that represents a group of a function instance and it's forwader living in the same network.
+// FunctionPod is a struct that represents a group of a function instance and it's runtime api living in the same network.
 type FunctionPod struct {
 	uuid   string // Of the "pod"
 	config config.Config
