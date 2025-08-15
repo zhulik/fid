@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -30,7 +29,7 @@ func initDI(ctx context.Context, cmd *cli.Command, services ...pal.ServiceDef) (
 
 	p, err := di.InitPal(ctx, cfg, services...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize pal: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 
 	return p, nil
