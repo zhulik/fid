@@ -11,7 +11,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/pal"
@@ -21,7 +20,8 @@ const (
 	APIDNSName = "api"
 )
 
-// FunctionPod is a struct that represents a group of a function instance and it's runtime api living in the same network.
+// FunctionPod is a struct that represents a group of a function instance and it's runtime api
+// living in the same network.
 type FunctionPod struct {
 	uuid   string // Of the "pod"
 	config config.Config
@@ -39,7 +39,7 @@ func CreateFunctionPod(
 ) (*FunctionPod, error) {
 	podID := uuid.NewString()
 
-	logger := lo.Must(pal.Invoke[*slog.Logger](ctx, p)).With(
+	logger := pal.MustInvoke[*slog.Logger](ctx, p).With(
 		"component", "backends.docker.Pod",
 		"podID", podID,
 		"function", function,
@@ -47,8 +47,8 @@ func CreateFunctionPod(
 
 	pod := &FunctionPod{
 		uuid:                    podID,
-		config:                  lo.Must(pal.Invoke[config.Config](ctx, p)),
-		docker:                  lo.Must(pal.Invoke[*client.Client](ctx, p)),
+		config:                  pal.MustInvoke[config.Config](ctx, p),
+		docker:                  pal.MustInvoke[*client.Client](ctx, p),
 		runtimeAPIContainerName: fmt.Sprintf("%s-%s", podID, core.ComponentNameRuntimeAPI),
 		functionContainerName:   fmt.Sprintf("%s-%s", podID, core.ComponentNameFunction),
 		logger:                  logger,
