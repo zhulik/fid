@@ -2,11 +2,11 @@ package di
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/zhulik/fid/internal/backends"
 	"github.com/zhulik/fid/internal/config"
+	"github.com/zhulik/fid/internal/httpserver"
 	"github.com/zhulik/fid/internal/invocation"
 	"github.com/zhulik/fid/internal/kv"
 	"github.com/zhulik/fid/internal/logging"
@@ -21,25 +21,21 @@ const (
 )
 
 func InitPal(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef) (*pal.Pal, error) {
-	services = append(services,
-		pal.Provide(cfg),
-		logging.Provide(),
-		pubsub.Provide(),
-		kv.Provide(),
-		invocation.Provide(),
-		backends.Provide(),
-	)
 	p := pal.New(
-		services...,
+		append(services,
+			pal.Provide(cfg),
+			logging.Provide(),
+			pubsub.Provide(),
+			kv.Provide(),
+			invocation.Provide(),
+			backends.Provide(),
+			httpserver.Provide(),
+		)...,
 	).
 		InitTimeout(initTimeout).
 		HealthCheckTimeout(healthCheckTimeout).
-		ShutdownTimeout(shutdownTimeout)
+		ShutdownTimeout(shutdownTimeout).
+		RunHealthCheckServer(":8081", "/health")
 
-	err := p.Init(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize pal: %w", err)
-	}
-
-	return p, nil
+	return p, p.Init(ctx) //nolint:wrapcheck
 }

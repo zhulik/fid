@@ -32,13 +32,6 @@ func (s *Server) Init(_ context.Context) error {
 	router.Use(LoggingMiddleware(s.Logger))
 	router.Use(JSONErrorHandler(s.Logger))
 
-	router.GET("/health", func(c *gin.Context) { //nolint:contextcheck
-		err := s.Pal.HealthCheck(c.Request.Context())
-		if err != nil {
-			c.Error(err)
-		}
-	})
-
 	s.Router = router
 	s.server = http.Server{
 		Addr:              fmt.Sprintf("0.0.0.0:%d", s.Config.HTTPPort),
@@ -49,8 +42,8 @@ func (s *Server) Init(_ context.Context) error {
 	return nil
 }
 
-// Run starts the HTTP server.
-func (s *Server) Run(ctx context.Context) error {
+// RunServer starts the HTTP server. Name is not Run to avoid conflict with Run method in pal.
+func (s *Server) RunServer(ctx context.Context) error {
 	s.Logger.Info("Starting server", "addr", s.server.Addr)
 
 	go func() {

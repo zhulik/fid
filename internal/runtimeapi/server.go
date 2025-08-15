@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/pkg/httpserver"
+	"github.com/zhulik/fid/internal/httpserver"
 	"github.com/zhulik/pal"
 )
 
@@ -60,6 +60,10 @@ func (s *Server) Init(ctx context.Context) error {
 	s.Router.POST("/2018-06-01/runtime/init/error", s.InitErrorHandler)
 
 	return nil
+}
+
+func (s *Server) Run(ctx context.Context) error {
+	return s.RunServer(ctx) //nolint:wrapcheck
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
