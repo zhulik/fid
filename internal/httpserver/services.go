@@ -1,11 +1,9 @@
-package gateway
+package httpserver
 
 import (
 	"github.com/zhulik/pal"
 )
 
 func Provide() pal.ServiceDef {
-	return pal.ProvideList(
-		pal.Provide(&Server{}),
-	)
+	return pal.Provide(&Server{})
 }

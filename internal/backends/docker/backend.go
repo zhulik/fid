@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/pal"
 )
 
 type Backend struct {
@@ -21,19 +20,7 @@ type Backend struct {
 	Config        config.Config
 	Logger        *slog.Logger
 	FunctionsRepo core.FunctionsRepo
-
-	injector do.Injector
-}
-
-func New(injector do.Injector) (*Backend, error) {
-	// TODO: define separate repositories for functions, elections etc.
-	return &Backend{
-		Docker:        do.MustInvoke[*client.Client](injector),
-		Config:        do.MustInvoke[config.Config](injector),
-		Logger:        do.MustInvoke[*slog.Logger](injector).With("component", "backends.docker.Backend"),
-		FunctionsRepo: do.MustInvoke[core.FunctionsRepo](injector),
-		injector:      injector,
-	}, nil
+	Pal           *pal.Pal
 }
 
 // Register creates a new function's template, scaler, and garbage collector(TODO).
@@ -145,11 +132,8 @@ func (b Backend) Info(ctx context.Context) (map[string]any, error) {
 	}, nil
 }
 
-func (b Backend) HealthCheck() error {
+func (b Backend) HealthCheck(ctx context.Context) error {
 	b.Logger.Debug("ContainerBackend health check.")
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 
 	_, err := b.Docker.Info(ctx)
 	if err != nil {
@@ -159,7 +143,7 @@ func (b Backend) HealthCheck() error {
 	return nil
 }
 
-func (b Backend) Shutdown() error {
+func (b Backend) Shutdown(_ context.Context) error {
 	b.Logger.Debug("ContainerBackend shutting down...")
 	defer b.Logger.Debug("ContainerBackend shot down.")
 
@@ -174,9 +158,16 @@ func (b Backend) Shutdown() error {
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
 	b.Logger.Info("Creating new function pod", "function", function)
 
-	pod, err := CreateFunctionPod(ctx, function, b.injector)
+	pod := &FunctionPod{Function: function}
+
+	err := b.Pal.InjectInto(ctx, pod)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to inject dependencies into function pod: %w", err)
+	}
+
+	err = pod.Start(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to start function pod: %w", err)
 	}
 
 	b.Logger.Info("Function pod created", "function", function, "podID", pod.uuid)
@@ -187,7 +178,7 @@ func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefiniti
 func (b Backend) StopInstance(ctx context.Context, instanceID string) error {
 	b.Logger.Info("Killing function instance", "instanceID", instanceID)
 
-	return FunctionPod{uuid: instanceID, docker: b.Docker}.Stop(ctx)
+	return (&FunctionPod{uuid: instanceID, Docker: b.Docker}).Stop(ctx)
 }
 
 func (b Backend) StartGateway(ctx context.Context) (string, error) {

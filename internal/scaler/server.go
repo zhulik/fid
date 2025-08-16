@@ -2,60 +2,24 @@ package scaler
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
-	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/pkg/httpserver"
+	"github.com/zhulik/fid/internal/httpserver"
+	"github.com/zhulik/pal"
 )
 
 type Server struct {
 	*httpserver.Server
 
+	Config *config.Config
+	Logger *slog.Logger
+
+	Pal *pal.Pal
+
 	Scaler *Scaler
 }
 
-// NewServer creates a new Server instance.
-func NewServer(ctx context.Context, injector do.Injector) (*Server, error) {
-	config := do.MustInvoke[config.Config](injector)
-	logger := do.MustInvoke[*slog.Logger](injector).With("component", "scaler.Server")
-	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
-
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a new http server: %w", err)
-	}
-
-	function, err := functionsRepo.Get(ctx, config.FunctionName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get function: %w", err)
-	}
-
-	scaler, err := NewScaler(ctx, injector, function)
-	if err != nil {
-		return nil, err
-	}
-
-	srv := &Server{
-		Server: server,
-		Scaler: scaler,
-	}
-
-	return srv, nil
-}
-
-func (s *Server) Run() error {
-	errs := make(chan error, 2) //nolint:mnd
-
-	go func() {
-		errs <- s.Scaler.Run()
-	}()
-
-	go func() {
-		errs <- s.Server.Run()
-	}()
-
-	return <-errs
+func (s *Server) Run(ctx context.Context) error {
+	return s.RunServer(ctx) //nolint:wrapcheck
 }

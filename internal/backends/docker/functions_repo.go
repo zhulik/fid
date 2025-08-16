@@ -5,38 +5,25 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
-	"github.com/samber/do/v2"
-	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/json"
 )
 
-type FunctionsRepo struct {
+type FunctionsRepo struct { //nolint:recvcheck
 	Logger *slog.Logger
+	KV     core.KV
 	bucket core.KVBucket
 }
 
-func NewFunctionsRepo(ctx context.Context, injector do.Injector) (*FunctionsRepo, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
+func (r *FunctionsRepo) Init(ctx context.Context) error {
+	bucket, err := r.KV.CreateBucket(ctx, core.BucketNameFunctions, 0)
+	if err != nil {
+		return fmt.Errorf("failed to create functions bucket: %w", err)
+	}
 
-	kv := do.MustInvoke[core.KV](injector)
-	bucket := lo.Must(kv.Bucket(ctx, core.BucketNameFunctions))
+	r.bucket = bucket
 
-	return &FunctionsRepo{
-		Logger: do.MustInvoke[*slog.Logger](injector).
-			With("component", "backends.docker.FunctionsRepo"),
-		bucket: bucket,
-	}, nil
-}
-
-func (r FunctionsRepo) HealthCheck() error {
-	return nil
-}
-
-func (r FunctionsRepo) Shutdown() error {
 	return nil
 }
 

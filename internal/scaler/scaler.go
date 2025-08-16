@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/pkg/elect"
@@ -17,38 +16,35 @@ import (
 
 var Stopped = errors.New("stopped") //nolint:errname,gochecknoglobals,staticcheck
 
-type Scaler struct {
-	Function core.FunctionDefinition
-	Logger   *slog.Logger
-
+type Scaler struct { //nolint:recvcheck
+	Logger        *slog.Logger
+	FunctionsRepo core.FunctionsRepo
+	Config        *config.Config
 	Backend       core.ContainerBackend
 	PubSuber      core.PubSuber
 	InstancesRepo core.InstancesRepo
+	KV            core.KV
+	elector       *elect.Elect
 
-	Elector *elect.Elect
+	function core.FunctionDefinition
 }
 
-func NewScaler(ctx context.Context, injector do.Injector, function core.FunctionDefinition) (*Scaler, error) {
+func (s *Scaler) Init(ctx context.Context) error {
 	electID := uuid.NewString()
 
-	config := do.MustInvoke[config.Config](injector)
-	logger := do.MustInvoke[*slog.Logger](injector).With(
-		"component", "scaler.Scaler",
+	function, err := s.FunctionsRepo.Get(ctx, s.Config.FunctionName)
+	if err != nil {
+		return fmt.Errorf("failed to get function: %w", err)
+	}
+
+	s.Logger = s.Logger.With(
 		"function", function,
 		"electID", electID,
 	)
 
-	backend := do.MustInvoke[core.ContainerBackend](injector)
-	pubSuber := do.MustInvoke[core.PubSuber](injector)
-	kv := do.MustInvoke[core.KV](injector)
-	instancesRepo := do.MustInvoke[core.InstancesRepo](injector)
-
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
-	defer cancel()
-
-	bucket, err := kv.Bucket(ctx, core.BucketNameElections)
+	bucket, err := s.KV.Bucket(ctx, core.BucketNameElections)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get bucket: %w", err)
+		return fmt.Errorf("failed to get bucket: %w", err)
 	}
 
 	kvWrap := kvWrapper{
@@ -57,25 +53,21 @@ func NewScaler(ctx context.Context, injector do.Injector, function core.Function
 
 	keyName := function.Name() + "-scaler-leader"
 
-	elector, err := elect.New(kvWrap, config.ElectionsBucketTTL, keyName, electID)
+	elector, err := elect.New(kvWrap, s.Config.ElectionsBucketTTL, keyName, electID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create elector: %w", err)
+		return fmt.Errorf("failed to create elector: %w", err)
 	}
 
-	logger.Info("Scaler created")
+	s.Logger.Info("Scaler created")
 
-	return &Scaler{
-		Function:      function,
-		Logger:        logger,
-		Backend:       backend,
-		PubSuber:      pubSuber,
-		Elector:       elector,
-		InstancesRepo: instancesRepo,
-	}, nil
+	s.function = function
+	s.elector = elector
+
+	return nil
 }
 
 // Run the scaler. Never returns nil error. When Shutdown is called, returns Stopped.
-func (s Scaler) Run() error { //nolint:cyclop,funlen
+func (s Scaler) Run(ctx context.Context) error { //nolint:cyclop,funlen
 	s.Logger.Info("Scaler started.")
 	defer s.Logger.Info("Scaler stopped.")
 
@@ -97,7 +89,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 
 	defer stop()
 
-	outcomeCh := s.Elector.Start()
+	outcomeCh := s.elector.Start(ctx)
 
 	for {
 		select {
@@ -106,7 +98,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 			case elect.Won:
 				s.Logger.Info("Elected as a leader")
 
-				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				ctx, cancel := context.WithTimeout(ctx, time.Second)
 				sub, err = s.subscribe(ctx)
 
 				cancel()
@@ -116,7 +108,7 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 				}
 
 				go func() {
-					err := s.runScaler(context.Background(), sub)
+					err := s.runScaler(ctx, sub)
 					if err != nil {
 						errCh <- err
 					}
@@ -141,8 +133,8 @@ func (s Scaler) Run() error { //nolint:cyclop,funlen
 
 func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 	sub, err := s.PubSuber.Subscribe(ctx,
-		s.PubSuber.FunctionStreamName(s.Function),
-		[]string{s.PubSuber.ScaleSubjectName(s.Function)},
+		s.PubSuber.FunctionStreamName(s.function),
+		[]string{s.PubSuber.ScaleSubjectName(s.function)},
 		s.subscriberName(),
 	)
 	if err != nil {
@@ -153,12 +145,12 @@ func (s Scaler) subscribe(ctx context.Context) (core.Subscription, error) {
 }
 
 func (s Scaler) subscriberName() string {
-	return fmt.Sprintf("%s-%s", s.Function.Name(), core.ComponentNameScaler)
+	return fmt.Sprintf("%s-%s", s.function.Name(), core.ComponentNameScaler)
 }
 
-func (s Scaler) Shutdown() error {
+func (s Scaler) Shutdown(_ context.Context) error {
 	defer s.Logger.Info("Scaler is shooting down")
-	s.Elector.Stop()
+	s.elector.Stop()
 
 	return nil
 }
@@ -196,7 +188,7 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 			}()
 		case core.ScalingRequestTypeScaleDown:
 			go func() {
-				ctx, cancel := context.WithTimeout(ctx, s.Function.Timeout())
+				ctx, cancel := context.WithTimeout(ctx, s.function.Timeout())
 				defer cancel()
 
 				// TODO: reply to scale request when deleted
@@ -219,17 +211,17 @@ func (s Scaler) runScaler(ctx context.Context, sub core.Subscription) error {
 }
 
 func (s Scaler) rescaleToConfig(ctx context.Context) error {
-	instances, err := s.InstancesRepo.Count(ctx, s.Function)
+	instances, err := s.InstancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instances: %w", err)
 	}
 
 	switch {
-	case instances < s.Function.ScalingConfig().Min:
-		toCreate := s.Function.ScalingConfig().Min - instances
+	case instances < s.function.ScalingConfig().Min:
+		toCreate := s.function.ScalingConfig().Min - instances
 		s.Logger.Info("No need to rescale to config",
 			"instances", instances,
-			"min", s.Function.ScalingConfig().Min,
+			"min", s.function.ScalingConfig().Min,
 			"toCreate", toCreate,
 		)
 
@@ -244,19 +236,19 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 				return fmt.Errorf("failed to scale up: %w", err)
 			}
 		}
-	case instances > s.Function.ScalingConfig().Max:
+	case instances > s.function.ScalingConfig().Max:
 		// TODO: implement
-		toKill := instances - s.Function.ScalingConfig().Max
+		toKill := instances - s.function.ScalingConfig().Max
 		s.Logger.Info("No need to rescale to config",
 			"instances", instances,
-			"max", s.Function.ScalingConfig().Max,
+			"max", s.function.ScalingConfig().Max,
 			"toKill", toKill,
 		)
 	default:
 		s.Logger.Info("No need to rescale to config",
 			"instances", instances,
-			"min", s.Function.ScalingConfig().Min,
-			"max", s.Function.ScalingConfig().Max,
+			"min", s.function.ScalingConfig().Min,
+			"max", s.function.ScalingConfig().Max,
 		)
 	}
 
@@ -264,12 +256,12 @@ func (s Scaler) rescaleToConfig(ctx context.Context) error {
 }
 
 func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
-	count, err := s.InstancesRepo.Count(ctx, s.Function)
+	count, err := s.InstancesRepo.Count(ctx, s.function)
 	if err != nil {
 		return fmt.Errorf("failed to get instance count: %w", err)
 	}
 
-	if count-1 <= s.Function.ScalingConfig().Min {
+	if count-1 <= s.function.ScalingConfig().Min {
 		s.Logger.Info("cannot kill instances, too few instances left", "instanceID", instanceID)
 
 		return nil
@@ -280,7 +272,7 @@ func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
 		return fmt.Errorf("failed to kill instance: %w", err)
 	}
 
-	err = s.InstancesRepo.Delete(ctx, s.Function, instanceID)
+	err = s.InstancesRepo.Delete(ctx, s.function, instanceID)
 	if err != nil {
 		return fmt.Errorf("failed to delete instance record: %w", err)
 	}
@@ -291,7 +283,7 @@ func (s Scaler) stopInstance(ctx context.Context, instanceID string) error {
 func (s Scaler) scaleUp(ctx context.Context) (string, error) { //nolint:unparam
 	s.Logger.Info("Scaling up")
 
-	instanceID, err := s.Backend.AddInstance(ctx, s.Function)
+	instanceID, err := s.Backend.AddInstance(ctx, s.function)
 	if err != nil {
 		return "", fmt.Errorf("failed to add instance: %w", err)
 	}

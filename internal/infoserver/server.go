@@ -1,49 +1,41 @@
 package infoserver
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samber/do/v2"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/pkg/httpserver"
+	"github.com/zhulik/fid/internal/httpserver"
+	"github.com/zhulik/pal"
 )
 
 type Server struct {
 	*httpserver.Server
 
+	Config        *config.Config
+	Logger        *slog.Logger
 	Backend       core.ContainerBackend
 	FunctionsRepo core.FunctionsRepo
+
+	Pal *pal.Pal
 }
 
 // NewServer creates a new Server instance.
-func NewServer(injector do.Injector) (*Server, error) {
-	config := do.MustInvoke[config.Config](injector)
-	logger := do.MustInvoke[*slog.Logger](injector).With("component", "infoserver.Server")
-	backend := do.MustInvoke[core.ContainerBackend](injector)
-	functionsrepo := do.MustInvoke[core.FunctionsRepo](injector)
+func (s *Server) Init(ctx context.Context) error {
+	s.Router.GET("/backend", s.BackendHandler)
+	s.Router.GET("/functions", s.FunctionsHandler)
+	s.Router.GET("/functions/:functionName", s.FunctionHandler)
 
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a new http server: %w", err)
-	}
+	return nil
+}
 
-	srv := &Server{
-		Server:        server,
-		Backend:       backend,
-		FunctionsRepo: functionsrepo,
-	}
-
-	srv.Router.GET("/backend", srv.BackendHandler)
-	srv.Router.GET("/functions", srv.FunctionsHandler)
-	srv.Router.GET("/functions/:functionName", srv.FunctionHandler)
-
-	return srv, nil
+func (s *Server) Run(ctx context.Context) error {
+	return s.RunServer(ctx) //nolint:wrapcheck
 }
 
 func (s *Server) BackendHandler(c *gin.Context) {

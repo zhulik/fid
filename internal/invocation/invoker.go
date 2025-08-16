@@ -8,32 +8,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/core"
 )
 
 // TODO: move to pubusub?
 
-func NewInvoker(injector do.Injector) (*Invoker, error) {
-	return &Invoker{
-		PubSuber: do.MustInvoke[core.PubSuber](injector),
-		Logger:   do.MustInvoke[*slog.Logger](injector).With("component", "invocation.Invoker"),
-		KV:       do.MustInvoke[core.KV](injector),
-	}, nil
-}
-
 type Invoker struct {
 	PubSuber core.PubSuber
 	KV       core.KV
 	Logger   *slog.Logger
-}
-
-func (i Invoker) HealthCheck() error {
-	return nil
-}
-
-func (i Invoker) Shutdown() error {
-	return nil
 }
 
 func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, payload []byte) ([]byte, error) {

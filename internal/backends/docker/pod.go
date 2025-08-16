@@ -11,7 +11,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/google/uuid"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 )
@@ -20,75 +19,71 @@ const (
 	APIDNSName = "api"
 )
 
-// FunctionPod is a struct that represents a group of a function instance and it's forwader living in the same network.
+// FunctionPod is a struct that represents a group of a function instance and it's runtime api
+// living in the same network.
 type FunctionPod struct {
-	uuid   string // Of the "pod"
-	config config.Config
-	docker *client.Client
-	logger *slog.Logger
+	uuid string // Of the "pod"
+
+	Config config.Config
+	Docker *client.Client
+	Logger *slog.Logger
 
 	runtimeAPIContainerName string
 	functionContainerName   string
+
+	Function core.FunctionDefinition
 }
 
-func CreateFunctionPod(
-	ctx context.Context,
-	function core.FunctionDefinition,
-	injector do.Injector,
-) (*FunctionPod, error) {
-	podID := uuid.NewString()
-
-	logger := do.MustInvoke[*slog.Logger](injector).With(
-		"component", "backends.docker.Pod",
-		"podID", podID,
-		"function", function,
+func (p *FunctionPod) Init(ctx context.Context) error {
+	p.Logger = p.Logger.With(
+		"podID", p.uuid,
+		"function", p.Function,
 	)
 
-	pod := &FunctionPod{
-		uuid:                    podID,
-		config:                  do.MustInvoke[config.Config](injector),
-		docker:                  do.MustInvoke[*client.Client](injector),
-		runtimeAPIContainerName: fmt.Sprintf("%s-%s", podID, core.ComponentNameRuntimeAPI),
-		functionContainerName:   fmt.Sprintf("%s-%s", podID, core.ComponentNameFunction),
-		logger:                  logger,
-	}
+	p.uuid = uuid.NewString()
+	p.runtimeAPIContainerName = fmt.Sprintf("%s-%s", p.uuid, core.ComponentNameRuntimeAPI)
+	p.functionContainerName = fmt.Sprintf("%s-%s", p.uuid, core.ComponentNameFunction)
 
+	return nil
+}
+
+func (p *FunctionPod) Start(ctx context.Context) error {
 	var err error
 
 	defer func() {
 		if err != nil {
-			logger.Warn("Pod creation failed, cleaning up...", "error", err)
+			p.Logger.Warn("Pod creation failed, cleaning up...", "error", err)
 
-			err := pod.Stop(ctx)
+			err := p.Stop(ctx)
 			if err != nil {
-				logger.Warn("Failed to clean up after failed pod creation.", "error", err)
+				p.Logger.Warn("Failed to clean up after failed pod creation.", "error", err)
 			}
 		}
 	}()
 
-	err = pod.createNetwork(ctx)
+	_, err = p.Docker.NetworkCreate(ctx, p.uuid, network.CreateOptions{})
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to create network: %w", err)
 	}
 
-	err = pod.createRuntimeAPI(ctx, function)
+	err = p.createRuntimeAPI(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = pod.createFunction(ctx, function)
+	err = p.createFunction(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return pod, nil
+	return nil
 }
 
-func (p FunctionPod) Stop(ctx context.Context) error {
-	fnStopErr := p.docker.ContainerStop(ctx, p.functionContainerName, container.StopOptions{})
+func (p *FunctionPod) Stop(ctx context.Context) error {
+	fnStopErr := p.Docker.ContainerStop(ctx, p.functionContainerName, container.StopOptions{})
 	if fnStopErr != nil {
 		if client.IsErrNotFound(fnStopErr) {
-			p.logger.Info("Function container '%s' does not exist, ignoring.")
+			p.Logger.Info("Function container '%s' does not exist, ignoring.")
 
 			fnStopErr = nil
 		} else {
@@ -96,10 +91,10 @@ func (p FunctionPod) Stop(ctx context.Context) error {
 		}
 	}
 
-	apiStopErr := p.docker.ContainerStop(ctx, p.runtimeAPIContainerName, container.StopOptions{})
+	apiStopErr := p.Docker.ContainerStop(ctx, p.runtimeAPIContainerName, container.StopOptions{})
 	if apiStopErr != nil {
 		if client.IsErrNotFound(apiStopErr) {
-			p.logger.Info("Runtime API container '%s' does not exist, ignoring.")
+			p.Logger.Info("Runtime API container '%s' does not exist, ignoring.")
 
 			fnStopErr = nil
 		} else {
@@ -107,7 +102,7 @@ func (p FunctionPod) Stop(ctx context.Context) error {
 		}
 	}
 
-	netDeleteErr := p.deleteNetwork(ctx)
+	netDeleteErr := p.Docker.NetworkRemove(ctx, p.uuid)
 	if netDeleteErr != nil {
 		netDeleteErr = fmt.Errorf("failed to delete network '%s': %w", p.uuid, netDeleteErr)
 	}
@@ -119,32 +114,14 @@ func (p FunctionPod) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (p FunctionPod) createNetwork(ctx context.Context) error {
-	_, err := p.docker.NetworkCreate(ctx, p.uuid, network.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to create network '%s': %w", p.uuid, err)
-	}
-
-	return nil
-}
-
-func (p FunctionPod) deleteNetwork(ctx context.Context) error {
-	err := p.docker.NetworkRemove(ctx, p.uuid)
-	if err != nil {
-		return fmt.Errorf("failed to remove network '%s': %w", p.uuid, err)
-	}
-
-	return nil
-}
-
-func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.FunctionDefinition) error {
+func (p *FunctionPod) createRuntimeAPI(ctx context.Context) error {
 	containerConfig := &container.Config{
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameRuntimeAPI},
 		Env: core.MapToEnvList(map[string]string{
-			core.EnvNameFunctionName:          function.Name(),
+			core.EnvNameFunctionName:          p.Function.Name(),
 			core.EnvNameInstanceID:            p.uuid,
-			core.EnvNameNatsURL:               p.config.NATSURL,
+			core.EnvNameNatsURL:               p.Config.NATSURL,
 			core.EnvNameFunctionContainerName: p.functionContainerName,
 		}),
 		Labels: map[string]string{
@@ -166,7 +143,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 		},
 	}
 
-	resp, err := p.docker.ContainerCreate(
+	resp, err := p.Docker.ContainerCreate(
 		ctx,
 		containerConfig,
 		hostConfig,
@@ -178,7 +155,7 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
-	err = p.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	err = p.Docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to start container: %w", err)
 	}
@@ -186,13 +163,13 @@ func (p FunctionPod) createRuntimeAPI(ctx context.Context, function core.Functio
 	return nil
 }
 
-func (p FunctionPod) createFunction(ctx context.Context, function core.FunctionDefinition) error {
-	stopTimeout := int((function.Timeout() + time.Second) / time.Second)
+func (p *FunctionPod) createFunction(ctx context.Context) error {
+	stopTimeout := int((p.Function.Timeout() + time.Second) / time.Second)
 
 	containerConfig := &container.Config{
-		Image: function.Image(),
+		Image: p.Function.Image(),
 		Env: core.MapToEnvList(
-			function.Env(),
+			p.Function.Env(),
 			map[string]string{core.EnvNameAWSLambdaRuntimeAPI: APIDNSName},
 		),
 		Labels: map[string]string{
@@ -209,7 +186,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.FunctionD
 		},
 	}
 
-	resp, err := p.docker.ContainerCreate(
+	resp, err := p.Docker.ContainerCreate(
 		ctx,
 		containerConfig,
 		hostConfig,
@@ -221,7 +198,7 @@ func (p FunctionPod) createFunction(ctx context.Context, function core.FunctionD
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
-	err = p.docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
+	err = p.Docker.ContainerStart(ctx, resp.ID, container.StartOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to start container: %w", err)
 	}

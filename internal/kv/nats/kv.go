@@ -7,19 +7,12 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/core"
-	pubsubNats "github.com/zhulik/fid/internal/pubsub/nats"
+	pubSubNats "github.com/zhulik/fid/internal/pubsub/nats"
 )
 
-func NewKV(injector do.Injector) (*KV, error) {
-	return &KV{
-		Nats: do.MustInvoke[*pubsubNats.Client](injector),
-	}, nil
-}
-
 type KV struct {
-	Nats *pubsubNats.Client
+	Nats *pubSubNats.Client
 }
 
 func (k KV) CreateBucket(ctx context.Context, name string, ttl time.Duration) (core.KVBucket, error) {
@@ -61,13 +54,5 @@ func (k KV) DeleteBucket(ctx context.Context, name string) error {
 		return fmt.Errorf("failed to delete bucket: %w", err)
 	}
 
-	return nil
-}
-
-func (k KV) HealthCheck() error {
-	return nil
-}
-
-func (k KV) Shutdown() error {
 	return nil
 }
