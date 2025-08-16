@@ -158,9 +158,16 @@ func (b Backend) Shutdown(_ context.Context) error {
 func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefinition) (string, error) {
 	b.Logger.Info("Creating new function pod", "function", function)
 
-	pod, err := CreateFunctionPod(ctx, function, b.Pal)
+	pod := &FunctionPod{Function: function}
+
+	err := b.Pal.InjectInto(ctx, pod)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to inject dependencies into function pod: %w", err)
+	}
+
+	err = pod.Start(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to start function pod: %w", err)
 	}
 
 	b.Logger.Info("Function pod created", "function", function, "podID", pod.uuid)
@@ -171,7 +178,7 @@ func (b Backend) AddInstance(ctx context.Context, function core.FunctionDefiniti
 func (b Backend) StopInstance(ctx context.Context, instanceID string) error {
 	b.Logger.Info("Killing function instance", "instanceID", instanceID)
 
-	return FunctionPod{uuid: instanceID, docker: b.Docker}.Stop(ctx)
+	return (&FunctionPod{uuid: instanceID, Docker: b.Docker}).Stop(ctx)
 }
 
 func (b Backend) StartGateway(ctx context.Context) (string, error) {
