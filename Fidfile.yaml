@@ -2,7 +2,7 @@ version: 1
 
 backend: docker # or swarm(unsupported yet)
 
-gateway: # if missing - does not any expose ports
+gateway: # if missing - does not expose any ports
   port: 8080
   instances: 1 # only in swarm
 

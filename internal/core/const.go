@@ -36,7 +36,6 @@ const (
 	ContainerNameGateway    = "gateway"
 
 	BucketNameFunctions = "fid-functions"
-	BucketNameElections = "fid-elections"
 	BucketNameInstances = "fid-instances"
 
 	FilenameFidfile = "Fidfile.yaml"

@@ -49,12 +49,13 @@ func LoggingMiddleware(logger *slog.Logger) gin.HandlerFunc {
 
 		defer func() {
 			total := time.Since(start)
-			logger.With(
+			logger.Info("Request",
+				"method", c.Request.Method,
+				"path", c.Request.URL.Path,
 				"method", c.Request.Method,
 				"path", c.Request.URL.Path,
 				"duration", total,
-				"status", c.Writer.Status(),
-			).Info("Request", "method", c.Request.Method, "path", c.Request.URL.Path)
+				"status", c.Writer.Status())
 		}()
 
 		c.Next()

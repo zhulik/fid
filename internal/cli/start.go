@@ -19,18 +19,38 @@ type Starter struct {
 	Backend       core.ContainerBackend
 	PubSuber      core.PubSuber
 	FunctionsRepo core.FunctionsRepo
+	KV            core.KV
 	Config        *config.Config
+
+	CMD *cli.Command `pal:"name=command"`
 }
 
 func (s *Starter) Run(ctx context.Context) error {
+	initOnly := s.CMD.Bool(flags.FlagNameInitOnly)
+
 	fidFilePath := s.Config.FidfilePath
 
-	s.Logger.Info("Starting...")
+	s.Logger.Info("Starting...", "init-only", initOnly)
+
+	err := s.createKVBuckets(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create KV buckets %w", err)
+	}
+
 	s.Logger.Info("Loading", "fidfile", fidFilePath)
 
 	fidFile, err := fidfile.ParseFile(fidFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %w", fidFilePath, err)
+	}
+
+	err = s.createOrUpdateFunctionStreams(ctx, fidFile.Functions)
+	if err != nil {
+		return fmt.Errorf("failed to create or update function streams %s: %w", fidFilePath, err)
+	}
+
+	if initOnly {
+		return nil
 	}
 
 	_, err = s.startGateway(ctx)
@@ -52,23 +72,40 @@ func (s *Starter) Run(ctx context.Context) error {
 	return s.registerFunctions(ctx, fidFile.Functions)
 }
 
-func (s *Starter) registerFunctions(
-	ctx context.Context,
-	functions map[string]*fidfile.Function,
-) error {
-	s.Logger.Info("Registering functions", "count", len(functions))
+func (s *Starter) createKVBuckets(ctx context.Context) error {
+	_, err := s.KV.CreateBucket(ctx, core.BucketNameInstances)
+	if err != nil {
+		return fmt.Errorf("failed to create or update instances bucket: %w", err)
+	}
+
+	_, err = s.KV.CreateBucket(ctx, core.BucketNameFunctions)
+	if err != nil {
+		return fmt.Errorf("failed to create or update functions bucket: %w", err)
+	}
+
+	s.Logger.Info("KV buckets created or updated")
+
+	return nil
+}
+
+func (s *Starter) createOrUpdateFunctionStreams(ctx context.Context, functions map[string]*fidfile.Function) error {
+	s.Logger.Info("Creating function streams", "count", len(functions))
 
 	for _, function := range functions {
-		logger := s.Logger.With("function", function.Name())
-
 		err := s.PubSuber.CreateOrUpdateFunctionStream(ctx, function)
 		if err != nil {
 			return fmt.Errorf("error creating or updating function stream %s: %w", function.Name(), err)
 		}
+	}
 
-		logger.Info("Elections bucket created")
+	return nil
+}
 
-		err = s.Backend.Register(ctx, function)
+func (s *Starter) registerFunctions(ctx context.Context, functions map[string]*fidfile.Function) error {
+	s.Logger.Info("Registering functions", "count", len(functions))
+
+	for _, function := range functions {
+		err := s.Backend.Register(ctx, function)
 		if err != nil {
 			return fmt.Errorf("error registering function %s: %w", function.Name(), err)
 		}
@@ -115,13 +152,18 @@ func (s *Starter) startInfoServer(ctx context.Context) (string, error) {
 var startCMD = &cli.Command{
 	Name:     "start",
 	Aliases:  []string{"s"},
-	Usage:    "Start FID.",
+	Usage:    "Start FID. Reads Fidfile.yaml and starts the required services.",
 	Category: "User",
 	Flags: []cli.Flag{
 		flags.NatsURL,
 		flags.LogLevel,
+		&cli.BoolFlag{
+			Name:    flags.FlagNameInitOnly,
+			Aliases: []string{"i"},
+			Usage:   "If specified, only streams and buckets will be created, no services will start",
+		},
 		&cli.StringFlag{
-			Name:    "fidfile",
+			Name:    flags.FlagNameFIDFile,
 			Aliases: []string{"f"},
 			Value:   core.FilenameFidfile,
 			Usage:   "Load Fidfile.yaml from `FILE`",
@@ -130,6 +172,8 @@ var startCMD = &cli.Command{
 	},
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
-		return runApp(ctx, cmd, pal.Provide(&Starter{}))
+		return runApp(ctx, cmd,
+			pal.Provide(&Starter{}),
+		)
 	},
 }

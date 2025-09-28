@@ -5,20 +5,19 @@ import (
 	"log/slog"
 
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/zhulik/fid/internal/core"
 )
 
 type subscriptionWrapper struct {
 	consumerCtx jetstream.ConsumeContext
-	ch          chan core.Message
+	ch          chan jetstream.Msg
 	logger      *slog.Logger
 }
 
 func newSubscriptionWrapper(cons jetstream.Consumer, logger *slog.Logger) (subscriptionWrapper, error) {
-	msgChan := make(chan core.Message)
+	msgChan := make(chan jetstream.Msg)
 
 	consumerCtx, err := cons.Consume(func(msg jetstream.Msg) {
-		msgChan <- messageWrapper{msg}
+		msgChan <- msg
 	})
 	if err != nil {
 		return subscriptionWrapper{}, fmt.Errorf("failed to consume: %w", err)
@@ -31,7 +30,7 @@ func newSubscriptionWrapper(cons jetstream.Consumer, logger *slog.Logger) (subsc
 	}, nil
 }
 
-func (s subscriptionWrapper) C() <-chan core.Message {
+func (s subscriptionWrapper) C() <-chan jetstream.Msg {
 	return s.ch
 }
 

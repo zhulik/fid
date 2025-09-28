@@ -12,7 +12,7 @@ import (
 var gatewayCMD = &cli.Command{
 	Name:     core.ComponentNameGateway,
 	Aliases:  []string{"gw"},
-	Usage:    "Run gateway server.",
+	Usage:    "Gateway is a component that receives events from the function and routes them to the functions.", //nolint:lll
 	Category: "Service",
 	Flags:    flags.ForServer,
 	Action: func(ctx context.Context, cmd *cli.Command) error {

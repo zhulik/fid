@@ -2,7 +2,6 @@ package config
 
 import (
 	"log/slog"
-	"time"
 )
 
 type Config struct {
@@ -10,8 +9,7 @@ type Config struct {
 	FunctionName       string
 	FunctionInstanceID string
 
-	NATSURL            string
-	LogLevel           slog.Level
-	ElectionsBucketTTL time.Duration
-	FidfilePath        string
+	NATSURL     string
+	LogLevel    slog.Level
+	FidfilePath string
 }

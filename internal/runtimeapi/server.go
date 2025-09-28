@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nats-io/nats.go"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
 	"github.com/zhulik/fid/internal/httpserver"
@@ -92,7 +93,7 @@ func (s *Server) NextHandler(c *gin.Context) {
 		return
 	}
 
-	msg.Ack()
+	msg.Ack() //nolint:errcheck
 
 	s.Logger.Info("Event received", "requestID", msg.Headers()[core.HeaderNameRequestID][0])
 
@@ -123,10 +124,8 @@ func (s *Server) ResponseHandler(c *gin.Context) {
 		return
 	}
 
-	msg := core.Msg{
-		Subject: subject,
-		Data:    response,
-	}
+	msg := nats.NewMsg(subject)
+	msg.Data = response
 
 	err = s.functionInstance.executed(c.Request.Context())
 	if err != nil {
@@ -162,10 +161,8 @@ func (s *Server) ErrorHandler(c *gin.Context) {
 		return
 	}
 
-	msg := core.Msg{
-		Subject: subject,
-		Data:    response,
-	}
+	msg := nats.NewMsg(subject)
+	msg.Data = response
 
 	if err := s.PubSuber.Publish(c.Request.Context(), msg); err != nil {
 		c.Error(err)

@@ -15,6 +15,8 @@ const (
 	FlagNameLogLevel           = "log-level"
 	FlagNameBackend            = "backend"
 	FlagNameDockerURL          = "docker-url"
+	FlagNameFIDFile            = "fidfile"
+	FlagNameInitOnly           = "init-only"
 )
 
 var (
@@ -45,7 +47,7 @@ var (
 	ServerPort = &cli.IntFlag{
 		Name:    FlagNameServerPort,
 		Aliases: []string{"p"},
-		Usage:   "Set server port tp `ID`.",
+		Usage:   "Set server port to `PORT`.",
 		Value:   defaultHTTPPort,
 		Sources: cli.EnvVars("HTTP_PORT"),
 	}

@@ -4,7 +4,24 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
+
+type KVEntry struct {
+	Key   string
+	Value []byte
+}
+
+type PublishWaitResponseInput struct {
+	Msg *nats.Msg
+
+	Stream string // To listen for response on
+
+	Subjects []string      // To listen for response on
+	Timeout  time.Duration // Give up waiting after this duration
+}
 
 type ContainerBackend interface {
 	Info(ctx context.Context) (map[string]any, error)
@@ -59,21 +76,20 @@ type FunctionInstance interface {
 }
 
 type Subscription interface {
-	C() <-chan Message
+	C() <-chan jetstream.Msg
 	Stop()
 }
 
 type PubSuber interface {
-	Publish(ctx context.Context, msg Msg) error
-	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (Message, error)
-	Next(ctx context.Context, streamName string, subjects []string, durableName string) (Message, error)
+	Publish(ctx context.Context, msg *nats.Msg) error
+	PublishWaitResponse(ctx context.Context, responseInput PublishWaitResponseInput) (jetstream.Msg, error)
+	Next(ctx context.Context, streamName string, subjects []string, durableName string) (jetstream.Msg, error)
 
 	Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (Subscription, error)
 
 	CreateOrUpdateFunctionStream(ctx context.Context, function FunctionDefinition) error
 
 	FunctionStreamName(function FunctionDefinition) string
-	ScaleSubjectName(function FunctionDefinition) string
 	InvokeSubjectName(function FunctionDefinition) string
 	ResponseSubjectName(function FunctionDefinition, requestID string) string
 	ErrorSubjectName(function FunctionDefinition, requestID string) string
@@ -83,16 +99,7 @@ type Invoker interface {
 	Invoke(ctx context.Context, function FunctionDefinition, payload []byte) ([]byte, error)
 }
 
-// Message is a message received from a pubsub system.
-type Message interface {
-	Subject() string
-	Data() []byte
-	Headers() map[string][]string
-	Ack() error
-	Nak() error
-}
-
-type KVBucket interface { //nolint:interfacebloat
+type KVBucket interface {
 	Name() string
 
 	// Keys returns a list of keys in the bucket. Expensive if the bucket is big.
@@ -112,13 +119,10 @@ type KVBucket interface { //nolint:interfacebloat
 	Put(ctx context.Context, key string, value []byte) error
 	Update(ctx context.Context, key string, value []byte, seq uint64) (uint64, error)
 	Delete(ctx context.Context, key string) error
-
-	Incr(ctx context.Context, key string, n int64) (int64, error)
-	Decr(ctx context.Context, key string, n int64) (int64, error)
 }
 
 type KV interface {
-	CreateBucket(ctx context.Context, name string, ttl time.Duration) (KVBucket, error)
+	CreateBucket(ctx context.Context, name string) (KVBucket, error)
 	Bucket(ctx context.Context, name string) (KVBucket, error)
 	DeleteBucket(ctx context.Context, name string) error
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nats-io/nats.go"
 	"github.com/zhulik/fid/internal/core"
 )
 
@@ -24,13 +25,11 @@ func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, p
 	subject := i.PubSuber.InvokeSubjectName(function)
 	deadline := time.Now().Add(function.Timeout()).UnixMilli()
 
-	msg := core.Msg{
-		Subject: subject,
-		Data:    payload,
-		Header: map[string][]string{
-			core.HeaderNameRequestID:       {requestID},
-			core.HeaderNameRequestDeadline: {strconv.FormatInt(deadline, 10)},
-		},
+	msg := nats.NewMsg(subject)
+	msg.Data = payload
+	msg.Header = nats.Header{
+		core.HeaderNameRequestID:       {requestID},
+		core.HeaderNameRequestDeadline: {strconv.FormatInt(deadline, 10)},
 	}
 
 	errorSubject := i.PubSuber.ErrorSubjectName(function, requestID)
@@ -45,7 +44,7 @@ func (i Invoker) Invoke(ctx context.Context, function core.FunctionDefinition, p
 		Timeout: function.Timeout(),
 	}
 
-	i.Logger.With("requestID", requestID, "function", function).Info("Invoking...")
+	i.Logger.Info("Invoking...", "requestID", requestID, "function", function)
 
 	response, err := i.PubSuber.PublishWaitResponse(ctx, responseInput)
 	if err != nil {

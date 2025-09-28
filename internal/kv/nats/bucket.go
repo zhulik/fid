@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/lo"
@@ -103,57 +102,6 @@ func (b Bucket) Delete(ctx context.Context, key string) error {
 	}
 
 	return nil
-}
-
-func (b Bucket) Incr(ctx context.Context, key string, n int64) (int64, error) { //nolint:cyclop
-	for {
-		// Try to get the value
-		entry, err := b.bucket.Get(ctx, key)
-		if err != nil { //nolint:nestif
-			if errors.Is(err, jetstream.ErrKeyNotFound) {
-				// It does not exist, create it.
-				_, err := b.bucket.Create(ctx, key, []byte(strconv.FormatInt(n, 10)))
-				if err != nil {
-					// Value was created concurrently, try again.
-					if errors.Is(err, jetstream.ErrKeyExists) {
-						continue
-					}
-
-					return 0, fmt.Errorf("failed to create value: %w", err)
-				}
-
-				return n, nil
-			}
-
-			return 0, fmt.Errorf("failed to get value: %w", err)
-		}
-
-		value, err := strconv.ParseInt(string(entry.Value()), 10, 64)
-		if err != nil {
-			return 0, fmt.Errorf("failed to parse counter value: %w", err)
-		}
-
-		value += n
-
-		// Try updating the value
-		_, err = b.bucket.Update(ctx, key, []byte(strconv.FormatInt(value, 10)), entry.Revision())
-		if err == nil {
-			return value, nil
-		}
-
-		if errors.Is(err, jetstream.ErrKeyExists) ||
-			errors.Is(err, jetstream.ErrKeyDeleted) ||
-			errors.Is(err, jetstream.ErrKeyNotFound) {
-			// It was updated or delete concurrently, try again.
-			continue
-		}
-
-		return 0, fmt.Errorf("failed to update value: %w", err)
-	}
-}
-
-func (b Bucket) Decr(ctx context.Context, key string, n int64) (int64, error) {
-	return b.Incr(ctx, key, -n)
 }
 
 func (b Bucket) Name() string {

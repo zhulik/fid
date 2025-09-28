@@ -23,7 +23,7 @@ type InstancesRepo struct { //nolint:recvcheck
 }
 
 func (r *InstancesRepo) Init(ctx context.Context) error {
-	bucket, err := r.KV.CreateBucket(ctx, core.BucketNameInstances, 0)
+	bucket, err := r.KV.CreateBucket(ctx, core.BucketNameInstances)
 	if err != nil {
 		return fmt.Errorf("failed to create instances bucket: %w", err)
 	}

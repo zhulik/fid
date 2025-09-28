@@ -1,10 +1,6 @@
 package nats_test
 
 import (
-	"math/rand/v2"
-	"strconv"
-	"sync"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/samber/lo"
@@ -12,13 +8,9 @@ import (
 	"github.com/zhulik/fid/internal/kv/nats"
 	"github.com/zhulik/fid/testhelpers"
 	"github.com/zhulik/pal"
-	"go.uber.org/atomic"
 )
 
 const (
-	concurrentUpdates = 100
-	updateIterations  = 100
-
 	oneLevelKey = "namespace.key"
 	twoLevelKey = "namespace.key.subkey"
 	anotherKey  = "another.key"
@@ -34,7 +26,7 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 
 		lo.Must0(pal.InjectInto(ctx, p, &kv))
 
-		bucket = lo.Must(kv.CreateBucket(ctx, "test", 0))
+		bucket = lo.Must(kv.CreateBucket(ctx, "test"))
 		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, "test") }) //nolint:errcheck
 
 		lo.Must(bucket.Create(ctx, "key", []byte("some - value")))
@@ -245,62 +237,6 @@ var _ = Describe("Nats KV Bucket", Serial, func() {
 				err := bucket.Delete(ctx, "key2")
 
 				Expect(err).ToNot(HaveOccurred())
-			})
-		})
-	})
-
-	Describe("Incr", func() {
-		Context("when counter does not exist", func() {
-			It("creates the counter", func(ctx SpecContext) {
-				value, err := bucket.Incr(ctx, "counter", 5)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(value).To(Equal(int64(5)))
-			})
-		})
-
-		Context("when counter exists", func() {
-			Context("when no concurrent updates", func() {
-				It("increments the counter", func(ctx SpecContext) {
-					lo.Must(bucket.Incr(ctx, "counter", 5))
-
-					value, err := bucket.Incr(ctx, "counter", 3)
-
-					Expect(err).ToNot(HaveOccurred())
-					Expect(value).To(Equal(int64(8)))
-				})
-			})
-
-			Context("when concurrent updates", func() {
-				It("increments the counter", func(ctx SpecContext) {
-					sum := atomic.NewInt64(0)
-
-					wg := sync.WaitGroup{}
-					wg.Add(concurrentUpdates)
-
-					for range concurrentUpdates {
-						go func() {
-							defer wg.Done()
-
-							for range updateIterations {
-								n := rand.Int64() //nolint:gosec
-								_, err := bucket.Incr(ctx, "counter", n)
-								Expect(err).ToNot(HaveOccurred())
-								sum.Add(n)
-							}
-						}()
-					}
-
-					wg.Wait()
-
-					bytes, err := bucket.Get(ctx, "counter")
-					Expect(err).ToNot(HaveOccurred())
-
-					value, err := strconv.ParseInt(string(bytes), 10, 64)
-					Expect(err).ToNot(HaveOccurred())
-
-					Expect(value).To(Equal(sum.Load()))
-				})
 			})
 		})
 	})

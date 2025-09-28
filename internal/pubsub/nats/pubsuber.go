@@ -11,7 +11,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/samber/lo"
 	"github.com/zhulik/fid/internal/core"
-	"github.com/zhulik/fid/pkg/json"
 )
 
 const (
@@ -38,22 +37,8 @@ func (p PubSuber) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
-	data, ok := msg.Data.([]byte)
-	if !ok {
-		var err error
-
-		data, err = json.Marshal(msg.Data)
-		if err != nil {
-			return fmt.Errorf("failed to marshal payload: %w", err)
-		}
-	}
-
-	message := nats.NewMsg(msg.Subject)
-	message.Data = data
-	message.Header = msg.Header
-
-	_, err := p.Nats.JetStream.PublishMsg(ctx, message)
+func (p PubSuber) Publish(ctx context.Context, msg *nats.Msg) error {
+	_, err := p.Nats.JetStream.PublishMsg(ctx, msg)
 	if err != nil {
 		return fmt.Errorf("failed to publish: %w", err)
 	}
@@ -63,14 +48,14 @@ func (p PubSuber) Publish(ctx context.Context, msg core.Msg) error {
 
 // PublishWaitResponse Publishes a message to "subject", awaits for response on "subject.response".
 // If payload is []byte, publishes as is, otherwise marshals to JSON.
-func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:lll
-	replChan := lo.Async2(func() (core.Message, error) { return p.awaitResponse(ctx, input) })
+func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (jetstream.Msg, error) { //nolint:lll
+	replChan := lo.Async2(func() (jetstream.Msg, error) { return p.awaitResponse(ctx, input) })
 
 	if err := p.Publish(ctx, input.Msg); err != nil {
 		return nil, fmt.Errorf("failed to publish msg: %w", err)
 	}
 
-	p.Logger.With("subject", input.Msg.Subject).Debug("Message sent, awaiting response")
+	p.Logger.Debug("Message sent, awaiting response", "subject", input.Msg.Subject)
 
 	select {
 	case <-ctx.Done():
@@ -80,7 +65,7 @@ func (p PubSuber) PublishWaitResponse(ctx context.Context, input core.PublishWai
 	}
 }
 
-func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (core.Message, error) { //nolint:lll
+func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitResponseInput) (jetstream.Msg, error) { //nolint:lll
 	responseCtx, cancel := context.WithTimeout(ctx, input.Timeout)
 	defer cancel()
 
@@ -89,7 +74,7 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
-	response.Ack()
+	response.Ack() //nolint:errcheck
 
 	return response, nil
 }
@@ -98,12 +83,10 @@ func (p PubSuber) awaitResponse(ctx context.Context, input core.PublishWaitRespo
 // TODO: something more universal, for any kind of streams?
 func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function core.FunctionDefinition) error {
 	streamName := p.FunctionStreamName(function)
-	logger := p.Logger.With("streamName", streamName)
 
 	cfg := jetstream.StreamConfig{
 		Name: streamName,
 		Subjects: []string{
-			p.ScaleSubjectName(function),
 			p.InvokeSubjectName(function),
 			p.ResponseSubjectName(function, "*"),
 			p.ErrorSubjectName(function, "*"),
@@ -121,7 +104,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function cor
 		return fmt.Errorf("failed to create or update stream: %w", err)
 	}
 
-	logger.Info("Stream created or updated")
+	p.Logger.Info("Stream created or updated", "streamName", streamName)
 
 	return nil
 }
@@ -129,7 +112,7 @@ func (p PubSuber) CreateOrUpdateFunctionStream(ctx context.Context, function cor
 // Next returns the next message from the stream, **does not respect ctx cancellation properly yet**,
 // but checks ctx status when reaches timeout in the Nats client, so ctx cancellation will be
 // respected in the next iteration.
-func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string, durableName string) (core.Message, error) { //nolint:lll
+func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string, durableName string) (jetstream.Msg, error) { //nolint:lll
 	var inactiveThreshold time.Duration
 	if durableName != "" {
 		inactiveThreshold = core.MaxTimeout
@@ -180,7 +163,7 @@ func (p PubSuber) Next(ctx context.Context, streamName string, subjects []string
 		return nil, fmt.Errorf("failed to fetch message: %w", err)
 	}
 
-	return &messageWrapper{msg}, nil
+	return msg, nil
 }
 
 func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []string, durableName string) (core.Subscription, error) { //nolint:lll
@@ -215,10 +198,6 @@ func (p PubSuber) Subscribe(ctx context.Context, streamName string, subjects []s
 
 func (p PubSuber) FunctionStreamName(function core.FunctionDefinition) string {
 	return fmt.Sprintf("%s:%s", core.StreamNameInvocation, function)
-}
-
-func (p PubSuber) ScaleSubjectName(function core.FunctionDefinition) string {
-	return fmt.Sprintf("%s.%s", core.ScaleSubjectBase, function)
 }
 
 func (p PubSuber) InvokeSubjectName(function core.FunctionDefinition) string {

@@ -12,7 +12,7 @@ import (
 var infoServerCMD = &cli.Command{
 	Name:     core.ComponentNameInfoServer,
 	Aliases:  []string{"is"},
-	Usage:    "Run info server.",
+	Usage:    "Info server is a component that provides information about functions, instances, execution and various metrics.", //nolint:lll
 	Category: "Service",
 	Flags: append(
 		flags.ForServer,

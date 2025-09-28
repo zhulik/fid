@@ -12,7 +12,7 @@ import (
 var scalerCMD = &cli.Command{
 	Name:     core.ComponentNameScaler,
 	Aliases:  []string{"sc"},
-	Usage:    "Run scaler.",
+	Usage:    "Scaler is a component that subscribes to the function's stream and scales the function's instances up if all instances are busy.", //nolint:lll
 	Category: "Function",
 	Flags: append(append(
 		flags.ForServer,

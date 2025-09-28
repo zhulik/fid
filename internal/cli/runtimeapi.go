@@ -12,7 +12,7 @@ import (
 var runtimeapiCMD = &cli.Command{
 	Name:     core.ComponentNameRuntimeAPI,
 	Aliases:  []string{"ra"},
-	Usage:    "Run runtime api server.",
+	Usage:    "Runtime api server is a component that runs as a side car with each function instance and mimics the AWS Lambda runtime API.", //nolint:lll
 	Category: "Function",
 	Flags: append(
 		flags.ForServer,

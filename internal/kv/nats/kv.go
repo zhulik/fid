@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/zhulik/fid/internal/core"
@@ -15,10 +14,9 @@ type KV struct {
 	Nats *pubSubNats.Client
 }
 
-func (k KV) CreateBucket(ctx context.Context, name string, ttl time.Duration) (core.KVBucket, error) {
+func (k KV) CreateBucket(ctx context.Context, name string) (core.KVBucket, error) {
 	bucket, err := k.Nats.JetStream.CreateKeyValue(ctx, jetstream.KeyValueConfig{
 		Bucket: name,
-		TTL:    ttl,
 	})
 	if err != nil {
 		if errors.Is(err, jetstream.ErrBucketExists) {

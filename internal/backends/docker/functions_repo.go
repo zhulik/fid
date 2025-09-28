@@ -17,7 +17,7 @@ type FunctionsRepo struct { //nolint:recvcheck
 }
 
 func (r *FunctionsRepo) Init(ctx context.Context) error {
-	bucket, err := r.KV.CreateBucket(ctx, core.BucketNameFunctions, 0)
+	bucket, err := r.KV.CreateBucket(ctx, core.BucketNameFunctions)
 	if err != nil {
 		return fmt.Errorf("failed to create functions bucket: %w", err)
 	}
@@ -47,13 +47,13 @@ func (r FunctionsRepo) Upsert(ctx context.Context, function core.FunctionDefinit
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	r.Logger.With("function", function).Info("Function template stored")
+	r.Logger.Info("Function template stored", "function", function)
 
 	return nil
 }
 
 func (r FunctionsRepo) Get(ctx context.Context, name string) (core.FunctionDefinition, error) {
-	r.Logger.With("function", name).Debug("Fetching function info")
+	r.Logger.Debug("Fetching function info", "function", name)
 
 	bytes, err := r.bucket.Get(ctx, name)
 	if err != nil {

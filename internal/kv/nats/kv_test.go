@@ -19,14 +19,14 @@ var _ = Describe("Nats KV", Serial, func() {
 
 		lo.Must0(pal.InjectInto(ctx, p, &kv))
 
-		lo.Must(kv.CreateBucket(ctx, "test", 0))
+		lo.Must(kv.CreateBucket(ctx, "test"))
 		DeferCleanup(func(ctx SpecContext) { kv.DeleteBucket(ctx, "test") }) //nolint:errcheck
 	})
 
 	Describe("CreateBucket", func() {
 		Context("when bucket exists", func() {
 			It("does not return an error", func(ctx SpecContext) {
-				_, err := kv.CreateBucket(ctx, "test", 0)
+				_, err := kv.CreateBucket(ctx, "test")
 
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -34,7 +34,7 @@ var _ = Describe("Nats KV", Serial, func() {
 
 		Context("when bucket does not exists", func() {
 			It("creates the bucket", func(ctx SpecContext) {
-				_, err := kv.CreateBucket(ctx, "test2", 0)
+				_, err := kv.CreateBucket(ctx, "test2")
 				Expect(err).NotTo(HaveOccurred())
 
 				lo.Must0(kv.DeleteBucket(ctx, "test2"))

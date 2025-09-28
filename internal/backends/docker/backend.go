@@ -40,8 +40,6 @@ func (b Backend) Register(ctx context.Context, function core.FunctionDefinition)
 
 // Deregister deletes function's template.
 func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.Logger.With("function", function)
-
 	err := b.FunctionsRepo.Delete(ctx, function.Name())
 	if err != nil {
 		return err //nolint:wrapcheck
@@ -50,14 +48,12 @@ func (b Backend) Deregister(ctx context.Context, function core.FunctionDefinitio
 	// TODO: we only delete the definition, the containers should be stopped and deleted by the
 	// garbage collector.
 
-	logger.Info("Function deregistered")
+	b.Logger.Info("Function deregistered", "function", function)
 
 	return nil
 }
 
 func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinition) error {
-	logger := b.Logger.With("function", function)
-
 	containerConfig := &container.Config{
 		Image: core.ImageNameFID,
 		Cmd:   []string{core.ComponentNameScaler},
@@ -87,7 +83,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 	_, err := b.Docker.ContainerCreate(ctx, containerConfig, hostConfig, networkingConfig, nil, containerName)
 	if err != nil {
 		if strings.Contains(err.Error(), "Conflict. The container name") {
-			logger.Info("Scaler container already exists")
+			b.Logger.Info("Scaler container already exists", "function", function)
 
 			return nil
 		}
@@ -100,7 +96,7 @@ func (b Backend) createScaler(ctx context.Context, function core.FunctionDefinit
 		return fmt.Errorf("failed to start scaler container: %w", err)
 	}
 
-	logger.Info("Scaler container created and started")
+	b.Logger.Info("Scaler container created and started", "function", function)
 
 	return nil
 }
@@ -115,7 +111,7 @@ func (b Backend) createFunctionTemplate(ctx context.Context, function core.Funct
 		return fmt.Errorf("failed to store function template: %w", err)
 	}
 
-	b.Logger.With("function", function).Info("Function template stored")
+	b.Logger.Info("Function template stored", "function", function)
 
 	return nil
 }

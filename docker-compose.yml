@@ -1,6 +1,6 @@
 services:
   nats:
-    image: nats:latest
+    image: nats:2.12
     labels:
       wtf.zhulik.fid.component: nats
 
@@ -12,24 +12,6 @@ services:
 
     networks:
       - nats
-
-  init:
-    image: ghcr.io/zhulik/fid
-    labels:
-      wtf.zhulik.fid.component: init
-
-    command:
-      - init
-    environment:
-      - NATS_URL=nats://nats:4222
-
-    networks:
-      - nats
-
-    depends_on:
-      - nats
-
-    restart: no
 
   start:
     image: ghcr.io/zhulik/fid
@@ -46,9 +28,6 @@ services:
 
     networks:
       - nats
-
-    depends_on:
-      - init
 
     restart: no
 

@@ -19,22 +19,22 @@ const (
 	shutdownTimeout    = time.Second * 30
 )
 
-func InitPal(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef) (*pal.Pal, error) {
-	p := pal.New(
-		append(services,
-			pal.Provide(cfg),
-			pubsub.Provide(),
-			kv.Provide(),
-			invocation.Provide(),
-			backends.Provide(),
-			httpserver.Provide(),
-		)...,
-	).
+func Run(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef) error {
+	services = append(services,
+		pal.Provide(cfg),
+		pubsub.Provide(),
+		kv.Provide(),
+		invocation.Provide(),
+		backends.Provide(),
+		httpserver.Provide(),
+	)
+
+	p := pal.New(services...).
 		InjectSlog().
 		InitTimeout(initTimeout).
 		HealthCheckTimeout(healthCheckTimeout).
 		ShutdownTimeout(shutdownTimeout).
 		RunHealthCheckServer(":8081", "/health")
 
-	return p, p.Init(ctx) //nolint:wrapcheck
+	return p.Run(ctx) //nolint:wrapcheck
 }
