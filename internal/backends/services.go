@@ -11,7 +11,7 @@ import (
 
 func Provide() pal.ServiceDef {
 	return pal.ProvideList(
-		pal.ProvideFn(func(ctx context.Context) (*client.Client, error) {
+		pal.ProvideFn[*client.Client](func(ctx context.Context) (*client.Client, error) {
 			return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		}),
 		pal.Provide[core.ContainerBackend](&docker.Backend{}),
