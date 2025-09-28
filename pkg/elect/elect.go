@@ -49,10 +49,10 @@ func New(kv KV, ttl time.Duration, key string, id string, opts ...Option) (*Elec
 	}, nil
 }
 
-func (e Elect) Start() chan Outcome {
+func (e Elect) Start(ctx context.Context) chan Outcome {
 	outcomeCh := make(chan Outcome, 1)
 
-	go e.election(context.Background(), outcomeCh)
+	go e.election(ctx, outcomeCh)
 
 	return outcomeCh
 }

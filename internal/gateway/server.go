@@ -1,51 +1,43 @@
 package gateway
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/config"
 	"github.com/zhulik/fid/internal/core"
+	"github.com/zhulik/fid/internal/httpserver"
 	"github.com/zhulik/fid/internal/middlewares"
-	"github.com/zhulik/fid/pkg/httpserver"
+	"github.com/zhulik/pal"
 )
 
 type Server struct {
 	*httpserver.Server
 
-	Invoker core.Invoker
+	Config        *config.Config
+	Logger        *slog.Logger
+	FunctionsRepo core.FunctionsRepo
+	Invoker       core.Invoker
+
+	Pal *pal.Pal
 }
 
 // NewServer creates a new Server instance.
-func NewServer(injector do.Injector) (*Server, error) {
-	config := do.MustInvoke[config.Config](injector)
-	logger := do.MustInvoke[*slog.Logger](injector).With("component", "gateway.Server")
-	functionsRepo := do.MustInvoke[core.FunctionsRepo](injector)
-	invoker := do.MustInvoke[core.Invoker](injector)
-
-	server, err := httpserver.NewServer(injector, logger, config.HTTPPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a new http server: %w", err)
-	}
-
-	server.Router.Use(middlewares.FunctionMiddleware(functionsRepo, func(c *gin.Context) string {
+func (s *Server) Init(ctx context.Context) error {
+	s.Router.Use(middlewares.FunctionMiddleware(s.FunctionsRepo, func(c *gin.Context) string {
 		return c.Param("functionName")
 	}))
 
-	server.Logger.Debug("Creating or updating function streams.")
+	s.Router.POST("/invoke/:functionName", s.InvokeHandler)
 
-	srv := &Server{
-		Server:  server,
-		Invoker: invoker,
-	}
+	return nil
+}
 
-	srv.Router.POST("/invoke/:functionName", srv.InvokeHandler)
-
-	return srv, nil
+func (s *Server) Run(ctx context.Context) error {
+	return s.RunServer(ctx) //nolint:wrapcheck
 }
 
 func (s *Server) InvokeHandler(c *gin.Context) {

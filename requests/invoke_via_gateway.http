@@ -1,9 +1,0 @@
-### Invoke the function via gateway
-POST http://127.0.0.1:8081/invoke/demo-function
-Content-Type: application/json
-
-{
-  "error": true
-}
-
-###

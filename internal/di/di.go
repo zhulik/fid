@@ -2,56 +2,39 @@ package di
 
 import (
 	"context"
-	"fmt"
+	"time"
 
-	"github.com/samber/do/v2"
 	"github.com/zhulik/fid/internal/backends"
-	"github.com/zhulik/fid/internal/gateway"
-	"github.com/zhulik/fid/internal/infoserver"
+	"github.com/zhulik/fid/internal/config"
+	"github.com/zhulik/fid/internal/httpserver"
 	"github.com/zhulik/fid/internal/invocation"
 	"github.com/zhulik/fid/internal/kv"
-	"github.com/zhulik/fid/internal/logging"
 	"github.com/zhulik/fid/internal/pubsub"
-	"github.com/zhulik/fid/internal/runtimeapi"
-	"github.com/zhulik/fid/internal/scaler"
 	"github.com/zhulik/pal"
 )
 
-func InitPal(ctx context.Context) (*pal.Pal, error) {
-	p := pal.New( //nolint:varnamelen
-		logging.Provide(),
-		runtimeapi.Provide(),
-		backends.Provide(),
-		gateway.Provide(),
-		pubsub.Provide(),
-		kv.Provide(),
-		invocation.Provide(),
-		infoserver.Provide(),
-		scaler.Provide(),
-	)
+const (
+	initTimeout        = time.Second * 3
+	healthCheckTimeout = time.Second * 3
+	shutdownTimeout    = time.Second * 30
+)
 
-	err := p.Init(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize pal: %w", err)
-	}
+func InitPal(ctx context.Context, cfg *config.Config, services ...pal.ServiceDef) (*pal.Pal, error) {
+	p := pal.New(
+		append(services,
+			pal.Provide(cfg),
+			pubsub.Provide(),
+			kv.Provide(),
+			invocation.Provide(),
+			backends.Provide(),
+			httpserver.Provide(),
+		)...,
+	).
+		InjectSlog().
+		InitTimeout(initTimeout).
+		HealthCheckTimeout(healthCheckTimeout).
+		ShutdownTimeout(shutdownTimeout).
+		RunHealthCheckServer(":8081", "/health")
 
-	return p, nil
-}
-
-func Init() *do.RootScope {
-	injector := do.New()
-
-	ctx := context.Background()
-
-	logging.Register(ctx, injector)
-	runtimeapi.Register(ctx, injector)
-	backends.Register(ctx, injector)
-	gateway.Register(ctx, injector)
-	pubsub.Register(ctx, injector)
-	kv.Register(ctx, injector)
-	invocation.Register(ctx, injector)
-	infoserver.Register(ctx, injector)
-	scaler.Register(ctx, injector)
-
-	return injector
+	return p, p.Init(ctx) //nolint:wrapcheck
 }

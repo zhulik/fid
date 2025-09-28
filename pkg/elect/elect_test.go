@@ -1,6 +1,7 @@
 package elect_test
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 
@@ -53,8 +54,8 @@ func (n *Nomenee) Stop() {
 	n.Elect.Stop()
 }
 
-func (n *Nomenee) Run() {
-	for outcome := range n.Elect.Start() {
+func (n *Nomenee) Run(ctx context.Context) {
+	for outcome := range n.Elect.Start(ctx) {
 		n.status.Store(int32(outcome.Status))
 
 		switch outcome.Status { //nolint:exhaustive
@@ -98,7 +99,7 @@ var _ = Describe("Elect", Serial, func() {
 			Context("when no concurrent nominees", func() {
 				Context("when the value does not exist", func() {
 					It("returns a channel with won status", func(sctx SpecContext) {
-						outcomeCh := elector.Start()
+						outcomeCh := elector.Start(sctx)
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Won))
@@ -111,7 +112,7 @@ var _ = Describe("Elect", Serial, func() {
 					})
 
 					It("keeps the record updated", func(sctx SpecContext) {
-						outcomeCh := elector.Start()
+						outcomeCh := elector.Start(sctx)
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Won))
@@ -133,7 +134,7 @@ var _ = Describe("Elect", Serial, func() {
 					})
 
 					It("becomes a looser if the value changes", func(sctx SpecContext) {
-						outcomeCh := elector.Start()
+						outcomeCh := elector.Start(sctx)
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Won))
@@ -158,7 +159,7 @@ var _ = Describe("Elect", Serial, func() {
 					})
 
 					It("returns a channel with lost status", func(sctx SpecContext) {
-						outcomeCh := elector.Start()
+						outcomeCh := elector.Start(sctx)
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Lost))
@@ -171,7 +172,7 @@ var _ = Describe("Elect", Serial, func() {
 					})
 
 					It("becomes a leader if the value is deleted", func(sctx SpecContext) {
-						outcomeCh := elector.Start()
+						outcomeCh := elector.Start(sctx)
 						outcome := <-outcomeCh
 
 						Expect(outcome.Status).To(Equal(elect.Lost))
@@ -199,7 +200,7 @@ var _ = Describe("Elect", Serial, func() {
 						nominee := newNomenee(jsKV)
 						nominees[i] = nominee
 
-						go nominee.Run()
+						go nominee.Run(sctx)
 					}
 					time.Sleep(100 * time.Millisecond)
 
